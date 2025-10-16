@@ -99,7 +99,17 @@ const handleNext = () => {
     projectType: projectType.value,
     ...createForm.value,
   })
-  // TODO: 这里可以跳转到下一步的任务配置页面
+  
+  // 根据项目类型跳转到不同的配置页面
+  if (projectType.value === '全栈环境') {
+    router.push('/dashboard/raining-project-management/config-full-stack')
+  } else if (projectType.value === 'JupyterNotebook环境') {
+    // TODO: 跳转到JupyterNotebook配置页面
+    console.log('JupyterNotebook环境配置页面待开发')
+  } else if (projectType.value === 'JupyterLab环境') {
+    // TODO: 跳转到JupyterLab配置页面
+    console.log('JupyterLab环境配置页面待开发')
+  }
 }
 
 // 监听项目类型变化，清空实验环境和小类别选择
@@ -169,7 +179,7 @@ onBeforeUnmount(() => {
     <div class="page-content">
       <!-- 项目类型选择 -->
       <div class="project-type-section">
-        <a-radio-group v-model:value="projectType">
+        <a-radio-group v-model:value="projectType" class="custom-radio">
           <a-radio value="全栈环境">全栈环境实训项目</a-radio>
           <a-radio value="JupyterNotebook环境">JupyterNotebook环境实训项目</a-radio>
           <a-radio value="JupyterLab环境">JupyterLab环境实训项目</a-radio>
@@ -334,6 +344,9 @@ onBeforeUnmount(() => {
         font-weight: 500;
         margin-bottom: 32px;
         color: rgba(0, 0, 0, 0.85);
+        padding-left: 120px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f0f0f0;
       }
 
       .ant-form-item {
@@ -407,6 +420,27 @@ onBeforeUnmount(() => {
       }
     }
   }
+}
+/* 自定义镂空样式 */
+.custom-radio ::v-deep(.ant-radio-wrapper:hover .ant-radio),
+.custom-radio ::v-deep(.ant-radio:hover .ant-radio-inner),
+.custom-radio ::v-deep(.ant-radio-input:focus + .ant-radio-inner) {
+  border-color: var(--pro-ant-color-primary);
+}
+
+.custom-radio ::v-deep(.ant-radio-inner) {
+  background-color: transparent;
+  border-color: #d9d9d9;
+}
+
+.custom-radio ::v-deep(.ant-radio-checked .ant-radio-inner) {
+  background-color: transparent;
+  border-color: var(--pro-ant-color-primary);
+}
+
+.custom-radio ::v-deep(.ant-radio-inner::after) {
+  background-color: var(--pro-ant-color-primary);
+  transform: scale(0.5);
 }
 </style>
 

@@ -38,6 +38,7 @@
     "ant-design-vue": "^4.2.6",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
+    "highlight.js": "^11.11.1",
     "lodash-es": "^4.17.21",
     "mitt": "^3.0.1",
     "pinia": "^2.3.0",

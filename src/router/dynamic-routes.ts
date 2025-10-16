@@ -33,6 +33,16 @@ export default [
           hideInMenu: true,
         },
       },
+      {
+        path: '/dashboard/raining-project-management/config-full-stack',
+        name: 'ConfigFullStack',
+        component: () => import('~/pages/dashboard/raining-project-management/config-full-stack.vue'),
+        meta: {
+          title: '全栈环境实训项目配置',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
+        },
+      },
       
     ],
   },
