@@ -33,6 +33,8 @@
     "@ctrl/tinycolor": "^4.1.0",
     "@v-c/utils": "^0.0.26",
     "@vueuse/core": "^10.11.1",
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^5.1.12",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",

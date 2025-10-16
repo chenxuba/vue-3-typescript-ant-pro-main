@@ -17,19 +17,29 @@ export default [
       {
         path: '/dashboard/analysis',
         name: 'DashboardAnalysis',
-        component: () => import('~/pages/dashboard/analysis/index.vue'),
+        component: () => import('~/pages/dashboard/raining-project-management/index.vue'),
         meta: {
           title: '实训项目管理',
           parentKeys:['/dashboard']
+        },
+      },
+      {
+        path: '/dashboard/raining-project-management/create',
+        name: 'RainingProjectCreate',
+        component: () => import('~/pages/dashboard/raining-project-management/create.vue'),
+        meta: {
+          title: '新建实训项目',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
         },
       },
       
     ],
   },
   {
-    path: '/form',
-    redirect: '/form/basic-form',
-    name: 'Form',
+    path: '/system-management',
+    redirect: '/system-management/basic-form',
+    name: 'System-management',
     meta: {
       title: '系统管理',
       icon: 'FormOutlined',
@@ -37,27 +47,35 @@ export default [
     component: basicRouteMap.RouteView,
     children: [
       {
-        path: '/form/basic-form',
-        name: 'FormBasic',
-        component: () => import('~/pages/form/basic-form/index.vue'),
+        path: '/system-management/personnel-management',
+        name: 'System-management-personnel-management',
+        component: () => import('~/pages/dashboard/system-management/personnel-management.vue'),
         meta: {
           title: '人员管理',
         },
       },
       {
-        path: '/form/step-form',
-        name: 'FormStep',
-        component: () => import('~/pages/form/step-form/index.vue'),
+        path: '/system-management/organization-management',
+        name: 'System-management-organization-management',
+        component: () => import('~/pages/dashboard/system-management/organization-management.vue'),
         meta: {
           title: '组织机构管理',
         },
       },
       {
-        path: '/form/advanced-form',
-        name: 'FormAdvanced',
-        component: () => import('~/pages/form/advanced-form/index.vue'),
+        path: '/system-management/role-management',
+        name: 'System-management-role-management',
+        component: () => import('~/pages/dashboard/system-management/role-management.vue'),
         meta: {
           title: '角色管理',
+        },
+      },
+      {
+        path: '/system-management/role-assignment',
+        name: 'System-management-role-assignment',
+        component: () => import('~/pages/dashboard/system-management/role-assignment.vue'),
+        meta: {
+          title: '角色分配',
         },
       },
     ],
