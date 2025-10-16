@@ -63,6 +63,7 @@ export interface TaskLevel {
   difficulty: '困难' | '适中' | '简单'
   skillTag: string
   taskHours: string
+  kernelLink?: string // 内核链接
   // 评测设置
   evaluationSettings?: {
     timeLimit: string
@@ -85,6 +86,7 @@ export interface TaskLevelForm {
   difficulty: '困难' | '适中' | '简单'
   skillTag: string
   taskHours: string
+  kernelLink?: string // 内核链接
 }
 
 // 测试集

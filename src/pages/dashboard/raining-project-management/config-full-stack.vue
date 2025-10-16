@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
@@ -155,6 +155,7 @@ const taskLevelFormData = ref<TaskLevelForm>({
   difficulty: '适中',
   skillTag: '',
   taskHours: '',
+  kernelLink: '',
 })
 
 // 评测设置表单数据
@@ -169,6 +170,19 @@ const evaluationFormData = ref<EvaluationForm>({
   testCases: [],
 })
 
+// 自定义校验：检查富文本编辑器内容是否为空
+const validateRichText = (_rule: any, value: string) => {
+  if (!value) {
+    return Promise.reject('请输入内容')
+  }
+  // 去除HTML标签后检查是否为空
+  const text = value.replace(/<[^>]*>/g, '').trim()
+  if (!text) {
+    return Promise.reject('请输入内容')
+  }
+  return Promise.resolve()
+}
+
 // 任务关卡表单验证规则
 const taskLevelFormRules: Record<string, Rule[]> = {
   taskName: [
@@ -178,10 +192,12 @@ const taskLevelFormRules: Record<string, Rule[]> = {
     { required: true, message: '请上传学习资源', trigger: 'change', type: 'array', min: 1 },
   ],
   taskRequirement: [
-    { required: true, message: '请输入任务要求', trigger: 'blur' },
+    { required: true, message: '' },
+    { validator: validateRichText },
   ],
   referenceAnswer: [
-    { required: true, message: '请输入参考答案', trigger: 'blur' },
+    { required: true, message: '请输入参考答案' },
+    { validator: validateRichText },
   ],
   difficulty: [
     { required: true, message: '请选择难度系数', trigger: 'change' },
@@ -191,6 +207,9 @@ const taskLevelFormRules: Record<string, Rule[]> = {
   ],
   taskHours: [
     { required: true, message: '请输入任务学时', trigger: 'blur' },
+  ],
+  kernelLink: [
+    { required: true, message: '请输入内嵌链接', trigger: 'blur' },
   ],
 }
 
@@ -206,6 +225,13 @@ const evaluationFormRules: Record<string, Rule[]> = {
     { required: true, message: '请上传评测执行文件', trigger: 'change', type: 'array', min: 1 },
   ],
 }
+
+// 判断当前任务类型是否为内核链接
+const isKernelTask = computed(() => {
+  if (!selectedTaskLevelId.value) return false
+  const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+  return level?.type === 'kernel'
+})
 
 // 文件上传处理
 const handleBackgroundUpload = (file: File) => {
@@ -374,6 +400,7 @@ const loadTaskLevelFormData = (id: string) => {
       difficulty: level.difficulty,
       skillTag: level.skillTag,
       taskHours: level.taskHours,
+      kernelLink: level.kernelLink || '',
     }
     
     // 加载评测设置数据
@@ -429,11 +456,15 @@ const handleLearningResourceUpload = (info: any) => {
 // 保存任务关卡
 const saveTaskLevel = async () => {
   try {
-    // 同时验证关联任务表单和评测设置表单
-    await Promise.all([
-      taskLevelFormRef.value?.validate(),
-      evaluationFormRef.value?.validate()
-    ])
+    // 对于内核链接任务，只验证关联任务表单；其他类型需要验证评测设置
+    if (isKernelTask.value) {
+      await taskLevelFormRef.value?.validate()
+    } else {
+      await Promise.all([
+        taskLevelFormRef.value?.validate(),
+        evaluationFormRef.value?.validate()
+      ])
+    }
     if (selectedTaskLevelId.value) {
       saveTaskLevelFormData(selectedTaskLevelId.value)
     }
@@ -832,11 +863,17 @@ const handleNext = async () => {
                       </a-form-item>
 
                       <a-form-item label="任务要求" name="taskRequirement" required>
-                        <RichTextEditor v-model="taskLevelFormData.taskRequirement" placeholder="请输入任务要求" />
+                        <RichTextEditor 
+                          v-model="taskLevelFormData.taskRequirement" 
+                          placeholder="请输入任务要求"
+                        />
                       </a-form-item>
 
                       <a-form-item label="参考答案" name="referenceAnswer" required>
-                        <RichTextEditor v-model="taskLevelFormData.referenceAnswer" placeholder="请输入参考答案" />
+                        <RichTextEditor 
+                          v-model="taskLevelFormData.referenceAnswer" 
+                          placeholder="请输入参考答案"
+                        />
                       </a-form-item>
 
                       <a-form-item label="难度系数" name="difficulty" required>
@@ -850,15 +887,20 @@ const handleNext = async () => {
                       <a-form-item label="技能标签" name="skillTag" required>
                         <a-input v-model:value="taskLevelFormData.skillTag" placeholder="请输入技能标签" />
                       </a-form-item>
+                      <a-form-item v-if="isKernelTask" label="内嵌链接" name="kernelLink" required>
+                        <a-input v-model:value="taskLevelFormData.kernelLink" placeholder="请输入内嵌链接" />
+                      </a-form-item>
 
                       <a-form-item label="任务学时" name="taskHours" required>
                         <a-input v-model:value="taskLevelFormData.taskHours" placeholder="请输入任务学时" />
                       </a-form-item>
+
+                      
                     </a-form>
                   </a-tab-pane>
 
                   <!-- 评测设置标签页 -->
-                  <a-tab-pane key="evaluation" tab="评测设置">
+                  <a-tab-pane key="evaluation" tab="评测设置" v-if="!isKernelTask">
                     <div class="evaluation-content">
                       <!-- 评测文件 -->
                       <div class="evaluation-section">
