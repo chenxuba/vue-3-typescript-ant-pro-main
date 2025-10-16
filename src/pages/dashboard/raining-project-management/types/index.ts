@@ -43,3 +43,65 @@ export interface NewFolderForm {
   commitMessage: string
 }
 
+// 上传的文件
+export interface UploadedFile {
+  uid: string
+  name: string
+  status: 'done' | 'uploading' | 'error'
+  url?: string
+}
+
+// 任务关卡类型
+export interface TaskLevel {
+  id: string
+  name: string
+  type: 'programming' | 'choice' | 'kernel'
+  taskName: string
+  learningResources: UploadedFile[]
+  taskRequirement: string
+  referenceAnswer: string
+  difficulty: '困难' | '适中' | '简单'
+  skillTag: string
+  taskHours: string
+  // 评测设置
+  evaluationSettings?: {
+    timeLimit: string
+    studentTaskFile: UploadedFile[]
+    evaluationFile: UploadedFile[]
+    passJudgment: 'output_compare' | 'rule_match'
+    spaceHandling: 'no_ignore' | 'ignore_edge' | 'ignore_all'
+    scoreRule: 'all_pass' | 'partial_pass'
+    caseType: 'text' | 'file'
+    testCases: TestCase[]
+  }
+}
+
+// 任务关卡表单
+export interface TaskLevelForm {
+  taskName: string
+  learningResources: UploadedFile[]
+  taskRequirement: string
+  referenceAnswer: string
+  difficulty: '困难' | '适中' | '简单'
+  skillTag: string
+  taskHours: string
+}
+
+// 测试集
+export interface TestCase {
+  id: string
+  input: string
+  output: string
+}
+
+// 评测设置表单
+export interface EvaluationForm {
+  timeLimit: string
+  studentTaskFile: UploadedFile[]
+  evaluationFile: UploadedFile[]
+  passJudgment: 'output_compare' | 'rule_match'
+  spaceHandling: 'no_ignore' | 'ignore_edge' | 'ignore_all'
+  scoreRule: 'all_pass' | 'partial_pass'
+  caseType: 'text' | 'file'
+  testCases: TestCase[]
+}

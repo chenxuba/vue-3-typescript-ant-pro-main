@@ -7,13 +7,16 @@ import '@wangeditor/editor/dist/css/style.css'
 
 interface Props {
   modelValue: string
+  placeholder?: string
 }
 
 interface Emits {
   (e: 'update:modelValue', value: string): void
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  placeholder: '请输入内容'
+})
 const emit = defineEmits<Emits>()
 
 const editorRef = shallowRef()
@@ -41,7 +44,7 @@ const toolbarConfig: Partial<IToolbarConfig> = {
 }
 
 const editorConfig: Partial<IEditorConfig> = {
-  placeholder: '请输入简介',
+  placeholder: props.placeholder,
   MENU_CONF: {},
 }
 
