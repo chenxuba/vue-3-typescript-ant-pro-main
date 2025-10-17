@@ -43,6 +43,16 @@ export default [
           hideInMenu: true,
         },
       },
+      {
+        path: '/dashboard/raining-project-management/config-jupyter-notebook',
+        name: 'ConfigJupyterNotebook',
+        component: () => import('~/pages/dashboard/raining-project-management/config-jupyter-notebook.vue'),
+        meta: {
+          title: 'JupyterNotebook环境实训项目配置',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
+        },
+      },
       
     ],
   },

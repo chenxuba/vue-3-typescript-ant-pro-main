@@ -17,7 +17,7 @@ const editorRef = shallowRef()
 const valueHtml = ref('')
 
 // 项目类型
-const projectType = ref('全栈环境')
+const projectType = ref(1)
 
 // 新建项目表单
 const createForm = ref({
@@ -39,19 +39,19 @@ const difficultyOptions = [
 
 // 实验环境选项（根据项目类型不同而不同）
 const getEnvironmentOptions = () => {
-  if (projectType.value === '全栈环境') {
+  if (projectType.value === 1) {
     return [
       { label: 'Python3.6', value: 'Python3.6' },
       { label: 'Python3.13', value: 'Python3.13' },
       { label: 'Python3.12/VNC', value: 'Python3.12/VNC' },
     ]
-  } else if (projectType.value === 'JupyterNotebook环境') {
+  } else if (projectType.value === 2) {
     return [
       { label: 'Python3/Jupyter', value: 'Python3/Jupyter' },
       { label: 'Python-GPU/upyter', value: 'Python-GPU/upyter' },
       { label: 'Paddle/Jupyter', value: 'Paddle/Jupyter' },
     ]
-  } else if (projectType.value === 'JupyterLab环境') {
+  } else if (projectType.value === 3) {
     return [
       { label: 'Python3.6', value: 'Python3.6' },
       { label: 'Python3.13', value: 'Python3.13' },
@@ -63,7 +63,7 @@ const getEnvironmentOptions = () => {
 // 小类别选项（根据实验环境不同而不同）
 const getSubCategoryOptions = () => {
   // 如果不是JupyterNotebook环境，返回空数组
-  if (projectType.value !== 'JupyterNotebook环境') return []
+  if (projectType.value !== 2) return []
   
   // 如果没有选择实验环境，返回空数组（但选择框仍然显示）
   if (!createForm.value.environment) return []
@@ -101,12 +101,11 @@ const handleNext = () => {
   })
   
   // 根据项目类型跳转到不同的配置页面
-  if (projectType.value === '全栈环境') {
+  if (projectType.value === 1) {
     router.push('/dashboard/raining-project-management/config-full-stack')
-  } else if (projectType.value === 'JupyterNotebook环境') {
-    // TODO: 跳转到JupyterNotebook配置页面
-    console.log('JupyterNotebook环境配置页面待开发')
-  } else if (projectType.value === 'JupyterLab环境') {
+  } else if (projectType.value === 2) {
+    router.push('/dashboard/raining-project-management/config-jupyter-notebook')
+  } else if (projectType.value === 3) {
     // TODO: 跳转到JupyterLab配置页面
     console.log('JupyterLab环境配置页面待开发')
   }
@@ -122,6 +121,16 @@ watch(projectType, () => {
 // 监听实验环境变化，清空小类别选择
 watch(() => createForm.value.environment, () => {
   createForm.value.subCategory = undefined
+})
+
+// 获取项目类型名称
+const getProjectTypeName = computed(() => {
+  const typeMap: Record<number, string> = {
+    1: '全栈环境',
+    2: 'JupyterNotebook环境',
+    3: 'JupyterLab环境',
+  }
+  return typeMap[projectType.value] || ''
 })
 
 // 富文本编辑器配置
@@ -180,20 +189,20 @@ onBeforeUnmount(() => {
       <!-- 项目类型选择 -->
       <div class="project-type-section">
         <a-radio-group v-model:value="projectType" class="custom-radio">
-          <a-radio value="全栈环境">全栈环境实训项目</a-radio>
-          <a-radio value="JupyterNotebook环境">JupyterNotebook环境实训项目</a-radio>
-          <a-radio value="JupyterLab环境">JupyterLab环境实训项目</a-radio>
+          <a-radio :value="1">全栈环境实训项目</a-radio>
+          <a-radio :value="2">JupyterNotebook环境实训项目</a-radio>
+          <a-radio :value="3">JupyterLab环境实训项目</a-radio>
         </a-radio-group>
       </div>
 
       <div class="project-type-desc">
-        <template v-if="projectType === '全栈环境'">
+        <template v-if="projectType === 1">
           多功能新型实战项目模式，支持图形化桌面、Web IDE、命令行、提供仿真拟真等种实验场景，适用于各类复杂工程项目研发。
         </template>
-        <template v-else-if="projectType === 'JupyterNotebook环境'">
+        <template v-else-if="projectType === 2">
           多功能实时交互实验模式，支持实时代码、数学方程、可视化和MarkDown等。 适用于数据清理、数值模拟、统计建模、机器学习等系列实验。
         </template>
-        <template v-else-if="projectType === 'JupyterLab环境'">
+        <template v-else-if="projectType === 3">
           多功能实时交互实验模式，支持实时代码、数学方程、可视化和MarkDown等。 适用于数据清理、数值模拟、统计建模、机器学习等系列实验。
         </template>
       </div>
@@ -201,7 +210,7 @@ onBeforeUnmount(() => {
       <!-- 项目信息表单 -->
       <div class="project-form-section">
         <div class="form-title">
-          {{ projectType }}实训项目
+          {{ getProjectTypeName }}实训项目
           <span v-if="createForm.environment"> 实验环境: {{ createForm.environment }}</span>
         </div>
 
@@ -235,7 +244,7 @@ onBeforeUnmount(() => {
           </a-form-item>
 
           <a-form-item 
-            v-if="projectType === 'JupyterNotebook环境'" 
+            v-if="projectType === 2" 
             label="任务要求" 
             name="showTaskRequirement"
           >
@@ -261,7 +270,7 @@ onBeforeUnmount(() => {
                 style="flex: 1;"
               />
               <a-select
-                v-if="projectType === 'JupyterNotebook环境'"
+                v-if="projectType === 2"
                 v-model:value="createForm.subCategory"
                 placeholder="请选择小类别"
                 :options="getSubCategoryOptions()"

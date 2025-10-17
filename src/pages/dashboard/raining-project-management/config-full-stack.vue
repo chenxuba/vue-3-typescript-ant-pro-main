@@ -1278,8 +1278,9 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
   }
 
   .page-content {
+    max-width: 1400px;
+    margin: 0 auto;
     background: #fff;
-    margin: 0 24px;
     padding: 24px;
     border-radius: 4px;
 
