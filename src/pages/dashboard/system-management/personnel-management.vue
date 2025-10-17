@@ -483,7 +483,7 @@ onMounted(() => {
               showQuickJumper: true,
               showTotal: (total) => `共 ${total} 条`,
             }"
-            :scroll="{ x: 1200 }"
+            :scroll="{ x: 1400 }"
             row-key="id"
             @change="handleTableChange"
           >
@@ -846,27 +846,6 @@ onMounted(() => {
 
         &:hover {
           text-decoration: underline;
-        }
-      }
-
-      :deep(.ant-table) {
-        .ant-table-thead {
-          > tr > th {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-            color: rgba(0, 0, 0, 0.85);
-            font-weight: 600;
-            border-bottom: 2px solid rgba(102, 126, 234, 0.2);
-          }
-        }
-
-        .ant-table-tbody {
-          > tr {
-            &:hover {
-              > td {
-                background: rgba(102, 126, 234, 0.03);
-              }
-            }
-          }
         }
       }
     }

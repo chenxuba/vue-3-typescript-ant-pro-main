@@ -379,7 +379,7 @@ onMounted(() => {
   .left-panel {
     width: 320px;
     height: fit-content;
-    max-height: calc(100vh - 200px);
+    max-height: calc(100vh - 100px);
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 16px;
     padding: 0;
