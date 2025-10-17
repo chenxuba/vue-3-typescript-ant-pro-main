@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
@@ -30,9 +30,10 @@ import RepositoryModal from './components/RepositoryModal.vue'
 
 // Composables
 import { useFileTree } from './composables/useFileTree'
+import { useTaskLevel } from './composables/useTaskLevel'
 
 // Types
-import type { FormData, NewFileForm, NewFolderForm, TaskLevel, TaskLevelForm, EvaluationForm } from './types'
+import type { FormData, NewFileForm, NewFolderForm } from './types'
 
 // 注册语言
 hljs.registerLanguage('javascript', javascript)
@@ -132,106 +133,39 @@ const {
   handleDeleteNode,
 } = useFileTree()
 
+// 使用任务关卡composable
+const {
+  taskLevels,
+  selectedTaskLevelId,
+  currentTab,
+  taskLevelFormRef,
+  evaluationFormRef,
+  taskLevelFormData,
+  evaluationFormData,
+  taskLevelFormRules,
+  evaluationFormRules,
+  isKernelTask,
+  addTaskLevel,
+  deleteTaskLevel,
+  selectTaskLevel,
+  saveTaskLevel,
+  resetTaskLevel,
+  handleLearningResourceUpload,
+  handleStudentTaskFileUpload,
+  handleEvaluationFileUpload,
+  addTestCase,
+  removeTestCase,
+  clearAllTestCases,
+  downloadTemplate,
+  batchUploadTestCases,
+} = useTaskLevel()
+
 // 弹窗状态
 const showRepositoryModal = ref(false)
 const showNewFileModal = ref(false)
 const showNewFolderModal = ref(false)
 const currentParentPath = ref('/')
 const currentFolderParentPath = ref('/')
-
-// 任务关卡相关状态
-const taskLevels = ref<TaskLevel[]>([])
-const selectedTaskLevelId = ref<string>('')
-const currentTab = ref('task')
-const taskLevelFormRef = ref<FormInstance>()
-const evaluationFormRef = ref<FormInstance>()
-
-// 任务关卡表单数据
-const taskLevelFormData = ref<TaskLevelForm>({
-  taskName: '',
-  learningResources: [],
-  taskRequirement: '',
-  referenceAnswer: '',
-  difficulty: '适中',
-  skillTag: '',
-  taskHours: '',
-  kernelLink: '',
-})
-
-// 评测设置表单数据
-const evaluationFormData = ref<EvaluationForm>({
-  timeLimit: '',
-  studentTaskFile: [],
-  evaluationFile: [],
-  passJudgment: 'output_compare',
-  spaceHandling: 'no_ignore',
-  scoreRule: 'all_pass',
-  caseType: 'text',
-  testCases: [],
-})
-
-// 自定义校验：检查富文本编辑器内容是否为空
-const validateRichText = (_rule: any, value: string) => {
-  if (!value) {
-    return Promise.reject('请输入内容')
-  }
-  // 去除HTML标签后检查是否为空
-  const text = value.replace(/<[^>]*>/g, '').trim()
-  if (!text) {
-    return Promise.reject('请输入内容')
-  }
-  return Promise.resolve()
-}
-
-// 任务关卡表单验证规则
-const taskLevelFormRules: Record<string, Rule[]> = {
-  taskName: [
-    { required: true, message: '请输入任务名称', trigger: 'blur' },
-  ],
-  learningResources: [
-    { required: true, message: '请上传学习资源', trigger: 'change', type: 'array', min: 1 },
-  ],
-  taskRequirement: [
-    { required: true, message: '' },
-    { validator: validateRichText },
-  ],
-  referenceAnswer: [
-    { required: true, message: '请输入参考答案' },
-    { validator: validateRichText },
-  ],
-  difficulty: [
-    { required: true, message: '请选择难度系数', trigger: 'change' },
-  ],
-  skillTag: [
-    { required: true, message: '请输入技能标签', trigger: 'blur' },
-  ],
-  taskHours: [
-    { required: true, message: '请输入任务学时', trigger: 'blur' },
-  ],
-  kernelLink: [
-    { required: true, message: '请输入内嵌链接', trigger: 'blur' },
-  ],
-}
-
-// 评测设置表单验证规则
-const evaluationFormRules: Record<string, Rule[]> = {
-  timeLimit: [
-    { required: true, message: '请输入评测时长限制', trigger: 'blur' },
-  ],
-  studentTaskFile: [
-    { required: true, message: '请上传学员任务文件', trigger: 'change', type: 'array', min: 1 },
-  ],
-  evaluationFile: [
-    { required: true, message: '请上传评测执行文件', trigger: 'change', type: 'array', min: 1 },
-  ],
-}
-
-// 判断当前任务类型是否为内核链接
-const isKernelTask = computed(() => {
-  if (!selectedTaskLevelId.value) return false
-  const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
-  return level?.type === 'kernel'
-})
 
 // 文件上传处理
 const handleBackgroundUpload = (file: File) => {
@@ -335,216 +269,6 @@ const handleConfirmNewFolder = (formData: NewFolderForm) => {
   addFolderToTree(formData.folderName, currentFolderParentPath.value)
   message.success('文件夹创建成功')
   showNewFolderModal.value = false
-}
-
-// 添加任务关卡
-const addTaskLevel = (type: 'programming' | 'choice' | 'kernel') => {
-  const typeNames = {
-    programming: '编程实训任务关卡',
-    choice: '选择题实训任务关卡',
-    kernel: '内核链接实训任务关卡',
-  }
-  
-  const newLevel: TaskLevel = {
-    id: Date.now().toString(),
-    name: `第${taskLevels.value.length + 1}关：${typeNames[type]}`,
-    type,
-    taskName: '',
-    learningResources: [],
-    taskRequirement: '',
-    referenceAnswer: '',
-    difficulty: '适中',
-    skillTag: '',
-    taskHours: '',
-  }
-  
-  taskLevels.value.push(newLevel)
-  selectedTaskLevelId.value = newLevel.id
-  loadTaskLevelFormData(newLevel.id)
-  message.success('任务关卡添加成功')
-}
-
-// 删除任务关卡
-const deleteTaskLevel = (id: string) => {
-  const index = taskLevels.value.findIndex(level => level.id === id)
-  if (index !== -1) {
-    taskLevels.value.splice(index, 1)
-    if (selectedTaskLevelId.value === id) {
-      selectedTaskLevelId.value = taskLevels.value[0]?.id || ''
-      if (selectedTaskLevelId.value) {
-        loadTaskLevelFormData(selectedTaskLevelId.value)
-      }
-    }
-    message.success('任务关卡删除成功')
-  }
-}
-
-// 选择任务关卡
-const selectTaskLevel = (id: string) => {
-  if (selectedTaskLevelId.value && selectedTaskLevelId.value !== id) {
-    saveTaskLevelFormData(selectedTaskLevelId.value)
-  }
-  selectedTaskLevelId.value = id
-  loadTaskLevelFormData(id)
-}
-
-// 加载任务关卡表单数据
-const loadTaskLevelFormData = (id: string) => {
-  const level = taskLevels.value.find(l => l.id === id)
-  if (level) {
-    taskLevelFormData.value = {
-      taskName: level.taskName,
-      learningResources: level.learningResources,
-      taskRequirement: level.taskRequirement,
-      referenceAnswer: level.referenceAnswer,
-      difficulty: level.difficulty,
-      skillTag: level.skillTag,
-      taskHours: level.taskHours,
-      kernelLink: level.kernelLink || '',
-    }
-    
-    // 加载评测设置数据
-    if (level.evaluationSettings) {
-      evaluationFormData.value = { ...level.evaluationSettings }
-    } else {
-      // 重置为默认值
-      evaluationFormData.value = {
-        timeLimit: '',
-        studentTaskFile: [],
-        evaluationFile: [],
-        passJudgment: 'output_compare',
-        spaceHandling: 'no_ignore',
-        scoreRule: 'all_pass',
-        caseType: 'text',
-        testCases: [],
-      }
-    }
-  }
-}
-
-// 保存任务关卡表单数据
-const saveTaskLevelFormData = (id: string) => {
-  const level = taskLevels.value.find(l => l.id === id)
-  if (level) {
-    Object.assign(level, taskLevelFormData.value)
-    // 保存评测设置数据
-    level.evaluationSettings = { ...evaluationFormData.value }
-  }
-}
-
-// 学习资源文件上传处理
-const handleLearningResourceUpload = (info: any) => {
-  const { file, fileList } = info
-  
-  if (file.status === 'done') {
-    message.success(`${file.name} 文件上传成功`)
-  } else if (file.status === 'error') {
-    message.error(`${file.name} 文件上传失败`)
-  }
-  
-  taskLevelFormData.value.learningResources = fileList.map((f: any) => ({
-    uid: f.uid,
-    name: f.name,
-    status: f.status,
-    url: f.response?.url || f.url,
-  }))
-  
-  // 触发表单验证
-  taskLevelFormRef.value?.validateFields(['learningResources'])
-}
-
-// 保存任务关卡
-const saveTaskLevel = async () => {
-  try {
-    // 对于内核链接任务，只验证关联任务表单；其他类型需要验证评测设置
-    if (isKernelTask.value) {
-      await taskLevelFormRef.value?.validate()
-    } else {
-      await Promise.all([
-        taskLevelFormRef.value?.validate(),
-        evaluationFormRef.value?.validate()
-      ])
-    }
-    if (selectedTaskLevelId.value) {
-      saveTaskLevelFormData(selectedTaskLevelId.value)
-    }
-    message.success('保存成功')
-  } catch (error) {
-    message.error('请完善必填信息')
-  }
-}
-
-// 重置任务关卡表单
-const resetTaskLevel = () => {
-  if (selectedTaskLevelId.value) {
-    loadTaskLevelFormData(selectedTaskLevelId.value)
-  }
-  // 清除所有表单校验
-  taskLevelFormRef.value?.clearValidate()
-  evaluationFormRef.value?.clearValidate()
-  message.info('已重置')
-}
-
-// 学员任务文件上传处理
-const handleStudentTaskFileUpload = (info: any) => {
-  const { fileList } = info
-  evaluationFormData.value.studentTaskFile = fileList.map((f: any) => ({
-    uid: f.uid,
-    name: f.name,
-    status: f.status,
-    url: f.response?.url || f.url,
-  }))
-  
-  // 触发表单验证
-  evaluationFormRef.value?.validateFields(['studentTaskFile'])
-}
-
-// 评测执行文件上传处理
-const handleEvaluationFileUpload = (info: any) => {
-  const { fileList } = info
-  evaluationFormData.value.evaluationFile = fileList.map((f: any) => ({
-    uid: f.uid,
-    name: f.name,
-    status: f.status,
-    url: f.response?.url || f.url,
-  }))
-  
-  // 触发表单验证
-  evaluationFormRef.value?.validateFields(['evaluationFile'])
-}
-
-// 新增测试集
-const addTestCase = () => {
-  evaluationFormData.value.testCases.push({
-    id: Date.now().toString(),
-    input: '',
-    output: '',
-  })
-}
-
-// 删除测试集
-const removeTestCase = (id: string) => {
-  const index = evaluationFormData.value.testCases.findIndex(tc => tc.id === id)
-  if (index !== -1) {
-    evaluationFormData.value.testCases.splice(index, 1)
-    message.success('删除成功')
-  }
-}
-
-// 一键删除测试用例
-const clearAllTestCases = () => {
-  evaluationFormData.value.testCases = []
-  message.success('已清空所有测试用例')
-}
-
-// 下载测试用例模板
-const downloadTemplate = () => {
-  message.info('下载功能开发中...')
-}
-
-// 批量上传测试用例
-const batchUploadTestCases = () => {
-  message.info('批量上传功能开发中...')
 }
 
 // 滚动到顶部
