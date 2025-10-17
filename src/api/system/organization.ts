@@ -38,6 +38,55 @@ interface OrganizationModel {
   children?: OrganizationModel[]
 }
 
+/**
+ * 原始组织接口返回数据类型
+ */
+interface RawOrganizationModel {
+  orgID: number
+  orgName: string
+  orgCode: string
+  parentOrgID: number
+  parentOrgName: string
+  status: number
+  sortID: number
+  attachedOrgId?: number
+  isOrg: number
+  isVirOrg: number
+  orglevel: number
+  orgTypeID?: string
+  logo?: string
+  orgSEQ: string
+}
+
+/**
+ * 组织列表请求参数
+ */
+interface OrganizationListParams {
+  limit: number
+  orderbyFiled?: string
+  page: number
+  startNum: number
+}
+
+/**
+ * 组织列表响应数据
+ */
+interface OrganizationListResponse {
+  total: number
+  pageSize: number
+  currentPage: number
+  list: RawOrganizationModel[]
+}
+
+/**
+ * 外部 API 响应格式（用于 result 而不是 code）
+ */
+interface ExternalApiResponse<T = any> {
+  result: number
+  msg: string
+  data?: T
+}
+
 type OrganizationParams = Partial<Omit<OrganizationModel, 'id' | 'children'>>
 
 /**
@@ -45,6 +94,16 @@ type OrganizationParams = Partial<Omit<OrganizationModel, 'id' | 'children'>>
  */
 export async function getOrganizationTreeApi(params?: OrganizationParams) {
   return usePost<OrganizationModel[]>('/organization/tree', params)
+}
+
+/**
+ * 获取所有组织列表（真实接口）
+ * 注意：开发环境下会通过 Vite 代理转发到 http://101.200.13.193:8080
+ */
+export async function getAllOrganizationListApi(params: OrganizationListParams) {
+  return usePost<OrganizationListResponse>('/web/api/user/allOrgList', params,{
+    customDev:true,
+  })
 }
 
 /**
@@ -78,5 +137,9 @@ export async function deleteOrganizationApi(id: string | number) {
 export type {
   OrganizationModel,
   OrganizationParams,
+  RawOrganizationModel,
+  OrganizationListParams,
+  OrganizationListResponse,
+  ExternalApiResponse,
 }
 

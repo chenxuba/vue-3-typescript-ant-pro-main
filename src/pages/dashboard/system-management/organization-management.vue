@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { Empty } from 'ant-design-vue'
+import { Empty, message } from 'ant-design-vue'
 import { ApartmentOutlined } from '@ant-design/icons-vue'
+import { getAllOrganizationListApi, type RawOrganizationModel, type OrganizationModel } from '@/api/system/organization'
 
 defineOptions({
   name: 'OrganizationManagement',
@@ -19,6 +20,8 @@ const expandedKeys = ref<(string | number)[]>([])
 const selectedKeys = ref<(string | number)[]>([])
 // 搜索关键词
 const searchKeyword = ref<string>('')
+// 加载状态
+const loading = ref<boolean>(false)
 
 // 递归获取所有节点的key（用于默认展开所有节点）
 const getAllKeys = (data: any[]): (string | number)[] => {
@@ -108,6 +111,54 @@ const getMatchedKeys = (nodes: any[], keyword: string): (string | number)[] => {
   return [...new Set(keys)] // 去重
 }
 
+// 将原始 API 数据转换为组织模型
+const convertRawToOrganization = (raw: RawOrganizationModel): OrganizationModel => {
+  return {
+    id: raw.orgID,
+    name: raw.orgName,
+    code: raw.orgCode,
+    parentId: raw.parentOrgID || null,
+    parentName: raw.parentOrgName,
+    isActive: raw.status === 1,
+    order: raw.sortID,
+    isIndependentTraining: raw.isOrg === 1,
+    isVirtual: raw.isVirOrg === 1,
+  }
+}
+
+// 将扁平列表转换为树形结构
+const buildTree = (list: OrganizationModel[]): OrganizationModel[] => {
+  const map = new Map<string | number, OrganizationModel>()
+  const roots: OrganizationModel[] = []
+  
+  // 先将所有节点放入 map
+  list.forEach((item) => {
+    map.set(item.id!, { ...item, children: [] })
+  })
+  
+  // 构建树形结构
+  list.forEach((item) => {
+    const node = map.get(item.id!)
+    if (!node) return
+    
+    if (item.parentId && map.has(item.parentId)) {
+      // 有父节点，添加到父节点的 children 中
+      const parent = map.get(item.parentId)
+      if (parent) {
+        if (!parent.children) {
+          parent.children = []
+        }
+        parent.children.push(node)
+      }
+    } else {
+      // 没有父节点或父节点不存在，作为根节点
+      roots.push(node)
+    }
+  })
+  
+  return roots
+}
+
 // 监听搜索关键词变化
 watch(searchKeyword, (newKeyword) => {
   if (!newKeyword || newKeyword.trim() === '') {
@@ -123,104 +174,50 @@ watch(searchKeyword, (newKeyword) => {
   }
 })
 
-// 初始化数据（模拟数据）
-const initData = () => {
-  const mockData = [
-    {
-      id: '1',
-      name: '计算机网络信息中心',
-      code: '241711',
-      parentId: null,
-      parentName: '中国科学院',
-      isActive: true,
-      order: 0,
-      isIndependentTraining: true,
-      isVirtual: false,
-      children: [
-        {
-          id: '1-1',
-          name: '大数据技术与应用发展部',
-          code: '241711001',
-          parentId: '1',
-          parentName: '计算机网络信息中心',
-          isActive: true,
-          order: 1,
-          isIndependentTraining: false,
-          isVirtual: false,
-          children: [
-            {
-              id: '1-1-1',
-              name: '党群办公室',
-              code: '241711001001',
-              parentId: '1-1',
-              parentName: '大数据技术与应用发展部',
-              isActive: true,
-              order: 1,
-              isIndependentTraining: false,
-              isVirtual: false,
-            },
-          ],
-        },
-        {
-          id: '1-2',
-          name: '高性能计算技术与应用发展部',
-          code: '241711002',
-          parentId: '1',
-          parentName: '计算机网络信息中心',
-          isActive: true,
-          order: 2,
-          isIndependentTraining: false,
-          isVirtual: false,
-        },
-        {
-          id: '1-3',
-          name: '管理信息化技术与应用发展部',
-          code: '241711003',
-          parentId: '1',
-          parentName: '计算机网络信息中心',
-          isActive: true,
-          order: 3,
-          isIndependentTraining: false,
-          isVirtual: false,
-          children: [
-            {
-              id: '1-3-1',
-              name: '广州中心',
-              code: '241711003001',
-              parentId: '1-3',
-              parentName: '管理信息化技术与应用发展部',
-              isActive: true,
-              order: 1,
-              isIndependentTraining: false,
-              isVirtual: false,
-            },
-            {
-              id: '1-3-2',
-              name: '基地办公室',
-              code: '241711003002',
-              parentId: '1-3',
-              parentName: '管理信息化技术与应用发展部',
-              isActive: true,
-              order: 2,
-              isIndependentTraining: false,
-              isVirtual: false,
-            },
-          ],
-        },
-      ],
-    },
-  ]
-  
-  // 保存原始数据
-  originalTreeData.value = deepClone(mockData)
-  treeData.value = deepClone(mockData)
-  
-  // 默认展开所有节点
-  expandedKeys.value = getAllKeys(treeData.value)
-  // 默认选中第一个节点
-  if (treeData.value.length > 0) {
-    selectedKeys.value = [treeData.value[0].id!]
-    selectedOrg.value = treeData.value[0]
+// 初始化数据（调用真实接口）
+const initData = async () => {
+  try {
+    loading.value = true
+    
+    // 调用真实接口获取组织列表
+    const response = await getAllOrganizationListApi({
+      limit: 10000, // 获取所有数据
+      page: 1,
+      startNum: 0,
+      orderbyFiled: 'orgCode:asc',
+    })
+    
+    // 根据接口返回的格式，数据在 response.data 中
+    // ResponseBody 格式: { code: number, data: OrganizationListResponse, msg: string }
+    if (response && response.data && response.data.list) {
+      // 转换数据格式
+      const organizations = response.data.list.map(convertRawToOrganization)
+      
+      // 构建树形结构
+      const treeStructure = buildTree(organizations)
+      
+      // 保存原始数据
+      originalTreeData.value = deepClone(treeStructure)
+      treeData.value = deepClone(treeStructure)
+      
+      // 默认展开所有节点
+      expandedKeys.value = getAllKeys(treeData.value)
+      
+      // 默认选中第一个节点
+      if (treeData.value.length > 0) {
+        selectedKeys.value = [treeData.value[0].id!]
+        selectedOrg.value = treeData.value[0]
+      }
+      
+      message.success(`成功加载 ${organizations.length} 个组织`)
+    } else {
+      message.warning('未获取到组织数据')
+    }
+  } catch (error) {
+    console.error('获取组织列表失败:', error)
+    message.error('获取组织列表失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -263,6 +260,7 @@ onMounted(() => {
             placeholder="搜索组织名称..." 
             allow-clear
             class="modern-search"
+            :disabled="loading"
           >
             <template #prefix>
               <SearchOutlined />
@@ -270,7 +268,11 @@ onMounted(() => {
           </a-input>
         </div>
 
-        <div v-if="searchKeyword && treeData.length === 0" class="empty-search">
+        <div v-if="loading" class="loading-container">
+          <a-spin size="large" tip="加载中..." />
+        </div>
+
+        <div v-else-if="searchKeyword && treeData.length === 0" class="empty-search">
           <a-empty 
             description="未找到匹配的组织"
             :image="Empty.PRESENTED_IMAGE_SIMPLE"
@@ -332,7 +334,7 @@ onMounted(() => {
               {{ selectedOrg.isActive ? '是' : '否' }}
             </a-descriptions-item>
             <a-descriptions-item label="序号">
-              {{ selectedOrg.order }}
+              {{ selectedOrg.order|| '-' }}
             </a-descriptions-item>
             <a-descriptions-item label="是否独立组织培训机构">
               {{ selectedOrg.isIndependentTraining ? '是' : '否' }}
@@ -376,6 +378,8 @@ onMounted(() => {
 
   .left-panel {
     width: 320px;
+    height: fit-content;
+    max-height: calc(100vh - 200px);
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 16px;
     padding: 0;
@@ -486,6 +490,33 @@ onMounted(() => {
         :deep(.ant-input-prefix) {
           color: rgba(102, 126, 234, 0.6);
           font-size: 16px;
+        }
+      }
+    }
+
+    .loading-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: rgba(255, 255, 255, 0.95);
+      margin: 0 12px 16px;
+      border-radius: 12px;
+      position: relative;
+      z-index: 1;
+
+      :deep(.ant-spin) {
+        .ant-spin-text {
+          color: rgba(0, 0, 0, 0.65);
+          font-size: 14px;
+          margin-top: 8px;
+        }
+
+        .ant-spin-dot {
+          .ant-spin-dot-item {
+            background-color: #667eea;
+          }
         }
       }
     }
