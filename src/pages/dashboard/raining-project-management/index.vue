@@ -282,7 +282,7 @@ const handleDelete = (record: any) => {
 <style scoped lang="less">
 .raining-project-management {
   background: #f0f2f5;
-  min-height: 100vh;
+  // min-height: 100vh;
 
   .search-section {
     background: #fff;
