@@ -98,6 +98,20 @@ export function useTaskLevel() {
     return level?.type === 'kernel'
   })
 
+  // 判断当前任务类型是否为选择题
+  const isChoiceTask = computed(() => {
+    if (!selectedTaskLevelId.value) return false
+    const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+    return level?.type === 'choice'
+  })
+
+  // 判断当前任务类型是否为编程任务
+  const isProgrammingTask = computed(() => {
+    if (!selectedTaskLevelId.value) return false
+    const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+    return level?.type === 'programming'
+  })
+
   // 添加任务关卡
   const addTaskLevel = (type: 'programming' | 'choice' | 'kernel') => {
     const typeNames = {
@@ -217,10 +231,12 @@ export function useTaskLevel() {
   // 保存任务关卡
   const saveTaskLevel = async () => {
     try {
-      // 对于内核链接任务，只验证关联任务表单；其他类型需要验证评测设置
-      if (isKernelTask.value) {
+      // 根据任务类型验证不同的表单
+      if (isKernelTask.value || isChoiceTask.value) {
+        // 内核链接任务和选择题任务只验证关联任务表单
         await taskLevelFormRef.value?.validate()
-      } else {
+      } else if (isProgrammingTask.value) {
+        // 编程任务需要验证关联任务表单和评测设置表单
         await Promise.all([
           taskLevelFormRef.value?.validate(),
           evaluationFormRef.value?.validate()
@@ -324,6 +340,8 @@ export function useTaskLevel() {
     
     // 计算属性
     isKernelTask,
+    isChoiceTask,
+    isProgrammingTask,
     
     // 方法
     addTaskLevel,

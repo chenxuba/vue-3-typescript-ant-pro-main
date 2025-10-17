@@ -145,6 +145,8 @@ const {
   taskLevelFormRules,
   evaluationFormRules,
   isKernelTask,
+  isChoiceTask,
+  isProgrammingTask,
   addTaskLevel,
   deleteTaskLevel,
   selectTaskLevel,
@@ -623,8 +625,15 @@ const handleNext = async () => {
                     </a-form>
                   </a-tab-pane>
 
-                  <!-- 评测设置标签页 -->
-                  <a-tab-pane key="evaluation" tab="评测设置" v-if="!isKernelTask">
+                  <!-- 题目标签页（选择题任务） -->
+                  <a-tab-pane key="questions" tab="题目" v-if="isChoiceTask">
+                    <div class="questions-content">
+                      <a-empty description="题目功能开发中..." />
+                    </div>
+                  </a-tab-pane>
+
+                  <!-- 评测设置标签页（编程任务） -->
+                  <a-tab-pane key="evaluation" tab="评测设置" v-if="isProgrammingTask">
                     <div class="evaluation-content">
                       <!-- 评测文件 -->
                       <div class="evaluation-section">
@@ -1107,6 +1116,13 @@ const handleNext = async () => {
           }
 
           .empty-evaluation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+          }
+
+          .questions-content {
             display: flex;
             align-items: center;
             justify-content: center;
