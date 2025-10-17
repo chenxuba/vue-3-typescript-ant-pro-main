@@ -140,7 +140,13 @@ const handleCreate = () => {
 
 // 统计
 const handleStatistics = (record: any) => {
-  console.log('统计', record)
+  router.push({
+    path: '/dashboard/raining-project-management/statistics',
+    query: {
+      id: record.key,
+      name: record.projectName,
+    },
+  })
 }
 
 // 发布/取消发布

@@ -63,6 +63,16 @@ export default [
           hideInMenu: true,
         },
       },
+      {
+        path: '/dashboard/raining-project-management/statistics',
+        name: 'ProjectStatistics',
+        component: () => import('~/pages/dashboard/raining-project-management/statistics.vue'),
+        meta: {
+          title: '实训项目管理详情',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
+        },
+      },
       
     ],
   },
