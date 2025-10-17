@@ -106,8 +106,7 @@ const handleNext = () => {
   } else if (projectType.value === 2) {
     router.push('/dashboard/raining-project-management/config-jupyter-notebook')
   } else if (projectType.value === 3) {
-    // TODO: 跳转到JupyterLab配置页面
-    console.log('JupyterLab环境配置页面待开发')
+    router.push('/dashboard/raining-project-management/config-jupyter-lab')
   }
 }
 

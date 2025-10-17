@@ -569,7 +569,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
     <div class="page-content">
       <!-- 步骤条 -->
       <div class="steps-container">
-        <a-steps :current="currentStep">
+        <a-steps :current="currentStep" class="custom-steps">
           <a-step title="基本信息" />
           <a-step title="代码仓库" />
           <a-step title="任务关卡" />
@@ -1287,6 +1287,10 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
     .steps-container {
       margin-bottom: 32px;
       padding: 0 100px;
+      .custom-steps {
+        max-width: 800px;
+        margin: 0 auto;
+      }
     }
 
     .section-title{

@@ -53,6 +53,16 @@ export default [
           hideInMenu: true,
         },
       },
+      {
+        path: '/dashboard/raining-project-management/config-jupyter-lab',
+        name: 'ConfigJupyterLab',
+        component: () => import('~/pages/dashboard/raining-project-management/config-jupyter-lab.vue'),
+        meta: {
+          title: 'JupyterLab环境实训项目配置',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
+        },
+      },
       
     ],
   },
