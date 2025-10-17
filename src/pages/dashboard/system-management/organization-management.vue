@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { Empty, message } from 'ant-design-vue'
-import { ApartmentOutlined } from '@ant-design/icons-vue'
+import { ApartmentOutlined,SearchOutlined, InfoCircleOutlined,  } from '@ant-design/icons-vue'
 import { getAllOrganizationListApi, type RawOrganizationModel, type OrganizationModel } from '@/api/system/organization'
-
+import {  } from '@ant-design/icons-vue'
 defineOptions({
   name: 'OrganizationManagement',
 })
@@ -282,7 +282,7 @@ onMounted(() => {
         <div v-else class="tree-container">
           <div v-if="searchKeyword" class="search-result-tip">
             <InfoCircleOutlined />
-            <span>搜索到 {{ getAllKeys(treeData).length }} 个匹配结果</span>
+            <span class="ml-6px">搜索到 {{ getAllKeys(treeData).length }} 个匹配结果</span>
           </div>
           
           <a-tree
