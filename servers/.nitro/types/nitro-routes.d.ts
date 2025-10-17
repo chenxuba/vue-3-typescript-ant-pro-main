@@ -49,6 +49,48 @@ declare module "nitropack/types" {
     '/organization/tree': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/organization/tree').default>>>>
     }
+    '/personnel/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/personnel/[id].get').default>>>>
+    }
+    '/personnel/:id/status': {
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/personnel/[id]/status.put').default>>>>
+    }
+    '/personnel/list': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/personnel/list.post').default>>>>
+    }
+    '/role-assignment/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role-assignment/[id].get').default>>>>
+    }
+    '/role-assignment/batch-delete': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role-assignment/batch-delete.post').default>>>>
+    }
+    '/role-assignment/create': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role-assignment/create.post').default>>>>
+    }
+    '/role-assignment/list': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role-assignment/list.post').default>>>>
+    }
+    '/role/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/[id].put').default>>>>
+    }
+    '/role/:id/permissions': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/[id]/permissions.get').default>>>>
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/[id]/permissions.post').default>>>>
+    }
+    '/role/:id/status': {
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/[id]/status.put').default>>>>
+    }
+    '/role/batch-delete': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/batch-delete.post').default>>>>
+    }
+    '/role/create': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/create.post').default>>>>
+    }
+    '/role/list': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/role/list.post').default>>>>
+    }
     '/test': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/test.delete').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/test.post').default>>>>

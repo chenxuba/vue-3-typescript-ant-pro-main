@@ -909,18 +909,34 @@ const _lazy_gyNdlQ = () => Promise.resolve().then(function () { return _401$1; }
 const _lazy_zC9CDx = () => Promise.resolve().then(function () { return _403$1; });
 const _lazy_o1GHsQ = () => Promise.resolve().then(function () { return _500$1; });
 const _lazy_cZKuAY = () => Promise.resolve().then(function () { return index$3; });
-const _lazy__rLm9o = () => Promise.resolve().then(function () { return _id__delete$1; });
+const _lazy__rLm9o = () => Promise.resolve().then(function () { return _id__delete$3; });
 const _lazy_NSYZIK = () => Promise.resolve().then(function () { return basicList_post$1; });
 const _lazy__YR0oB = () => Promise.resolve().then(function () { return consultList_post$1; });
-const _lazy_7VGE2v = () => Promise.resolve().then(function () { return create_post$1; });
+const _lazy_7VGE2v = () => Promise.resolve().then(function () { return create_post$5; });
 const _lazy_WrNzvn = () => Promise.resolve().then(function () { return crudTable_post$1; });
 const _lazy_UFJepS = () => Promise.resolve().then(function () { return index_post$1; });
 const _lazy_iyIZYs = () => Promise.resolve().then(function () { return index_put$1; });
 const _lazy_1y92kW = () => Promise.resolve().then(function () { return login_post$1; });
 const _lazy_mpi3sf = () => Promise.resolve().then(function () { return logout$1; });
 const _lazy_DwmP7_ = () => Promise.resolve().then(function () { return index$1; });
-const _lazy_A13qtQ = () => Promise.resolve().then(function () { return _id__get$1; });
+const _lazy_A13qtQ = () => Promise.resolve().then(function () { return _id__get$7; });
 const _lazy_HG0bS0 = () => Promise.resolve().then(function () { return tree$1; });
+const _lazy_JwQ4Br = () => Promise.resolve().then(function () { return _id__get$5; });
+const _lazy_dfp2tI = () => Promise.resolve().then(function () { return status_put$3; });
+const _lazy_4THXJ_ = () => Promise.resolve().then(function () { return list_post$5; });
+const _lazy_CridtN = () => Promise.resolve().then(function () { return _id__get$3; });
+const _lazy_CNNrec = () => Promise.resolve().then(function () { return batchDelete_post$3; });
+const _lazy_nXOHqB = () => Promise.resolve().then(function () { return create_post$3; });
+const _lazy_JD1wA7 = () => Promise.resolve().then(function () { return list_post$3; });
+const _lazy_V38yBI = () => Promise.resolve().then(function () { return _id__delete$1; });
+const _lazy_QQyUSE = () => Promise.resolve().then(function () { return _id__get$1; });
+const _lazy_SPPR86 = () => Promise.resolve().then(function () { return _id__put$1; });
+const _lazy_qIWuek = () => Promise.resolve().then(function () { return permissions_get$1; });
+const _lazy_M2ig9h = () => Promise.resolve().then(function () { return permissions_post$1; });
+const _lazy_3yyIjM = () => Promise.resolve().then(function () { return status_put$1; });
+const _lazy_XqQYN3 = () => Promise.resolve().then(function () { return batchDelete_post$1; });
+const _lazy_3AKOu8 = () => Promise.resolve().then(function () { return create_post$1; });
+const _lazy_tvNxaf = () => Promise.resolve().then(function () { return list_post$1; });
 const _lazy_a_2pXV = () => Promise.resolve().then(function () { return test_delete$1; });
 const _lazy_uEKqeI = () => Promise.resolve().then(function () { return test_post$1; });
 const _lazy_4F33dK = () => Promise.resolve().then(function () { return test_put$1; });
@@ -943,6 +959,22 @@ const handlers = [
   { route: '/menu', handler: _lazy_DwmP7_, lazy: true, middleware: false, method: undefined },
   { route: '/organization/:id', handler: _lazy_A13qtQ, lazy: true, middleware: false, method: "get" },
   { route: '/organization/tree', handler: _lazy_HG0bS0, lazy: true, middleware: false, method: undefined },
+  { route: '/personnel/:id', handler: _lazy_JwQ4Br, lazy: true, middleware: false, method: "get" },
+  { route: '/personnel/:id/status', handler: _lazy_dfp2tI, lazy: true, middleware: false, method: "put" },
+  { route: '/personnel/list', handler: _lazy_4THXJ_, lazy: true, middleware: false, method: "post" },
+  { route: '/role-assignment/:id', handler: _lazy_CridtN, lazy: true, middleware: false, method: "get" },
+  { route: '/role-assignment/batch-delete', handler: _lazy_CNNrec, lazy: true, middleware: false, method: "post" },
+  { route: '/role-assignment/create', handler: _lazy_nXOHqB, lazy: true, middleware: false, method: "post" },
+  { route: '/role-assignment/list', handler: _lazy_JD1wA7, lazy: true, middleware: false, method: "post" },
+  { route: '/role/:id', handler: _lazy_V38yBI, lazy: true, middleware: false, method: "delete" },
+  { route: '/role/:id', handler: _lazy_QQyUSE, lazy: true, middleware: false, method: "get" },
+  { route: '/role/:id', handler: _lazy_SPPR86, lazy: true, middleware: false, method: "put" },
+  { route: '/role/:id/permissions', handler: _lazy_qIWuek, lazy: true, middleware: false, method: "get" },
+  { route: '/role/:id/permissions', handler: _lazy_M2ig9h, lazy: true, middleware: false, method: "post" },
+  { route: '/role/:id/status', handler: _lazy_3yyIjM, lazy: true, middleware: false, method: "put" },
+  { route: '/role/batch-delete', handler: _lazy_XqQYN3, lazy: true, middleware: false, method: "post" },
+  { route: '/role/create', handler: _lazy_3AKOu8, lazy: true, middleware: false, method: "post" },
+  { route: '/role/list', handler: _lazy_tvNxaf, lazy: true, middleware: false, method: "post" },
   { route: '/test', handler: _lazy_a_2pXV, lazy: true, middleware: false, method: "delete" },
   { route: '/test', handler: _lazy_uEKqeI, lazy: true, middleware: false, method: "post" },
   { route: '/test', handler: _lazy_4F33dK, lazy: true, middleware: false, method: "put" },
@@ -1258,7 +1290,7 @@ const index$3 = /*#__PURE__*/Object.freeze({
   default: index$2
 });
 
-const _id__delete = eventHandler((event) => {
+const _id__delete$2 = eventHandler((event) => {
   const id = event.context.params.id;
   if (typeof id !== "number") {
     setResponseStatus(event, 403);
@@ -1273,9 +1305,9 @@ const _id__delete = eventHandler((event) => {
   };
 });
 
-const _id__delete$1 = /*#__PURE__*/Object.freeze({
+const _id__delete$3 = /*#__PURE__*/Object.freeze({
   __proto__: null,
-  default: _id__delete
+  default: _id__delete$2
 });
 
 const basicList_post = eventHandler(async (_event) => {
@@ -1431,7 +1463,7 @@ const consultList_post$1 = /*#__PURE__*/Object.freeze({
   default: consultList_post
 });
 
-const create_post = eventHandler(async (event) => {
+const create_post$4 = eventHandler(async (event) => {
   const body = await readBody(event);
   console.log(body);
   return {
@@ -1440,9 +1472,9 @@ const create_post = eventHandler(async (event) => {
   };
 });
 
-const create_post$1 = /*#__PURE__*/Object.freeze({
+const create_post$5 = /*#__PURE__*/Object.freeze({
   __proto__: null,
-  default: create_post
+  default: create_post$4
 });
 
 const crudTable_post = eventHandler(async (_event) => {
@@ -2065,7 +2097,7 @@ const index$1 = /*#__PURE__*/Object.freeze({
   default: index
 });
 
-const _id__get = defineEventHandler((event) => {
+const _id__get$6 = defineEventHandler((event) => {
   const id = getRouterParam(event, "id");
   const mockData = {
     "1": {
@@ -2094,9 +2126,9 @@ const _id__get = defineEventHandler((event) => {
   return mockData[id || "1"] || mockData["1"];
 });
 
-const _id__get$1 = /*#__PURE__*/Object.freeze({
+const _id__get$7 = /*#__PURE__*/Object.freeze({
   __proto__: null,
-  default: _id__get
+  default: _id__get$6
 });
 
 const tree = defineEventHandler(() => {
@@ -2190,6 +2222,617 @@ const tree = defineEventHandler(() => {
 const tree$1 = /*#__PURE__*/Object.freeze({
   __proto__: null,
   default: tree
+});
+
+const _id__get$4 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const mockPersonnel = {
+    id,
+    userCode: "ceshi123456",
+    userName: "\u674E\u6E05\u7167",
+    organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+    organizationId: "1-1",
+    isNaturalPerson: true,
+    phone: "13812345678",
+    email: "ceshizhanghao@qq.com",
+    status: true
+  };
+  return {
+    code: 200,
+    message: "success",
+    data: mockPersonnel
+  };
+});
+
+const _id__get$5 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__get$4
+});
+
+const status_put$2 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: body.status ? "\u542F\u7528\u6210\u529F" : "\u7981\u7528\u6210\u529F",
+    data: {
+      id,
+      status: body.status
+    }
+  };
+});
+
+const status_put$3 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: status_put$2
+});
+
+const list_post$4 = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const mockPersonnelData = [
+    {
+      id: "1",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      organizationId: "1-1",
+      isNaturalPerson: true,
+      phone: "",
+      email: "ceshizhanghao@qq.com",
+      status: true
+    },
+    {
+      id: "2",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      organizationId: "1-1",
+      isNaturalPerson: true,
+      phone: "",
+      email: "ceshizhanghao@qq.com",
+      status: false
+    },
+    {
+      id: "3",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      organizationId: "1-1",
+      isNaturalPerson: true,
+      phone: "13812345678",
+      email: "ceshizhanghao@qq.com",
+      status: true
+    },
+    {
+      id: "4",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      organizationId: "1-1",
+      isNaturalPerson: true,
+      phone: "13812345678",
+      email: "ceshizhanghao@qq.com",
+      status: true
+    },
+    {
+      id: "5",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      organizationId: "1-1",
+      isNaturalPerson: true,
+      phone: "13812345678",
+      email: "ceshizhanghao@qq.com",
+      status: true
+    },
+    {
+      id: "6",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      organizationId: "1-1",
+      isNaturalPerson: true,
+      phone: "",
+      email: "ceshizhanghao@qq.com",
+      status: true
+    },
+    {
+      id: "7",
+      userCode: "test789012",
+      userName: "\u738B\u7EF4",
+      organization: "\u9AD8\u6027\u80FD\u8BA1\u7B97\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      organizationId: "1-2",
+      isNaturalPerson: true,
+      phone: "13987654321",
+      email: "wangwei@qq.com",
+      status: true
+    },
+    {
+      id: "8",
+      userCode: "test345678",
+      userName: "\u675C\u752B",
+      organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      organizationId: "1-3",
+      isNaturalPerson: false,
+      phone: "13765432109",
+      email: "dufu@qq.com",
+      status: true
+    },
+    {
+      id: "9",
+      userCode: "user111222",
+      userName: "\u767D\u5C45\u6613",
+      organization: "\u5E7F\u5DDE\u4E2D\u5FC3",
+      organizationId: "1-3-1",
+      isNaturalPerson: true,
+      phone: "13654321098",
+      email: "baijuyi@qq.com",
+      status: false
+    },
+    {
+      id: "10",
+      userCode: "admin999888",
+      userName: "\u674E\u767D",
+      organization: "\u515A\u7FA4\u529E\u516C\u5BA4",
+      organizationId: "1-1-1",
+      isNaturalPerson: true,
+      phone: "13543210987",
+      email: "libai@qq.com",
+      status: true
+    }
+  ];
+  let filteredData = [...mockPersonnelData];
+  if (body.organizationId) {
+    filteredData = filteredData.filter((item) => item.organizationId === body.organizationId);
+  }
+  if (body.userCode) {
+    filteredData = filteredData.filter(
+      (item) => item.userCode.toLowerCase().includes(body.userCode.toLowerCase())
+    );
+  }
+  if (body.userName) {
+    filteredData = filteredData.filter(
+      (item) => item.userName.includes(body.userName)
+    );
+  }
+  if (body.organization) {
+    filteredData = filteredData.filter(
+      (item) => item.organization.includes(body.organization)
+    );
+  }
+  const pageNum = body.pageNum || 1;
+  const pageSize = body.pageSize || 10;
+  const startIndex = (pageNum - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedData = filteredData.slice(startIndex, endIndex);
+  return {
+    code: 200,
+    message: "success",
+    data: {
+      list: paginatedData,
+      total: filteredData.length
+    }
+  };
+});
+
+const list_post$5 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: list_post$4
+});
+
+const _id__get$2 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const mockData = {
+    id,
+    userCode: "ceshi123456",
+    userName: "\u674E\u6E05\u7167",
+    organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+    roles: ["\u5B66\u5458"],
+    roleIds: ["1"]
+  };
+  return {
+    code: 200,
+    message: "success",
+    data: mockData
+  };
+});
+
+const _id__get$3 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__get$2
+});
+
+const batchDelete_post$2 = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  console.log("\u6279\u91CF\u5220\u9664\u89D2\u8272\u5206\u914D:", body.ids);
+  return {
+    code: 200,
+    message: "\u6279\u91CF\u5220\u9664\u6210\u529F",
+    data: null
+  };
+});
+
+const batchDelete_post$3 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: batchDelete_post$2
+});
+
+const create_post$2 = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  console.log("\u521B\u5EFA\u89D2\u8272\u5206\u914D:", body);
+  return {
+    code: 200,
+    message: "\u89D2\u8272\u5206\u914D\u521B\u5EFA\u6210\u529F",
+    data: {
+      id: Date.now().toString(),
+      ...body
+    }
+  };
+});
+
+const create_post$3 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: create_post$2
+});
+
+const list_post$2 = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const mockData = [
+    {
+      id: "1",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u5B66\u5458"],
+      roleIds: ["1"]
+    },
+    {
+      id: "2",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u5B66\u5458"],
+      roleIds: ["1"]
+    },
+    {
+      id: "3",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u5B66\u5458"],
+      roleIds: ["1"]
+    },
+    {
+      id: "4",
+      userCode: "ceshi123456",
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u5B66\u5458"],
+      roleIds: ["1"]
+    },
+    {
+      id: "5",
+      userCode: "user001",
+      userName: "\u5F20\u4E09",
+      organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u7CFB\u7EDF\u7BA1\u7406\u5458", "\u9879\u76EE\u534F\u8C03\u5458"],
+      roleIds: ["2", "4"]
+    },
+    {
+      id: "6",
+      userCode: "user002",
+      userName: "\u738B\u82B3",
+      organization: "\u9AD8\u6027\u80FD\u8BA1\u7B97\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u90E8\u95E8\u7BA1\u7406\u5458"],
+      roleIds: ["3"]
+    },
+    {
+      id: "7",
+      userCode: "user003",
+      userName: "\u8D75\u4E3D",
+      organization: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+      roles: ["\u5BA1\u6838\u5458", "\u5B66\u5458"],
+      roleIds: ["5", "1"]
+    },
+    {
+      id: "8",
+      userCode: "user004",
+      userName: "\u5B59\u6885",
+      organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u5B9E\u8BAD\u9879\u76EE\u7BA1\u7406\u5458"],
+      roleIds: ["1"]
+    },
+    {
+      id: "9",
+      userCode: "user005",
+      userName: "\u5468\u5F3A",
+      organization: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u90E8\u95E8\u7BA1\u7406\u5458", "\u5BA1\u6838\u5458"],
+      roleIds: ["3", "5"]
+    },
+    {
+      id: "10",
+      userCode: "user006",
+      userName: "\u5434\u9759",
+      organization: "\u9AD8\u6027\u80FD\u8BA1\u7B97\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u5B66\u5458"],
+      roleIds: ["1"]
+    }
+  ];
+  const additionalData = [];
+  for (let i = 11; i <= 123; i++) {
+    additionalData.push({
+      id: String(i),
+      userCode: `ceshi123456`,
+      userName: "\u674E\u6E05\u7167",
+      organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      roles: ["\u5B66\u5458"],
+      roleIds: ["1"]
+    });
+  }
+  const allData = [...mockData, ...additionalData];
+  let filteredData = [...allData];
+  if (body.userName) {
+    filteredData = filteredData.filter(
+      (item) => item.userName.includes(body.userName)
+    );
+  }
+  if (body.roleName) {
+    filteredData = filteredData.filter(
+      (item) => item.roles.some((role) => role.includes(body.roleName))
+    );
+  }
+  const total = filteredData.length;
+  const pageNum = body.pageNum || 1;
+  const pageSize = body.pageSize || 10;
+  const start = (pageNum - 1) * pageSize;
+  const end = start + pageSize;
+  return {
+    code: 200,
+    message: "success",
+    data: {
+      list: filteredData.slice(start, end),
+      total
+    }
+  };
+});
+
+const list_post$3 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: list_post$2
+});
+
+const _id__delete = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  return {
+    code: 200,
+    message: "\u5220\u9664\u6210\u529F",
+    data: { id }
+  };
+});
+
+const _id__delete$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__delete
+});
+
+const _id__get = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const mockRole = {
+    id,
+    roleName: "\u5B9E\u8BAD\u9879\u76EE\u7BA1\u7406\u5458",
+    roleCode: "ROLE_001",
+    isVirtualManagerRole: false,
+    managementScopeType: "\u672C\u5355\u4F4D\u53CA\u4E0B\u5C5E\u5355\u4F4D",
+    managementScope: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+    createTime: "2025-07-02 12:12:12",
+    remark: "-",
+    status: true
+  };
+  return {
+    code: 200,
+    message: "success",
+    data: mockRole
+  };
+});
+
+const _id__get$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__get
+});
+
+const _id__put = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: "\u66F4\u65B0\u6210\u529F",
+    data: {
+      id,
+      ...body
+    }
+  };
+});
+
+const _id__put$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__put
+});
+
+const permissions_get = defineEventHandler(async (event) => {
+  getRouterParam(event, "id");
+  const mockPermissions = [
+    "/dashboard",
+    "/dashboard/analysis",
+    "/system-management",
+    "/system-management/organization-management",
+    "/system-management/personnel-management"
+  ];
+  return {
+    code: 200,
+    message: "success",
+    data: mockPermissions
+  };
+});
+
+const permissions_get$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: permissions_get
+});
+
+const permissions_post = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const body = await readBody(event);
+  console.log("\u4FDD\u5B58\u89D2\u8272\u6743\u9650:", {
+    roleId: id,
+    permissions: body.permissions
+  });
+  return {
+    code: 200,
+    message: "\u6743\u9650\u4FDD\u5B58\u6210\u529F",
+    data: null
+  };
+});
+
+const permissions_post$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: permissions_post
+});
+
+const status_put = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: "\u72B6\u6001\u66F4\u65B0\u6210\u529F",
+    data: {
+      id,
+      status: body.status
+    }
+  };
+});
+
+const status_put$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: status_put
+});
+
+const batchDelete_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: `\u6210\u529F\u5220\u9664 ${body.ids.length} \u4E2A\u89D2\u8272`,
+    data: { ids: body.ids }
+  };
+});
+
+const batchDelete_post$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: batchDelete_post
+});
+
+const create_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: "\u521B\u5EFA\u6210\u529F",
+    data: {
+      id: Date.now().toString(),
+      ...body,
+      createTime: (/* @__PURE__ */ new Date()).toISOString(),
+      status: body.status !== void 0 ? body.status : true
+    }
+  };
+});
+
+const create_post$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: create_post
+});
+
+const list_post = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const mockData = [
+    {
+      id: "1",
+      roleName: "\u5B9E\u8BAD\u9879\u76EE\u7BA1\u7406\u5458",
+      roleCode: "ROLE_001",
+      isVirtualManagerRole: false,
+      managementScopeType: "\u672C\u5355\u4F4D\u53CA\u4E0B\u5C5E\u5355\u4F4D",
+      managementScope: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+      createTime: "2025-07-02 12:12:12",
+      remark: "-",
+      status: true
+    },
+    {
+      id: "2",
+      roleName: "\u7CFB\u7EDF\u7BA1\u7406\u5458",
+      roleCode: "ROLE_002",
+      isVirtualManagerRole: false,
+      managementScopeType: "\u6240\u6709\u5355\u4F4D",
+      managementScope: "\u5168\u90E8",
+      createTime: "2025-07-02 12:12:12",
+      remark: "\u7CFB\u7EDF\u6700\u9AD8\u6743\u9650\u7BA1\u7406\u5458",
+      status: true
+    },
+    {
+      id: "3",
+      roleName: "\u90E8\u95E8\u7BA1\u7406\u5458",
+      roleCode: "ROLE_003",
+      isVirtualManagerRole: false,
+      managementScopeType: "\u672C\u5355\u4F4D",
+      managementScope: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      createTime: "2025-07-02 12:12:12",
+      remark: "\u8D1F\u8D23\u90E8\u95E8\u65E5\u5E38\u7BA1\u7406",
+      status: true
+    },
+    {
+      id: "4",
+      roleName: "\u9879\u76EE\u534F\u8C03\u5458",
+      roleCode: "ROLE_004",
+      isVirtualManagerRole: true,
+      managementScopeType: "\u672C\u5355\u4F4D\u53CA\u4E0B\u5C5E\u5355\u4F4D",
+      managementScope: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+      createTime: "2025-07-02 12:12:12",
+      remark: "\u534F\u8C03\u9879\u76EE\u76F8\u5173\u4E8B\u52A1",
+      status: false
+    },
+    {
+      id: "5",
+      roleName: "\u5BA1\u6838\u5458",
+      roleCode: "ROLE_005",
+      isVirtualManagerRole: false,
+      managementScopeType: "\u6307\u5B9A\u5355\u4F4D",
+      managementScope: "\u9AD8\u6027\u80FD\u8BA1\u7B97\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      createTime: "2025-07-02 12:12:12",
+      remark: "\u8D1F\u8D23\u5BA1\u6838\u6D41\u7A0B",
+      status: true
+    }
+  ];
+  let filteredData = [...mockData];
+  if (body.roleName) {
+    filteredData = filteredData.filter(
+      (item) => item.roleName.includes(body.roleName)
+    );
+  }
+  const total = filteredData.length;
+  const pageNum = body.pageNum || 1;
+  const pageSize = body.pageSize || 10;
+  const start = (pageNum - 1) * pageSize;
+  const end = start + pageSize;
+  return {
+    code: 200,
+    message: "success",
+    data: {
+      list: filteredData.slice(start, end),
+      total
+    }
+  };
+});
+
+const list_post$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: list_post
 });
 
 const test_delete = eventHandler(() => {
