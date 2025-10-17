@@ -333,6 +333,11 @@ const handleNext = async () => {
     scrollToTop()
   }
 }
+
+// 新增题目
+const handleAddQuestion = () => {
+  message.info('新增题目功能开发中...')
+}
 </script>
 
 <template>
@@ -559,6 +564,14 @@ const handleNext = async () => {
             <div class="task-level-detail">
               <div v-if="selectedTaskLevelId" class="detail-content">
                 <a-tabs v-model:activeKey="currentTab">
+                  <!-- 标签栏右侧额外内容 -->
+                  <template #tabBarExtraContent v-if="isChoiceTask && currentTab === 'questions'">
+                    <a-button type="primary" @click="handleAddQuestion">
+                      <PlusOutlined />
+                      新增题目
+                    </a-button>
+                  </template>
+                  
                   <!-- 关联任务标签页 -->
                   <a-tab-pane key="task" tab="关联任务">
                     <a-form 
@@ -628,7 +641,7 @@ const handleNext = async () => {
                   <!-- 题目标签页（选择题任务） -->
                   <a-tab-pane key="questions" tab="题目" v-if="isChoiceTask">
                     <div class="questions-content">
-                      <a-empty description="题目功能开发中..." />
+                      <a-empty description="暂无题目，请点击右上方按钮新增题目" />
                     </div>
                   </a-tab-pane>
 
