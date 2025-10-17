@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import type { TaskLevel, TaskLevelForm, EvaluationForm } from '../types'
+import type { TaskLevel, TaskLevelForm, EvaluationForm, Question } from '../types'
 
 export function useTaskLevel() {
   // 状态
@@ -135,6 +135,7 @@ export function useTaskLevel() {
     
     taskLevels.value.push(newLevel)
     selectedTaskLevelId.value = newLevel.id
+    currentTab.value = 'task' // 切换到第一个标签页（关联任务）
     loadTaskLevelFormData(newLevel.id)
     message.success('任务关卡添加成功')
   }
@@ -160,6 +161,7 @@ export function useTaskLevel() {
       saveTaskLevelFormData(selectedTaskLevelId.value)
     }
     selectedTaskLevelId.value = id
+    currentTab.value = 'task' // 切换到第一个标签页（关联任务）
     loadTaskLevelFormData(id)
   }
 
@@ -201,7 +203,11 @@ export function useTaskLevel() {
   const saveTaskLevelFormData = (id: string) => {
     const level = taskLevels.value.find(l => l.id === id)
     if (level) {
+      // 保存 questions 数据，避免被覆盖
+      const existingQuestions = level.questions
       Object.assign(level, taskLevelFormData.value)
+      // 恢复 questions 数据
+      level.questions = existingQuestions
       // 保存评测设置数据
       level.evaluationSettings = { ...evaluationFormData.value }
     }
@@ -324,6 +330,61 @@ export function useTaskLevel() {
     message.info('批量上传功能开发中...')
   }
 
+  // 获取当前任务关卡的题目列表
+  const getCurrentQuestions = computed(() => {
+    if (!selectedTaskLevelId.value) return []
+    const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+    return level?.questions || []
+  })
+
+  // 添加题目
+  const addQuestion = (question: Question) => {
+    if (!selectedTaskLevelId.value) return
+    const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+    if (level) {
+      if (!level.questions) {
+        level.questions = []
+      }
+      level.questions.push(question)
+      message.success('题目添加成功')
+    }
+  }
+
+  // 删除题目
+  const deleteQuestion = (questionId: string) => {
+    if (!selectedTaskLevelId.value) return
+    const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+    if (level && level.questions) {
+      const index = level.questions.findIndex(q => q.id === questionId)
+      if (index !== -1) {
+        level.questions.splice(index, 1)
+        message.success('题目删除成功')
+      }
+    }
+  }
+
+  // 更新题目
+  const updateQuestion = (question: Question) => {
+    if (!selectedTaskLevelId.value) return
+    const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+    if (level && level.questions) {
+      const index = level.questions.findIndex(q => q.id === question.id)
+      if (index !== -1) {
+        level.questions[index] = question
+        message.success('题目更新成功')
+      }
+    }
+  }
+
+  // 更新题目顺序
+  const updateQuestionsOrder = (questions: Question[]) => {
+    if (!selectedTaskLevelId.value) return
+    const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+    if (level) {
+      level.questions = questions
+    }
+  }
+
   return {
     // 状态
     taskLevels,
@@ -357,6 +418,13 @@ export function useTaskLevel() {
     clearAllTestCases,
     downloadTemplate,
     batchUploadTestCases,
+    
+    // 题目管理
+    getCurrentQuestions,
+    addQuestion,
+    deleteQuestion,
+    updateQuestion,
+    updateQuestionsOrder,
   }
 }
 

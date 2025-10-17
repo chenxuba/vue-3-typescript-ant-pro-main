@@ -8,6 +8,7 @@ import '@wangeditor/editor/dist/css/style.css'
 interface Props {
   modelValue: string
   placeholder?: string
+  height?: number
 }
 
 interface Emits {
@@ -15,7 +16,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: '请输入内容'
+  placeholder: '请输入内容',
+  height: 300
 })
 const emit = defineEmits<Emits>()
 
@@ -71,6 +73,7 @@ onBeforeUnmount(() => {
       :defaultConfig="editorConfig" 
       :mode="'default'" 
       class="editor-content"
+      :style="{ height: `${height}px` }"
       @onCreated="handleCreated" 
       @onChange="handleChange" 
     />
@@ -98,7 +101,6 @@ onBeforeUnmount(() => {
   }
 
   .editor-content {
-    height: 300px !important;
     overflow-y: auto;
     background: #fff;
 

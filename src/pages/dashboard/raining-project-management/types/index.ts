@@ -64,6 +64,7 @@ export interface TaskLevel {
   skillTag: string
   taskHours: string
   kernelLink?: string // 内核链接
+  questions?: Question[] // 选择题题目列表
   // 评测设置
   evaluationSettings?: {
     timeLimit: string
@@ -106,4 +107,20 @@ export interface EvaluationForm {
   scoreRule: 'all_pass' | 'partial_pass'
   caseType: 'text' | 'file'
   testCases: TestCase[]
+}
+
+// 选择题选项
+export interface QuestionOption {
+  id: string
+  label: string // A, B, C, D
+  content: string
+  isCorrect: boolean
+}
+
+// 选择题题目
+export interface Question {
+  id: string
+  title: string
+  options: QuestionOption[]
+  explanation: string // 答案解析
 }

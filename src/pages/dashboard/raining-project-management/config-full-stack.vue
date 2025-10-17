@@ -3,7 +3,7 @@ import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined } from '@ant-design/icons-vue'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -27,6 +27,7 @@ import RichTextEditor from './components/RichTextEditor.vue'
 import NewFileModal from './components/NewFileModal.vue'
 import NewFolderModal from './components/NewFolderModal.vue'
 import RepositoryModal from './components/RepositoryModal.vue'
+import QuestionModal from './components/QuestionModal.vue'
 
 // Composables
 import { useFileTree } from './composables/useFileTree'
@@ -160,12 +161,19 @@ const {
   clearAllTestCases,
   downloadTemplate,
   batchUploadTestCases,
+  getCurrentQuestions,
+  addQuestion,
+  deleteQuestion,
+  updateQuestion,
+  updateQuestionsOrder,
 } = useTaskLevel()
 
 // 弹窗状态
 const showRepositoryModal = ref(false)
 const showNewFileModal = ref(false)
 const showNewFolderModal = ref(false)
+const showQuestionModal = ref(false)
+const currentEditingQuestion = ref<any>(null) // 当前编辑的题目
 const currentParentPath = ref('/')
 const currentFolderParentPath = ref('/')
 
@@ -336,7 +344,55 @@ const handleNext = async () => {
 
 // 新增题目
 const handleAddQuestion = () => {
-  message.info('新增题目功能开发中...')
+  currentEditingQuestion.value = null
+  showQuestionModal.value = true
+}
+
+// 编辑题目
+const handleEditQuestion = (question: any) => {
+  currentEditingQuestion.value = question
+  showQuestionModal.value = true
+}
+
+// 确认添加/编辑题目
+const handleConfirmQuestion = (question: any) => {
+  if (currentEditingQuestion.value) {
+    // 编辑模式：更新题目
+    updateQuestion(question)
+  } else {
+    // 新增模式：添加题目
+    addQuestion(question)
+  }
+  currentEditingQuestion.value = null
+}
+
+// 拖拽相关
+const draggedIndex = ref<number | null>(null)
+
+const handleDragStart = (index: number) => {
+  draggedIndex.value = index
+}
+
+const handleDragOver = (e: DragEvent) => {
+  e.preventDefault()
+}
+
+const handleDrop = (e: DragEvent, dropIndex: number) => {
+  e.preventDefault()
+  if (draggedIndex.value !== null && draggedIndex.value !== dropIndex) {
+    const questions = [...getCurrentQuestions.value]
+    const [draggedItem] = questions.splice(draggedIndex.value, 1)
+    questions.splice(dropIndex, 0, draggedItem)
+    
+    // 更新题目顺序
+    updateQuestionsOrder(questions)
+    message.success('题目顺序已更新')
+  }
+  draggedIndex.value = null
+}
+
+const handleDragEnd = () => {
+  draggedIndex.value = null
 }
 </script>
 
@@ -640,8 +696,58 @@ const handleAddQuestion = () => {
 
                   <!-- 题目标签页（选择题任务） -->
                   <a-tab-pane key="questions" tab="题目" v-if="isChoiceTask">
-                    <div class="questions-content">
+                    <div v-if="getCurrentQuestions.length === 0" class="questions-content">
                       <a-empty description="暂无题目，请点击右上方按钮新增题目" />
+                    </div>
+                    <div v-else class="questions-list">
+                      <div 
+                        v-for="(question, index) in getCurrentQuestions" 
+                        :key="question.id"
+                        class="question-item"
+                        draggable="true"
+                        :class="{ 'dragging': draggedIndex === index }"
+                        @dragstart="handleDragStart(index)"
+                        @dragover="handleDragOver"
+                        @drop="handleDrop($event, index)"
+                        @dragend="handleDragEnd"
+                      >
+                        <div class="question-header">
+                          <div class="question-number-with-drag">
+                            <HolderOutlined class="drag-handle" />
+                            <span class="question-number">题目{{ index + 1 }}</span>
+                          </div>
+                          <div class="action-icons">
+                            <EditOutlined class="edit-icon" @click="handleEditQuestion(question)" />
+                            <DeleteOutlined class="delete-icon" @click="deleteQuestion(question.id)" />
+                          </div>
+                        </div>
+                        <div class="question-title">
+                          <div v-if="question.title" class="flex">
+                            {{ index + 1 }}、
+                          <div  v-html="question.title"></div>
+                          </div>
+                          <div v-else style="color: #bfbfbf;">暂无题干</div>
+                        </div>
+                        <div class="question-options">
+                          <div 
+                            v-for="option in question.options" 
+                            :key="option.id"
+                            class="option-row"
+                            :class="{ 'is-correct': option.isCorrect }"
+                          >
+                            <span class="option-label">{{ option.label }}.</span>
+                            <span class="option-content">{{ option.content }}</span>
+                            <span v-if="option.isCorrect" class="correct-tag">正确答案</span>
+                          </div>
+                        </div>
+                        <div class="question-explanation">
+                          <div class="explanation-label">答案解析：</div>
+                          <div class="explanation-content">
+                            <span v-if="question.explanation">{{ question.explanation }}</span>
+                            <span v-else style="color: #bfbfbf;">暂无答案解析</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </a-tab-pane>
 
@@ -811,6 +917,13 @@ const handleAddQuestion = () => {
       v-model:open="showNewFolderModal"
       :parent-path="currentFolderParentPath"
       @confirm="handleConfirmNewFolder"
+    />
+    
+    <!-- 添加题目弹窗 -->
+    <QuestionModal 
+      v-model:open="showQuestionModal"
+      :question="currentEditingQuestion"
+      @confirm="handleConfirmQuestion"
     />
   </div>
 </template>
@@ -1140,6 +1253,174 @@ const handleAddQuestion = () => {
             align-items: center;
             justify-content: center;
             min-height: 300px;
+          }
+
+          .questions-list {
+            .question-item {
+              background: #fafafa;
+              border: 1px solid #e8e8e8;
+              border-radius: 4px;
+              padding: 16px;
+              margin-bottom: 16px;
+              cursor: move;
+              transition: all 0.3s;
+              user-select: none;
+
+              &:hover {
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                transform: translateY(-2px);
+              }
+
+              &.dragging {
+                opacity: 0.5;
+                background: #e6f7ff;
+                border-color: #1890ff;
+              }
+
+              .question-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+
+                .question-number-with-drag {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+
+                  .drag-handle {
+                    color: rgba(0, 0, 0, 0.25);
+                    font-size: 16px;
+                    cursor: move;
+                    transition: color 0.3s;
+
+                    &:hover {
+                      color: rgba(0, 0, 0, 0.45);
+                    }
+                  }
+
+                  .question-number {
+                    font-weight: 500;
+                    font-size: 14px;
+                    color: rgba(0, 0, 0, 0.85);
+                  }
+                }
+
+                .action-icons {
+                  display: flex;
+                  gap: 12px;
+                  align-items: center;
+
+                  .edit-icon {
+                    color: #1890ff;
+                    cursor: pointer;
+                    font-size: 16px;
+                    transition: all 0.3s;
+
+                    &:hover {
+                      color: #40a9ff;
+                    }
+                  }
+
+                  .delete-icon {
+                    color: #ff4d4f;
+                    cursor: pointer;
+                    font-size: 16px;
+                    transition: all 0.3s;
+
+                    &:hover {
+                      color: #ff7875;
+                    }
+                  }
+                }
+              }
+
+              .question-title {
+                font-size: 14px;
+                color: rgba(0, 0, 0, 0.85);
+                margin-bottom: 16px;
+                line-height: 1.6;
+                min-height: 20px;
+                word-break: break-word;
+                
+                :deep(p) {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  line-height: 1.6;
+                  display: block;
+                }
+                
+                :deep(br) {
+                  display: none;
+                }
+                
+                :deep(*) {
+                  max-width: 100%;
+                }
+              }
+
+              .question-options {
+                margin-bottom: 16px;
+
+                .option-row {
+                  display: flex;
+                  align-items: center;
+                  padding: 8px 12px;
+                  margin-bottom: 8px;
+                  background: #fff;
+                  border: 1px solid #e8e8e8;
+                  border-radius: 4px;
+                  transition: all 0.3s;
+
+                  &.is-correct {
+                    background: #f6ffed;
+                    border-color: #52c41a;
+                  }
+
+                  .option-label {
+                    font-weight: 500;
+                    margin-right: 12px;
+                    color: rgba(0, 0, 0, 0.85);
+                    flex-shrink: 0;
+                  }
+
+                  .option-content {
+                    flex: 1;
+                    color: rgba(0, 0, 0, 0.65);
+                  }
+
+                  .correct-tag {
+                    flex-shrink: 0;
+                    background: #52c41a;
+                    color: #fff;
+                    padding: 2px 8px;
+                    border-radius: 2px;
+                    font-size: 12px;
+                    margin-left: 12px;
+                  }
+                }
+              }
+
+              .question-explanation {
+                background: #fff7e6;
+                border: 1px solid #ffd591;
+                border-radius: 4px;
+                padding: 12px;
+
+                .explanation-label {
+                  font-weight: 500;
+                  color: rgba(0, 0, 0, 0.85);
+                  margin-bottom: 8px;
+                  font-size: 14px;
+                }
+
+                .explanation-content {
+                  color: rgba(0, 0, 0, 0.65);
+                  line-height: 1.6;
+                  font-size: 14px;
+                }
+              }
+            }
           }
 
           .evaluation-content {
