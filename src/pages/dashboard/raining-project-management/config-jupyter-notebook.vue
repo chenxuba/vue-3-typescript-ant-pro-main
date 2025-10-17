@@ -18,6 +18,101 @@ const currentStep = ref(0)
 const formRef = ref<FormInstance>()
 const trainingScopeFormRef = ref<FormInstance>()
 
+// Jupyter编辑器
+const jupyterUrl = 'http://101.200.13.193:8888/jupyter3a88a3/lab?token=jupyter3a88a3'
+const isFullscreen = ref(false)
+
+// 全屏切换
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value
+}
+
+// 评测设置 - 当前标签页
+const evaluationActiveTab = ref('settings')
+
+// 评测设置数据
+interface EvaluationData {
+  enableEvaluation: boolean
+  defaultFile: File | null
+  defaultFileName: string
+  timeLimit: string
+  scoringRule: string
+  evaluationSetting: string
+  testSets: TestSet[]
+}
+
+interface TestSet {
+  id: number
+  checked: boolean
+  content: string
+}
+
+const evaluationData = ref<EvaluationData>({
+  enableEvaluation: true,
+  defaultFile: null,
+  defaultFileName: '',
+  timeLimit: '',
+  scoringRule: '通过全部测试集',
+  evaluationSetting: '通过所有代码块评测',
+  testSets: [
+    { id: 1, checked: false, content: '' },
+    { id: 2, checked: false, content: '' },
+  ],
+})
+
+// 参考答案数据
+interface ReferenceAnswerData {
+  hideReference: boolean
+  disableCopy: boolean
+  content: string
+}
+
+const referenceAnswerData = ref<ReferenceAnswerData>({
+  hideReference: true,
+  disableCopy: true,
+  content: '',
+})
+
+// 测试集计数器
+let testSetIdCounter = 3
+
+// 新增测试集
+const addTestSet = () => {
+  evaluationData.value.testSets.push({
+    id: testSetIdCounter++,
+    checked: false,
+    content: '',
+  })
+}
+
+// 删除测试集
+const deleteTestSet = () => {
+  // 检查是否有选中的测试集
+  const hasChecked = evaluationData.value.testSets.some(item => item.checked)
+  if (!hasChecked) {
+    message.warning('请勾选要删除的测试集')
+    return
+  }
+  
+  evaluationData.value.testSets = evaluationData.value.testSets.filter(item => !item.checked)
+  if (evaluationData.value.testSets.length === 0) {
+    message.warning('至少保留一个测试集')
+    evaluationData.value.testSets.push({
+      id: testSetIdCounter++,
+      checked: false,
+      content: '',
+    })
+  }
+}
+
+// 选择代码文件
+const handleCodeFileUpload = (file: File) => {
+  evaluationData.value.defaultFile = file
+  evaluationData.value.defaultFileName = file.name
+  message.success(`已选择文件: ${file.name}`)
+  return false
+}
+
 // 表单数据
 interface FormData {
   name: string
@@ -127,6 +222,8 @@ const handleSave = async () => {
     const projectData = {
       type: 'JupyterNotebook',
       basicInfo: formData.value,
+      evaluation: evaluationData.value,
+      referenceAnswer: referenceAnswerData.value,
     }
     
     console.log('保存项目数据：', projectData)
@@ -296,16 +393,158 @@ const handleCoverUpload = (file: File) => {
 
       <!-- 第二步：实验内容 -->
       <div v-if="currentStep === 1" class="step-content">
-        <div class="content-card">
-          <a-empty description="实验内容配置开发中..." />
+        <div class="jupyter-container" :class="{ 'fullscreen': isFullscreen }">
+          <div class="jupyter-header">
+            <h3>Jupyter Notebook 编辑器</h3>
+            <div class="jupyter-actions">
+              <a-tooltip :title="isFullscreen ? '退出全屏' : '全屏'">
+                <a-button 
+                  type="text" 
+                  :icon="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+                  @click="toggleFullscreen"
+                >
+                  {{ isFullscreen ? '退出全屏' : '全屏' }}
+                </a-button>
+              </a-tooltip>
+            </div>
+          </div>
+          <div class="jupyter-iframe-wrapper">
+            <iframe 
+              :src="jupyterUrl" 
+              class="jupyter-iframe"
+              frameborder="0"
+              allowfullscreen
+            ></iframe>
+          </div>
         </div>
       </div>
 
       <!-- 第三步：评测设置 -->
-      <div v-if="currentStep === 2" class="step-content">
-        <div class="content-card">
-          <a-empty description="评测设置配置开发中..." />
-        </div>
+      <div v-if="currentStep === 2" class="step-content evaluation-step">
+        <a-tabs v-model:activeKey="evaluationActiveTab" class="evaluation-tabs">
+          <!-- 评测设置标签页 -->
+          <a-tab-pane key="settings" tab="评测设置">
+            <div class="evaluation-section">
+              <!-- 评测文件 -->
+              <div class="section-block">
+                <div class="block-header">评测文件</div>
+                <div class="block-content">
+                  <a-form layout="horizontal" :label-col="{ span: 3 }" :wrapper-col="{ span: 20 }">
+                    <a-form-item label="是否启用评测功能" required>
+                      <a-radio-group v-model:value="evaluationData.enableEvaluation" class="custom-radio">
+                        <a-radio :value="true">是</a-radio>
+                        <a-radio :value="false">否</a-radio>
+                      </a-radio-group>
+                    </a-form-item>
+
+                    <template v-if="evaluationData.enableEvaluation">
+                      <a-form-item label="默认打开文件" required>
+                        <div class="flex items-center gap-16px">
+                          <a-upload 
+                            :before-upload="handleCodeFileUpload"
+                            :show-upload-list="false"
+                            accept=".py,.ipynb"
+                          >
+                            <a-button type="primary">点击选择代码文件</a-button>
+                          </a-upload>
+                          <span v-if="evaluationData.defaultFileName" class="file-name">
+                            {{ evaluationData.defaultFileName }}
+                          </span>
+                        </div>
+                      </a-form-item>
+
+                      <a-form-item label="评测时长限制" required>
+                        <a-input 
+                          v-model:value="evaluationData.timeLimit" 
+                          placeholder="请输入评测时长（秒）" 
+                          style="width: 600px"
+                        />
+                      </a-form-item>
+
+                      <a-form-item label="系统评分规则">
+                        <a-radio-group v-model:value="evaluationData.scoringRule" class="custom-radio">
+                          <a-radio value="通过全部测试集">
+                            通过全部测试集（仅当所有测试集都正确时，获得项目学时）
+                          </a-radio>
+                          <a-radio value="通过部分测试集">
+                            通过部分测试集（任意一个测试集正确时，获得项目学时）
+                          </a-radio>
+                        </a-radio-group>
+                      </a-form-item>
+
+                      <a-form-item label="评测设置" required>
+                        <a-radio-group v-model:value="evaluationData.evaluationSetting" class="custom-radio">
+                          <a-radio value="通过所有代码块评测">
+                            通过所有代码块评测（对学员任务文件的所有非空代码块进行评测）
+                          </a-radio>
+                          <a-radio value="通过指定代码块评测">
+                            通过指定代码块评测（对学员任务文件的指定非空代码块进行评测）
+                          </a-radio>
+                        </a-radio-group>
+                      </a-form-item>
+                    </template>
+                  </a-form>
+                </div>
+              </div>
+
+              <!-- 测试集 -->
+              <div v-if="evaluationData.enableEvaluation" class="section-block">
+                <div class="block-header">
+                  <span>测试集</span>
+                  <div class="header-actions">
+                    <a-button @click="addTestSet">新增测试集</a-button>
+                    <a-button @click="deleteTestSet">删除测试集</a-button>
+                  </div>
+                </div>
+                <div class="block-content">
+                  <div 
+                    v-for="(testSet, index) in evaluationData.testSets" 
+                    :key="testSet.id"
+                    class="test-set-item"
+                  >
+                    <a-checkbox v-model:checked="testSet.checked" />
+                    <span class="test-set-label">测试集{{ index + 1 }}</span>
+                    <a-input 
+                      v-model:value="testSet.content" 
+                      placeholder="请输入预期输出内容"
+                      class="test-set-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </a-tab-pane>
+
+          <!-- 参考答案标签页 -->
+          <a-tab-pane key="reference" tab="参考答案">
+            <div class="reference-section">
+              <div class="section-block">
+                <div class="block-header">参考答案</div>
+                <div class="block-content">
+                  <a-form layout="horizontal" :label-col="{ span: 3 }" :wrapper-col="{ span: 20 }">
+                    <a-form-item label="是否隐藏参考答案模块" required>
+                      <a-radio-group v-model:value="referenceAnswerData.hideReference" class="custom-radio">
+                        <a-radio :value="true">是</a-radio>
+                        <a-radio :value="false">否</a-radio>
+                      </a-radio-group>
+                    </a-form-item>
+
+                    <a-form-item label="是否禁止复制参考答案" required>
+                      <a-radio-group v-model:value="referenceAnswerData.disableCopy" class="custom-radio">
+                        <a-radio :value="true">是</a-radio>
+                        <a-radio :value="false">否</a-radio>
+                      </a-radio-group>
+                    </a-form-item>
+
+                    <a-form-item label="参考答案" required>
+                      <RichTextEditor v-model="referenceAnswerData.content" />
+                    </a-form-item>
+                  </a-form>
+                </div>
+              </div>
+            </div>
+          </a-tab-pane>
+        </a-tabs>
       </div>
 
       <!-- 底部按钮 -->
@@ -326,7 +565,7 @@ const handleCoverUpload = (file: File) => {
   .page-header {
     background: #fff;
     padding: 16px 24px;
-    margin: 0 24px 16px 24px;
+    margin: 0 0 16px 0;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     text-align: center;
     
@@ -339,8 +578,7 @@ const handleCoverUpload = (file: File) => {
   }
 
   .page-container {
-    max-width: 1400px;
-    margin: 0 auto;
+   
     background: #fff;
     padding: 24px;
     border-radius: 4px;
@@ -410,8 +648,17 @@ const handleCoverUpload = (file: File) => {
   align-items: flex-start;
 }
 
+.items-center {
+  align-items: center;
+}
+
 .gap-16px {
   gap: 16px;
+}
+
+.file-name {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
 }
 
 /* 自定义镂空样式 */
@@ -438,6 +685,152 @@ const handleCoverUpload = (file: File) => {
 .custom-radio ::v-deep(.ant-radio-inner::after) {
   background-color: var(--pro-ant-color-primary);
   transform: scale(0.5);
+}
+
+/* Jupyter编辑器样式 */
+.jupyter-container {
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+  transition: all 0.3s;
+  
+  &.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    border-radius: 0;
+    
+    .jupyter-iframe-wrapper {
+      height: calc(100vh - 64px);
+    }
+  }
+  
+  .jupyter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.85);
+    }
+    
+    .jupyter-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+  
+  .jupyter-iframe-wrapper {
+    width: 100%;
+    height: 700px;
+    position: relative;
+    
+    .jupyter-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+  }
+}
+
+/* 评测设置样式 */
+.evaluation-step {
+  .evaluation-tabs {
+    ::v-deep(.ant-tabs-nav) {
+      margin-bottom: 0;
+      background: #fff;
+    }
+
+    ::v-deep(.ant-tabs-content-holder) {
+      padding: 0;
+    }
+  }
+
+  .evaluation-section,
+  .reference-section {
+    padding: 20px 0;
+  }
+
+  .section-block {
+    background: #fff;
+    margin-bottom: 16px;
+    border-radius: 4px;
+    overflow: hidden;
+
+    .block-header {
+      background: #5b8ff9;
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .header-actions {
+        display: flex;
+        gap: 8px;
+
+        .ant-btn {
+          background: transparent;
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.6);
+          font-size: 13px;
+          height: 28px;
+          padding: 0 12px;
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #fff;
+          }
+        }
+      }
+    }
+
+    .block-content {
+      padding: 24px;
+
+      .ant-form-item {
+        margin-bottom: 20px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+
+  .test-set-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .test-set-label {
+      min-width: 70px;
+      color: rgba(0, 0, 0, 0.85);
+      font-size: 14px;
+    }
+
+    .test-set-input {
+      flex: 1;
+    }
+  }
 }
 </style>
 
