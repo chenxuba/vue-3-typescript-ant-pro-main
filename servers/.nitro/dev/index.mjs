@@ -919,6 +919,8 @@ const _lazy_iyIZYs = () => Promise.resolve().then(function () { return index_put
 const _lazy_1y92kW = () => Promise.resolve().then(function () { return login_post$1; });
 const _lazy_mpi3sf = () => Promise.resolve().then(function () { return logout$1; });
 const _lazy_DwmP7_ = () => Promise.resolve().then(function () { return index$1; });
+const _lazy_A13qtQ = () => Promise.resolve().then(function () { return _id__get$1; });
+const _lazy_HG0bS0 = () => Promise.resolve().then(function () { return tree$1; });
 const _lazy_a_2pXV = () => Promise.resolve().then(function () { return test_delete$1; });
 const _lazy_uEKqeI = () => Promise.resolve().then(function () { return test_post$1; });
 const _lazy_4F33dK = () => Promise.resolve().then(function () { return test_put$1; });
@@ -939,6 +941,8 @@ const handlers = [
   { route: '/login', handler: _lazy_1y92kW, lazy: true, middleware: false, method: "post" },
   { route: '/logout', handler: _lazy_mpi3sf, lazy: true, middleware: false, method: undefined },
   { route: '/menu', handler: _lazy_DwmP7_, lazy: true, middleware: false, method: undefined },
+  { route: '/organization/:id', handler: _lazy_A13qtQ, lazy: true, middleware: false, method: "get" },
+  { route: '/organization/tree', handler: _lazy_HG0bS0, lazy: true, middleware: false, method: undefined },
   { route: '/test', handler: _lazy_a_2pXV, lazy: true, middleware: false, method: "delete" },
   { route: '/test', handler: _lazy_uEKqeI, lazy: true, middleware: false, method: "post" },
   { route: '/test', handler: _lazy_4F33dK, lazy: true, middleware: false, method: "put" },
@@ -2059,6 +2063,133 @@ const index$1 = /*#__PURE__*/Object.freeze({
   __proto__: null,
   accessMenuData: accessMenuData,
   default: index
+});
+
+const _id__get = defineEventHandler((event) => {
+  const id = getRouterParam(event, "id");
+  const mockData = {
+    "1": {
+      id: "1",
+      name: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+      code: "241711",
+      parentId: null,
+      parentName: "\u4E2D\u56FD\u79D1\u5B66\u9662",
+      isActive: true,
+      order: 0,
+      isIndependentTraining: true,
+      isVirtual: false
+    },
+    "1-1": {
+      id: "1-1",
+      name: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+      code: "241711001",
+      parentId: "1",
+      parentName: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+      isActive: true,
+      order: 1,
+      isIndependentTraining: false,
+      isVirtual: false
+    }
+  };
+  return mockData[id || "1"] || mockData["1"];
+});
+
+const _id__get$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__get
+});
+
+const tree = defineEventHandler(() => {
+  return [
+    {
+      id: "1",
+      name: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+      code: "241711",
+      parentId: null,
+      parentName: "\u4E2D\u56FD\u79D1\u5B66\u9662",
+      isActive: true,
+      order: 0,
+      isIndependentTraining: true,
+      isVirtual: false,
+      children: [
+        {
+          id: "1-1",
+          name: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+          code: "241711001",
+          parentId: "1",
+          parentName: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+          isActive: true,
+          order: 1,
+          isIndependentTraining: false,
+          isVirtual: false,
+          children: [
+            {
+              id: "1-1-1",
+              name: "\u515A\u7FA4\u529E\u516C\u5BA4",
+              code: "241711001001",
+              parentId: "1-1",
+              parentName: "\u5927\u6570\u636E\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+              isActive: true,
+              order: 1,
+              isIndependentTraining: false,
+              isVirtual: false
+            }
+          ]
+        },
+        {
+          id: "1-2",
+          name: "\u9AD8\u6027\u80FD\u8BA1\u7B97\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+          code: "241711002",
+          parentId: "1",
+          parentName: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+          isActive: true,
+          order: 2,
+          isIndependentTraining: false,
+          isVirtual: false
+        },
+        {
+          id: "1-3",
+          name: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+          code: "241711003",
+          parentId: "1",
+          parentName: "\u8BA1\u7B97\u673A\u7F51\u7EDC\u4FE1\u606F\u4E2D\u5FC3",
+          isActive: true,
+          order: 3,
+          isIndependentTraining: false,
+          isVirtual: false,
+          children: [
+            {
+              id: "1-3-1",
+              name: "\u5E7F\u5DDE\u4E2D\u5FC3",
+              code: "241711003001",
+              parentId: "1-3",
+              parentName: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+              isActive: true,
+              order: 1,
+              isIndependentTraining: false,
+              isVirtual: false
+            },
+            {
+              id: "1-3-2",
+              name: "\u57FA\u5730\u529E\u516C\u5BA4",
+              code: "241711003002",
+              parentId: "1-3",
+              parentName: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
+              isActive: true,
+              order: 2,
+              isIndependentTraining: false,
+              isVirtual: false
+            }
+          ]
+        }
+      ]
+    }
+  ];
+});
+
+const tree$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: tree
 });
 
 const test_delete = eventHandler(() => {

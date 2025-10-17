@@ -43,6 +43,12 @@ declare module "nitropack/types" {
     '/menu': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/menu/index').default>>>>
     }
+    '/organization/:id': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/organization/[id].get').default>>>>
+    }
+    '/organization/tree': {
+      'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/organization/tree').default>>>>
+    }
     '/test': {
       'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/test.delete').default>>>>
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/test.post').default>>>>

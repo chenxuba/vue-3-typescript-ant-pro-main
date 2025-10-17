@@ -87,19 +87,19 @@ export default [
     component: basicRouteMap.RouteView,
     children: [
       {
-        path: '/system-management/personnel-management',
-        name: 'System-management-personnel-management',
-        component: () => import('~/pages/dashboard/system-management/personnel-management.vue'),
-        meta: {
-          title: '人员管理',
-        },
-      },
-      {
         path: '/system-management/organization-management',
         name: 'System-management-organization-management',
         component: () => import('~/pages/dashboard/system-management/organization-management.vue'),
         meta: {
           title: '组织机构管理',
+        },
+      },
+      {
+        path: '/system-management/personnel-management',
+        name: 'System-management-personnel-management',
+        component: () => import('~/pages/dashboard/system-management/personnel-management.vue'),
+        meta: {
+          title: '人员管理',
         },
       },
       {
