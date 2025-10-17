@@ -3,7 +3,7 @@ import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -34,7 +34,7 @@ import { useFileTree } from './composables/useFileTree'
 import { useTaskLevel } from './composables/useTaskLevel'
 
 // Types
-import type { FormData, NewFileForm, NewFolderForm } from './types'
+import type { FormData, NewFileForm, NewFolderForm, ExperimentEnvironmentForm } from './types'
 
 // 注册语言
 hljs.registerLanguage('javascript', javascript)
@@ -58,6 +58,7 @@ const currentStep = ref(0)
 // 表单引用
 const formRef = ref<FormInstance>()
 const trainingScopeFormRef = ref<FormInstance>()
+const experimentFormRef = ref<FormInstance>()
 
 // 表单数据
 const formData = ref<FormData>({
@@ -118,6 +119,54 @@ const repositoryTypeOptions = [
   { label: '代码仓库', value: '代码仓库' },
   { label: '私密代码仓库', value: '私密代码仓库' },
 ]
+
+// 实验环境列表
+interface ExperimentEnvironment {
+  id: string
+  name: string
+  isEditing: boolean
+  config: ExperimentEnvironmentForm
+}
+
+const experimentEnvironments = ref<ExperimentEnvironment[]>([
+  {
+    id: '1',
+    name: '实验环境1',
+    isEditing: false,
+    config: {
+      experimentImage: 'Python3.6',
+      experimentInterfaces: [],
+      attachedEnvironment: undefined,
+      applicationCard: undefined,
+      programmingLanguage: undefined,
+      startupCommand: undefined,
+      containerPort: undefined,
+      route: undefined,
+    }
+  }
+])
+
+const activeEnvironmentKey = ref('1')
+const editingEnvironmentName = ref('')
+
+// 实验环境验证规则
+const experimentFormRules: Record<string, Rule[]> = {
+  experimentImage: [
+    { required: true, message: '请选择实验镜像', trigger: 'change' },
+  ],
+  experimentInterfaces: [
+    { required: true, type: 'array', min: 1, message: '请至少选择一个实验界面', trigger: 'change' },
+  ],
+  containerPort: [
+    { required: true, message: '请输入容器端口', trigger: 'blur' },
+  ],
+}
+
+// 获取当前激活的环境配置
+const currentEnvironmentConfig = computed(() => {
+  const env = experimentEnvironments.value.find(e => e.id === activeEnvironmentKey.value)
+  return env?.config || experimentEnvironments.value[0]?.config
+})
 
 // 使用文件树composable
 const {
@@ -342,6 +391,42 @@ const handleNext = async () => {
   }
 }
 
+// 保存项目
+const handleSave = async () => {
+  try {
+    // 验证实验环境表单
+    await experimentFormRef.value?.validate()
+    
+    // 收集所有数据
+    const projectData = {
+      basicInfo: formData.value,
+      repository: {
+        enabled: formData.value.enableCodeRepository,
+        type: formData.value.repositoryType,
+        url: formData.value.repositoryUrl,
+        fileTree: fileTreeData.value,
+      },
+      taskLevels: taskLevels.value,
+      experimentEnvironments: experimentEnvironments.value,
+    }
+    
+    console.log('保存项目数据：', projectData)
+    
+    // 这里可以调用后端API保存数据
+    // await saveProject(projectData)
+    
+    message.success('项目创建成功！')
+    
+    // 延迟返回列表页，让用户看到成功提示
+    setTimeout(() => {
+      router.push('/dashboard/analysis')
+    }, 500)
+  } catch (error) {
+    console.error('保存失败：', error)
+    message.error('请完善必填信息')
+  }
+}
+
 // 新增题目
 const handleAddQuestion = () => {
   currentEditingQuestion.value = null
@@ -393,6 +478,85 @@ const handleDrop = (e: DragEvent, dropIndex: number) => {
 
 const handleDragEnd = () => {
   draggedIndex.value = null
+}
+
+// 实验界面切换
+const toggleInterface = (type: string) => {
+  const config = currentEnvironmentConfig.value
+  if (!config) return
+  
+  const index = config.experimentInterfaces.indexOf(type)
+  if (index > -1) {
+    config.experimentInterfaces.splice(index, 1)
+    // 清除对应的条件字段
+    if (type === 'editor') {
+      config.programmingLanguage = undefined
+    } else if (type === 'terminal') {
+      config.startupCommand = undefined
+    } else if (type === 'service') {
+      config.containerPort = undefined
+      config.route = undefined
+    }
+  } else {
+    config.experimentInterfaces.push(type)
+  }
+}
+
+// 添加实验环境
+const handleAddEnvironment = () => {
+  const newId = String(Date.now())
+  const newEnv: ExperimentEnvironment = {
+    id: newId,
+    name: `实验环境${experimentEnvironments.value.length + 1}`,
+    isEditing: false,
+    config: {
+      experimentImage: 'Python3.6',
+      experimentInterfaces: [],
+      attachedEnvironment: undefined,
+      applicationCard: undefined,
+      programmingLanguage: undefined,
+      startupCommand: undefined,
+      containerPort: undefined,
+      route: undefined,
+    }
+  }
+  experimentEnvironments.value.push(newEnv)
+  activeEnvironmentKey.value = newId
+  message.success('添加实验环境成功')
+}
+
+// 删除实验环境
+const handleDeleteEnvironment = (id: string) => {
+  if (experimentEnvironments.value.length === 1) {
+    message.warning('至少保留一个实验环境')
+    return
+  }
+  const index = experimentEnvironments.value.findIndex(e => e.id === id)
+  if (index > -1) {
+    experimentEnvironments.value.splice(index, 1)
+    // 如果删除的是当前激活的，切换到第一个
+    if (activeEnvironmentKey.value === id) {
+      activeEnvironmentKey.value = experimentEnvironments.value[0].id
+    }
+    message.success('删除实验环境成功')
+  }
+}
+
+// 开始编辑环境名称
+const handleEditEnvironmentName = (env: ExperimentEnvironment) => {
+  env.isEditing = true
+  editingEnvironmentName.value = env.name
+}
+
+// 保存环境名称
+const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
+  if (editingEnvironmentName.value.trim()) {
+    env.name = editingEnvironmentName.value.trim()
+    env.isEditing = false
+    message.success('重命名成功')
+  } else {
+    message.warning('名称不能为空')
+  }
 }
 </script>
 
@@ -890,12 +1054,178 @@ const handleDragEnd = () => {
           </div>
         </div>
       </div>
+      
+      <!-- 第四步：实验环境 -->
+      <div v-if="currentStep === 3" class="step-content">
+        <div class="content-card">
+          <div class="environment-header">
+            <h3 class="environment-title">实验环境</h3>
+            <div class="environment-actions">
+              <a-button type="primary" @click="handleAddEnvironment">添加实验环境</a-button>
+              <a-button>设置</a-button>
+            </div>
+          </div>
+          <a-form
+            ref="experimentFormRef"
+            :model="currentEnvironmentConfig"
+            :rules="experimentFormRules"
+            :label-col="{ span: 4 }"
+            :wrapper-col="{ span: 18 }"
+          >
+            <a-tabs v-model:activeKey="activeEnvironmentKey">
+              <a-tab-pane 
+                v-for="env in experimentEnvironments" 
+                :key="env.id"
+              >
+                <template #tab>
+                  <div class="tab-label">
+                    <template v-if="env.isEditing">
+                      <a-input 
+                        v-model:value="editingEnvironmentName"
+                        size="small"
+                        style="width: 120px;"
+                        @pressEnter="handleSaveEnvironmentName(env)"
+                        @blur="handleSaveEnvironmentName(env)"
+                      />
+                    </template>
+                    <template v-else>
+                      <span @dblclick="handleEditEnvironmentName(env)">{{ env.name }}</span>
+                      <a-dropdown :trigger="['click']">
+                        <MoreOutlined class="tab-more-icon" @click.stop />
+                        <template #overlay>
+                          <a-menu>
+                            <a-menu-item @click="handleEditEnvironmentName(env)">
+                              <EditOutlined /> 重命名
+                            </a-menu-item>
+                            <a-menu-item @click="handleDeleteEnvironment(env.id)">
+                              <DeleteOutlined /> 删除
+                            </a-menu-item>
+                          </a-menu>
+                        </template>
+                      </a-dropdown>
+                    </template>
+                  </div>
+                </template>
+                <a-form-item label="实验镜像" name="experimentImage" required>
+                  <div class="experiment-image-info">
+                    系统实验镜像默认认为Python3.6。
+                  </div>
+                </a-form-item>
+
+                <a-form-item label="实验界面" name="experimentInterfaces" required>
+                  <div class="experiment-interfaces">
+                    <div 
+                      class="interface-card"
+                      :class="{ active: env.config.experimentInterfaces.includes('editor') }"
+                      @click="toggleInterface('editor')"
+                    >
+                      <div class="card-title">代码编辑器</div>
+                      <div class="card-desc">提供代码编辑器，编辑器，调试器等工具</div>
+                    </div>
+                    <div 
+                      class="interface-card"
+                      :class="{ active: env.config.experimentInterfaces.includes('terminal') }"
+                      @click="toggleInterface('terminal')"
+                    >
+                      <div class="card-title">命令行终端</div>
+                      <div class="card-desc">提供命令行窗口</div>
+                    </div>
+                    <div 
+                      class="interface-card"
+                      :class="{ active: env.config.experimentInterfaces.includes('service') }"
+                      @click="toggleInterface('service')"
+                    >
+                      <div class="card-title">容器内服务</div>
+                      <div class="card-desc">直接预览容器内部Web服务</div>
+                    </div>
+                  </div>
+                </a-form-item>
+
+                <a-form-item label="附带环境">
+                  <a-select 
+                    v-model:value="env.config.attachedEnvironment"
+                    placeholder="请选择附带环境"
+                    allowClear
+                  >
+                    <a-select-option value="env1">环境1</a-select-option>
+                    <a-select-option value="env2">环境2</a-select-option>
+                  </a-select>
+                </a-form-item>
+
+                <a-form-item label="应用关卡">
+                  <a-select 
+                    v-model:value="env.config.applicationCard"
+                    placeholder="请选择应用关卡"
+                    allowClear
+                  >
+                    <a-select-option value="level1">关卡1</a-select-option>
+                    <a-select-option value="level2">关卡2</a-select-option>
+                  </a-select>
+                </a-form-item>
+
+                <!-- 选择代码编辑器时显示编程语言 -->
+                <a-form-item 
+                  v-if="env.config.experimentInterfaces.includes('editor')"
+                  label="编程语言"
+                >
+                  <a-select 
+                    v-model:value="env.config.programmingLanguage"
+                    placeholder="请选择附带语言"
+                    allowClear
+                  >
+                    <a-select-option value="python">Python</a-select-option>
+                    <a-select-option value="javascript">JavaScript</a-select-option>
+                    <a-select-option value="java">Java</a-select-option>
+                    <a-select-option value="cpp">C++</a-select-option>
+                  </a-select>
+                </a-form-item>
+
+                <!-- 选择命令行终端时显示开启时触发命令 -->
+                <a-form-item 
+                  v-if="env.config.experimentInterfaces.includes('terminal')"
+                  label="开启时触发命令"
+                >
+                  <a-input 
+                    v-model:value="env.config.startupCommand"
+                    placeholder="请输入命令"
+                  />
+                </a-form-item>
+
+                <!-- 选择容器内服务时显示容器端口和路由 -->
+                <a-form-item 
+                  v-if="env.config.experimentInterfaces.includes('service')"
+                  label="容器端口" 
+                  name="containerPort" 
+                  required
+                >
+                  <a-row :gutter="16">
+                    <a-col :span="12">
+                      <a-input 
+                        v-model:value="env.config.containerPort"
+                        placeholder="请输入容器端口"
+                      />
+                    </a-col>
+                    <a-col :span="12">
+                      <a-input 
+                        v-model:value="env.config.route"
+                        placeholder="请输入路由"
+                        addon-before="路由（选填）"
+                      />
+                    </a-col>
+                  </a-row>
+                </a-form-item>
+              </a-tab-pane>
+            </a-tabs>
+          </a-form>
+        </div>
+      </div>
 
       <!-- 底部按钮 -->
       <div class="page-footer">
         <a-button v-if="currentStep === 0" @click="handleBack">返回</a-button>
         <a-button v-else @click="handleBack">上一步</a-button>
-        <a-button type="primary" @click="handleNext">下一步</a-button>
+        <a-button v-if="currentStep === 3" type="primary" @click="handleSave">保存</a-button>
+        <a-button v-else type="primary" @click="handleNext">下一步</a-button>
       </div>
     </div>
 
@@ -1524,5 +1854,94 @@ const handleDragEnd = () => {
 .custom-radio ::v-deep(.ant-radio-inner::after) {
   background-color: var(--pro-ant-color-primary);
   transform: scale(0.5);
+}
+
+/* 实验环境样式 */
+.environment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e8e8;
+
+  .environment-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.85);
+    margin: 0;
+  }
+
+  .environment-actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .tab-more-icon {
+    color: rgba(0, 0, 0, 0.45);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px;
+    transition: color 0.3s;
+
+    &:hover {
+      color: rgba(0, 0, 0, 0.85);
+    }
+  }
+}
+
+.experiment-image-info {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+}
+
+.experiment-interfaces {
+  display: flex;
+  gap: 16px;
+
+  .interface-card {
+    flex: 1;
+    background: #e8e8e8;
+    color: rgba(0, 0, 0, 0.65);
+    border-radius: 4px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    &.active {
+      background: #5b8fff;
+      color: #fff;
+      border-color: #fff;
+      box-shadow: 0 0 0 2px #5b8fff;
+
+      &:hover {
+        box-shadow: 0 4px 12px rgba(91, 143, 255, 0.3), 0 0 0 2px #5b8fff;
+      }
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+  }
 }
 </style>

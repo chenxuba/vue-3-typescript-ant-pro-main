@@ -124,3 +124,15 @@ export interface Question {
   options: QuestionOption[]
   explanation: string // 答案解析
 }
+
+// 实验环境表单
+export interface ExperimentEnvironmentForm {
+  experimentImage: string // 实验镜像
+  experimentInterfaces: string[] // 实验界面（多选）
+  attachedEnvironment?: string // 附带环境
+  applicationCard?: string // 应用关卡
+  programmingLanguage?: string // 编程语言
+  startupCommand?: string // 开启时触发命令
+  containerPort?: string // 容器端口
+  route?: string // 路由（选填）
+}
