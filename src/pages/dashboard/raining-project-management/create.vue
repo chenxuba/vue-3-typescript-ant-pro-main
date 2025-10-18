@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 // @ts-ignore
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
@@ -16,6 +17,9 @@ const router = useRouter()
 const editorRef = shallowRef()
 const valueHtml = ref('')
 
+// 表单引用
+const formRef = ref()
+
 // 项目类型
 const projectType = ref(1)
 
@@ -27,8 +31,30 @@ const createForm = ref({
   environment: undefined,
   secondType: undefined,
   classHour: '',
-  showTaskRequirement: false,
+  showTaskRequire: false,
 })
+
+// 验证富文本编辑器内容
+const validateDescription = (_rule: any, value: string) => {
+  if (!value) {
+    return Promise.reject('请输入简介')
+  }
+  // 移除所有 HTML 标签和空格，检查是否有实际内容
+  const textContent = value.replace(/<[^>]*>/g, '').trim()
+  if (!textContent) {
+    return Promise.reject('请输入简介')
+  }
+  return Promise.resolve()
+}
+
+// 表单验证规则
+const formRules: any = {
+  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+  description: [{ required: true, validator: validateDescription, trigger: 'blur' }],
+  difficulty: [{ required: true, message: '请选择难度', trigger: 'change' }],
+  environment: [{ required: true, message: '请选择实验环境', trigger: 'change' }],
+  secondType: [{ required: true, message: '请选择小类别', trigger: 'change' }],
+}
 
 // 难度选项
 const difficultyOptions = [
@@ -41,51 +67,35 @@ const difficultyOptions = [
 const getEnvironmentOptions = () => {
   if (projectType.value === 1) {
     return [
-      { label: 'Python3.6', value: 'Python3.6' },
-      { label: 'Python3.13', value: 'Python3.13' },
-      { label: 'Python3.12/VNC', value: 'Python3.12/VNC' },
+      { label: 'Python3.6', value: 1 },
+      { label: 'Python3.13', value: 2 },
+      { label: 'Python3.12/VNC', value: 3 },
     ]
   } else if (projectType.value === 2) {
     return [
-      { label: 'Python3/Jupyter', value: 'Python3/Jupyter' },
-      { label: 'Python-GPU/upyter', value: 'Python-GPU/upyter' },
-      { label: 'Paddle/Jupyter', value: 'Paddle/Jupyter' },
+      { label: 'Python3/Jupyter', value: 1 },
+      { label: 'Python-GPU/upyter', value: 2 },
+      { label: 'Paddle/Jupyter', value: 3 },
     ]
   } else if (projectType.value === 3) {
     return [
-      { label: 'Python3.6', value: 'Python3.6' },
-      { label: 'Python3.13', value: 'Python3.13' },
+      { label: 'Python3.6', value: 1 },
+      { label: 'Python3.13', value: 2 },
     ]
   }
   return []
 }
 
-// 小类别选项（根据实验环境不同而不同）
+// 小类别选项（固定选项，不做联动）
 const getSecondTypeOptions = () => {
   // 如果不是JupyterNotebook环境，返回空数组
   if (projectType.value !== 2) return []
   
-  // 如果没有选择实验环境，返回空数组（但选择框仍然显示）
-  if (!createForm.value.environment) return []
-  
-  // 根据不同的实验环境返回不同的小类别
-  const secondTypeMap: Record<string, any[]> = {
-    'Python3/Jupyter': [
-      { label: 'Bwapp', value: 'Bwapp' },
-      { label: 'CSS', value: 'CSS' },
-      { label: 'DataTurks', value: 'DataTurks' },
-    ],
-    'Python-GPU/upyter': [
-      { label: 'GPU-Bwapp', value: 'GPU-Bwapp' },
-      { label: 'GPU-CSS', value: 'GPU-CSS' },
-    ],
-    'Paddle/Jupyter': [
-      { label: 'Paddle-A', value: 'Paddle-A' },
-      { label: 'Paddle-B', value: 'Paddle-B' },
-    ],
-  }
-  
-  return secondTypeMap[createForm.value.environment] || []
+  return [
+    { label: 'Bwapp', value: 1 },
+    { label: 'CSS', value: 2 },
+    { label: 'DataTurks', value: 3 },
+  ]
 }
 
 // 返回
@@ -94,7 +104,41 @@ const handleBack = () => {
 }
 
 // 下一步
-const handleNext = () => {
+const handleNext = async () => {
+  // 验证表单
+  try {
+    await formRef.value?.validate()
+  } catch (error) {
+    console.log('表单验证失败', error)
+    return
+  }
+  
+  // 基础字段必填校验
+  if (!createForm.value.name) {
+    message.error('请输入名称')
+    return
+  }
+  // 验证简介内容（移除 HTML 标签后检查）
+  const descTextContent = createForm.value.description?.replace(/<[^>]*>/g, '').trim() || ''
+  if (!descTextContent) {
+    message.error('请输入简介')
+    return
+  }
+  if (!createForm.value.difficulty) {
+    message.error('请选择难度')
+    return
+  }
+  if (!createForm.value.environment) {
+    message.error('请选择实验环境')
+    return
+  }
+  
+  // 如果是 JupyterNotebook 环境，小类别也是必填
+  if (projectType.value === 2 && !createForm.value.secondType) {
+    message.error('请选择小类别')
+    return
+  }
+  
   console.log('下一步', {
     projectType: projectType.value,
     ...createForm.value,
@@ -114,12 +158,7 @@ const handleNext = () => {
 watch(projectType, () => {
   createForm.value.environment = undefined
   createForm.value.secondType = undefined
-  createForm.value.showTaskRequirement = false
-})
-
-// 监听实验环境变化，清空小类别选择
-watch(() => createForm.value.environment, () => {
-  createForm.value.secondType = undefined
+  createForm.value.showTaskRequire = false
 })
 
 // 获取项目类型名称
@@ -130,6 +169,14 @@ const getProjectTypeName = computed(() => {
     3: 'JupyterLab环境',
   }
   return typeMap[projectType.value] || ''
+})
+
+// 获取实验环境名称
+const getEnvironmentName = computed(() => {
+  if (!createForm.value.environment) return ''
+  const options = getEnvironmentOptions()
+  const option = options.find(opt => opt.value === createForm.value.environment)
+  return option?.label || ''
 })
 
 // 富文本编辑器配置
@@ -157,6 +204,7 @@ const toolbarConfig: Partial<IToolbarConfig> = {
 
 const editorConfig: Partial<IEditorConfig> = {
   placeholder: '请输入简介内容',
+  autoFocus: false,
   MENU_CONF: {},
 }
 
@@ -168,6 +216,11 @@ const handleCreated = (editor: any) => {
 // 编辑器内容变化
 const handleChange = (editor: any) => {
   createForm.value.description = editor.getHtml()
+  // 如果有内容，清除该字段的验证错误
+  const textContent = createForm.value.description?.replace(/<[^>]*>/g, '').trim() || ''
+  if (textContent) {
+    formRef.value?.clearValidate(['description'])
+  }
 }
 
 // 组件销毁时，销毁编辑器
@@ -210,11 +263,13 @@ onBeforeUnmount(() => {
       <div class="project-form-section">
         <div class="form-title">
           {{ getProjectTypeName }}实训项目
-          <span v-if="createForm.environment"> 实验环境: {{ createForm.environment }}</span>
+          <span v-if="createForm.environment"> 实验环境: {{ getEnvironmentName }}</span>
         </div>
 
         <a-form
+          ref="formRef"
           :model="createForm"
+          :rules="formRules"
           layout="horizontal"
           :label-col="{ span: 3 }"
           :wrapper-col="{ span: 18 }"
@@ -223,7 +278,7 @@ onBeforeUnmount(() => {
             <a-input v-model:value="createForm.name" placeholder="请输入名称" />
           </a-form-item>
 
-          <a-form-item label="简介" name="description">
+          <a-form-item label="简介" name="description" required>
             <div class="editor-container">
               <Toolbar
                 :editor="editorRef"
@@ -245,9 +300,9 @@ onBeforeUnmount(() => {
           <a-form-item 
             v-if="projectType === 2" 
             label="任务要求" 
-            name="showTaskRequirement"
+            name="showTaskRequire"
           >
-            <a-checkbox v-model:checked="createForm.showTaskRequirement">
+            <a-checkbox v-model:checked="createForm.showTaskRequire">
               显示任务要求（勾选后，将简介作为任务要求显示在实践项目挑战页面）
             </a-checkbox>
           </a-form-item>
@@ -261,21 +316,24 @@ onBeforeUnmount(() => {
           </a-form-item>
 
           <a-form-item label="实验环境" name="environment" required>
-            <div style="display: flex; gap: 16px;">
-              <a-select
-                v-model:value="createForm.environment"
-                placeholder="请选择实验环境"
-                :options="getEnvironmentOptions()"
-                style="flex: 1;"
-              />
-              <a-select
-                v-if="projectType === 2"
-                v-model:value="createForm.secondType"
-                placeholder="请选择小类别"
-                :options="getSecondTypeOptions()"
-                style="flex: 1;"
-              />
-            </div>
+            <a-select
+              v-model:value="createForm.environment"
+              placeholder="请选择实验环境"
+              :options="getEnvironmentOptions()"
+            />
+          </a-form-item>
+
+          <a-form-item 
+            v-if="projectType === 2"
+            label="小类别" 
+            name="secondType" 
+            required
+          >
+            <a-select
+              v-model:value="createForm.secondType"
+              placeholder="请选择小类别"
+              :options="getSecondTypeOptions()"
+            />
           </a-form-item>
 
           <a-form-item label="学时" name="classHour">
@@ -362,20 +420,6 @@ onBeforeUnmount(() => {
 
         :deep(.ant-form-item-label) {
           font-weight: 500;
-
-          label {
-            &::before {
-              display: none !important;
-            }
-          }
-        }
-
-        :deep(.ant-form-item-required) {
-          &::before {
-            content: '*';
-            color: #ff4d4f;
-            margin-right: 4px;
-          }
         }
 
         .editor-container {
