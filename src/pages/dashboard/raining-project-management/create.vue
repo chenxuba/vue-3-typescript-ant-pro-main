@@ -25,16 +25,16 @@ const createForm = ref({
   description: '',
   difficulty: undefined,
   environment: undefined,
-  subCategory: undefined,
-  studyHours: '配置任务后自动计算',
+  secondType: undefined,
+  classHour: '',
   showTaskRequirement: false,
 })
 
 // 难度选项
 const difficultyOptions = [
-  { label: '简单', value: '简单' },
-  { label: '适中', value: '适中' },
-  { label: '困难', value: '困难' },
+  { label: '简单', value: 1 },
+  { label: '适中', value: 2 },
+  { label: '困难', value: 3 },
 ]
 
 // 实验环境选项（根据项目类型不同而不同）
@@ -61,7 +61,7 @@ const getEnvironmentOptions = () => {
 }
 
 // 小类别选项（根据实验环境不同而不同）
-const getSubCategoryOptions = () => {
+const getSecondTypeOptions = () => {
   // 如果不是JupyterNotebook环境，返回空数组
   if (projectType.value !== 2) return []
   
@@ -69,7 +69,7 @@ const getSubCategoryOptions = () => {
   if (!createForm.value.environment) return []
   
   // 根据不同的实验环境返回不同的小类别
-  const subCategoryMap: Record<string, any[]> = {
+  const secondTypeMap: Record<string, any[]> = {
     'Python3/Jupyter': [
       { label: 'Bwapp', value: 'Bwapp' },
       { label: 'CSS', value: 'CSS' },
@@ -85,7 +85,7 @@ const getSubCategoryOptions = () => {
     ],
   }
   
-  return subCategoryMap[createForm.value.environment] || []
+  return secondTypeMap[createForm.value.environment] || []
 }
 
 // 返回
@@ -113,13 +113,13 @@ const handleNext = () => {
 // 监听项目类型变化，清空实验环境和小类别选择
 watch(projectType, () => {
   createForm.value.environment = undefined
-  createForm.value.subCategory = undefined
+  createForm.value.secondType = undefined
   createForm.value.showTaskRequirement = false
 })
 
 // 监听实验环境变化，清空小类别选择
 watch(() => createForm.value.environment, () => {
-  createForm.value.subCategory = undefined
+  createForm.value.secondType = undefined
 })
 
 // 获取项目类型名称
@@ -270,16 +270,16 @@ onBeforeUnmount(() => {
               />
               <a-select
                 v-if="projectType === 2"
-                v-model:value="createForm.subCategory"
+                v-model:value="createForm.secondType"
                 placeholder="请选择小类别"
-                :options="getSubCategoryOptions()"
+                :options="getSecondTypeOptions()"
                 style="flex: 1;"
               />
             </div>
           </a-form-item>
 
-          <a-form-item label="学时" name="studyHours">
-            <a-input v-model:value="createForm.studyHours" disabled />
+          <a-form-item label="学时" name="classHour">
+            <a-input v-model:value="createForm.classHour" placeholder="配置任务后自动计算" disabled />
           </a-form-item>
         </a-form>
       </div>

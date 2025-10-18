@@ -17,8 +17,8 @@ export function useTaskLevel() {
     learningResources: [],
     taskRequirement: '',
     referenceAnswer: '',
-    difficulty: '适中',
-    skillTag: '',
+    difficulty: 2,
+    tag: '',
     taskHours: '',
     kernelLink: '',
   })
@@ -67,7 +67,7 @@ export function useTaskLevel() {
     difficulty: [
       { required: true, message: '请选择难度系数', trigger: 'change' },
     ],
-    skillTag: [
+    tag: [
       { required: true, message: '请输入技能标签', trigger: 'blur' },
     ],
     taskHours: [
@@ -128,8 +128,8 @@ export function useTaskLevel() {
       learningResources: [],
       taskRequirement: '',
       referenceAnswer: '',
-      difficulty: '适中',
-      skillTag: '',
+      difficulty: 2,
+      tag: '',
       taskHours: '',
     }
     
@@ -175,7 +175,7 @@ export function useTaskLevel() {
         taskRequirement: level.taskRequirement,
         referenceAnswer: level.referenceAnswer,
         difficulty: level.difficulty,
-        skillTag: level.skillTag,
+        tag: level.tag,
         taskHours: level.taskHours,
         kernelLink: level.kernelLink || '',
       }

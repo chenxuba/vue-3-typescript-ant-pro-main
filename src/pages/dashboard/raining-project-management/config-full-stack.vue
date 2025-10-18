@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
+import { uploadFileApi } from '@/api/common/file'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -63,54 +64,61 @@ const experimentFormRef = ref<FormInstance>()
 // 表单数据
 const formData = ref<FormData>({
   name: '',
-  skillTag: '',
-  domainCategory: undefined,
-  difficulty: '简单',
-  studyHours: '配置任务后自动计算',
-  backgroundImage: null,
-  coverImage: null,
+  tag: '',
+  fieldType: undefined,
+  difficulty: 1,
+  classHour: '配置任务后自动计算',
+  topCover: null,
+  cover: null,
   description: '',
-  showTaskRequirement: false,
-  trainingScope: '完全公开',
+  showTaskRequire: false,
+  authType: 1,
   enableCodeRepository: false,
   repositoryType: '代码仓库',
-  repositoryUrl: 'https://git.educoder.net/pmper166s9/test9',
+  gitUrl: 'https://git.educoder.net/pmper166s9/test9',
 })
+
+// 图片上传相关
+const topCoverUrl = ref<string>('')
+const coverUrl = ref<string>('')
+const uploadingTopCover = ref(false)
+const uploadingCover = ref(false)
+const imageUrlPrefix = 'http://101.200.13.193:8080/'
 
 // 表单验证规则
 const formRules: Record<string, Rule[]> = {
   name: [
     { required: true, message: '请输入名称', trigger: 'blur' },
   ],
-  skillTag: [
+  tag: [
     { required: true, message: '请输入技能标签', trigger: 'blur' },
   ],
-  domainCategory: [
+  fieldType: [
     { required: true, message: '请选择领域类别', trigger: 'change' },
   ],
   difficulty: [
     { required: true, message: '请选择难度', trigger: 'change' },
   ],
-  studyHours: [
+  classHour: [
     { required: true, message: '请输入学时', trigger: 'blur' },
   ],
-  backgroundImage: [
+  topCover: [
     { required: true, message: '请上传顶部背景图', trigger: 'change' },
   ],
-  coverImage: [
+  cover: [
     { required: true, message: '请上传封面图', trigger: 'change' },
   ],
-  trainingScope: [
+  authType: [
     { required: true, message: '请选择培训公开范围', trigger: 'change' },
   ],
 }
 
 // 领域类别选项
 const domainCategoryOptions = [
-  { label: '人工智能', value: '人工智能' },
-  { label: '大数据', value: '大数据' },
-  { label: '云计算', value: '云计算' },
-  { label: 'Web开发', value: 'Web开发' },
+  { label: '人工智能', value: 1 },
+  { label: '大数据', value: 2 },
+  { label: '云计算', value: 3 },
+  { label: 'Web开发', value: 4 },
 ]
 
 // 仓库类型选项
@@ -227,15 +235,65 @@ const currentParentPath = ref('/')
 const currentFolderParentPath = ref('/')
 
 // 文件上传处理
-const handleBackgroundUpload = (file: File) => {
-  formData.value.backgroundImage = file
-  formRef.value?.validateFields(['backgroundImage'])
+const handleBackgroundUpload = async (file: File) => {
+  // 验证文件大小
+  const isLt12M = file.size / 1024 / 1024 < 12
+  if (!isLt12M) {
+    message.error('图片大小不能超过 12MB!')
+    return false
+  }
+  
+  // 验证文件类型
+  const isImage = file.type === 'image/jpeg' || file.type === 'image/png'
+  if (!isImage) {
+    message.error('只能上传 JPG/PNG 格式的图片!')
+    return false
+  }
+  
+  try {
+    uploadingTopCover.value = true
+    const fileUrl = await uploadFileApi(file)
+    topCoverUrl.value = imageUrlPrefix + fileUrl
+    formData.value.topCover = file
+    formRef.value?.validateFields(['topCover'])
+    message.success('顶部背景图上传成功')
+  } catch (error) {
+    message.error('顶部背景图上传失败')
+  } finally {
+    uploadingTopCover.value = false
+  }
+  
   return false
 }
 
-const handleCoverUpload = (file: File) => {
-  formData.value.coverImage = file
-  formRef.value?.validateFields(['coverImage'])
+const handleCoverUpload = async (file: File) => {
+  // 验证文件大小
+  const isLt12M = file.size / 1024 / 1024 < 12
+  if (!isLt12M) {
+    message.error('图片大小不能超过 12MB!')
+    return false
+  }
+  
+  // 验证文件类型
+  const isImage = file.type === 'image/jpeg' || file.type === 'image/png'
+  if (!isImage) {
+    message.error('只能上传 JPG/PNG 格式的图片!')
+    return false
+  }
+  
+  try {
+    uploadingCover.value = true
+    const fileUrl = await uploadFileApi(file)
+    coverUrl.value = imageUrlPrefix + fileUrl
+    formData.value.cover = file
+    formRef.value?.validateFields(['cover'])
+    message.success('封面图上传成功')
+  } catch (error) {
+    message.error('封面图上传失败')
+  } finally {
+    uploadingCover.value = false
+  }
+  
   return false
 }
 
@@ -379,7 +437,7 @@ const handleNext = async () => {
       scrollToTop()
     } catch (error) {
       message.error('请完善必填信息')
-      currentStep.value = 1
+      // currentStep.value = 1
       scrollToTop()
     }
   } else if (currentStep.value === 1) {
@@ -403,7 +461,7 @@ const handleSave = async () => {
       repository: {
         enabled: formData.value.enableCodeRepository,
         type: formData.value.repositoryType,
-        url: formData.value.repositoryUrl,
+        url: formData.value.gitUrl,
         fileTree: fileTreeData.value,
       },
       taskLevels: taskLevels.value,
@@ -594,14 +652,14 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
 
             <a-row>
               <a-col :span="12">
-                <a-form-item label="技能标签" name="skillTag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
-                  <a-input v-model:value="formData.skillTag" placeholder="请输入技能标签" />
+                <a-form-item label="技能标签" name="tag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
+                  <a-input v-model:value="formData.tag" placeholder="请输入技能标签" />
                 </a-form-item>
               </a-col>
               <a-col :span="12">
-                <a-form-item label="领域类别" name="domainCategory" required :label-col="{ span: 4 }"
+                <a-form-item label="领域类别" name="fieldType" required :label-col="{ span: 4 }"
                   :wrapper-col="{ span: 12 }">
-                  <a-select v-model:value="formData.domainCategory" placeholder="请选择领域类别"
+                  <a-select v-model:value="formData.fieldType" placeholder="请选择领域类别"
                     :options="domainCategoryOptions" />
                 </a-form-item>
               </a-col>
@@ -609,35 +667,51 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
 
             <a-form-item label="难度" name="difficulty" required>
               <a-radio-group v-model:value="formData.difficulty" class="custom-radio">
-                <a-radio value="简单">简单</a-radio>
-                <a-radio value="适中">适中</a-radio>
-                <a-radio value="困难">困难</a-radio>
+                <a-radio :value="1">简单</a-radio>
+                <a-radio :value="2">适中</a-radio>
+                <a-radio :value="3">困难</a-radio>
               </a-radio-group>
             </a-form-item>
 
-            <a-form-item label="学时" name="studyHours" required>
-              <a-input v-model:value="formData.studyHours" disabled />
+            <a-form-item label="学时" name="classHour" required>
+              <a-input v-model:value="formData.classHour" disabled />
             </a-form-item>
 
-            <a-form-item label="顶部背景图" name="backgroundImage" required>
+            <a-form-item label="顶部背景图" name="topCover" required>
               <div class="flex items-top gap-16px">
-                <a-upload :before-upload="handleBackgroundUpload" :show-upload-list="false"
-                  accept="image/png,image/jpeg">
-                  <a-button>选择文件</a-button>
-                </a-upload>
+                <div class="flex flex-col gap-12px">
+                  <a-upload :before-upload="handleBackgroundUpload" :show-upload-list="false"
+                    accept="image/png,image/jpeg">
+                    <a-button :loading="uploadingTopCover">
+                      <template v-if="!uploadingTopCover">选择文件</template>
+                      <template v-else>上传中...</template>
+                    </a-button>
+                  </a-upload>
+                  <div v-if="topCoverUrl" class="image-preview">
+                    <img :src="topCoverUrl" alt="顶部背景图预览" style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
+                  </div>
+                </div>
                 <div class="upload-hint">
-                  说明：支持上传png/jpeg等格式文件，文件大小不能超过12M,建议使用290*218像素；如不上传，默认使用系统图片。
+                  说明：支持上传png/jpeg等格式文件，文件大小不能超过12M,建议使用290*218像素。
                 </div>
               </div>
             </a-form-item>
 
-            <a-form-item label="封面图" name="coverImage" required>
+            <a-form-item label="封面图" name="cover" required>
               <div class="flex items-top gap-16px">
-                <a-upload :before-upload="handleCoverUpload" :show-upload-list="false" accept="image/png,image/jpeg">
-                  <a-button>选择文件</a-button>
-                </a-upload>
+                <div class="flex flex-col gap-12px">
+                  <a-upload :before-upload="handleCoverUpload" :show-upload-list="false" accept="image/png,image/jpeg">
+                    <a-button :loading="uploadingCover">
+                      <template v-if="!uploadingCover">选择文件</template>
+                      <template v-else>上传中...</template>
+                    </a-button>
+                  </a-upload>
+                  <div v-if="coverUrl" class="image-preview">
+                    <img :src="coverUrl" alt="封面图预览" style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
+                  </div>
+                </div>
                 <div class="upload-hint">
-                  说明：支持上传png/jpeg等格式文件，文件大小不能超过12M,建议使用290*218像素；如不上传，默认使用系统图片。
+                  说明：支持上传png/jpeg等格式文件，文件大小不能超过12M,建议使用290*218像素。
                 </div>
               </div>
             </a-form-item>
@@ -646,8 +720,8 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
               <RichTextEditor v-model="formData.description" />
             </a-form-item>
 
-            <a-form-item label="任务要求" name="showTaskRequirement">
-              <a-checkbox v-model:checked="formData.showTaskRequirement">
+            <a-form-item label="任务要求" name="showTaskRequire">
+              <a-checkbox v-model:checked="formData.showTaskRequire">
                 显示任务要求（勾选后，将帮作为任务要求显示在任务项目政策面）
               </a-checkbox>
             </a-form-item>
@@ -663,12 +737,12 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
         <div class="form-section">
           <a-form ref="trainingScopeFormRef" :model="formData" :rules="formRules" layout="horizontal"
             :label-col="{ span: 2 }" :wrapper-col="{ span: 18 }">
-            <a-form-item label="培训公开范围" name="trainingScope" required>
-              <a-radio-group v-model:value="formData.trainingScope" class="custom-radio">
-                <a-radio value="完全公开">完全公开</a-radio>
-                <a-radio value="全院公开">全院公开</a-radio>
-                <a-radio value="本单位公开">本单位公开</a-radio>
-                <a-radio value="不公开">不公开</a-radio>
+            <a-form-item label="培训公开范围" name="authType" required>
+              <a-radio-group v-model:value="formData.authType" class="custom-radio">
+                <a-radio :value="1">完全公开</a-radio>
+                <a-radio :value="2">全院公开</a-radio>
+                <a-radio :value="3">本单位公开</a-radio>
+                <a-radio :value="4">不公开</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-form>
@@ -684,7 +758,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
               class="repository-type-select" />
             <div class="repository-url-group">
               <span class="url-label">仓库地址：</span>
-              <a-input v-model:value="formData.repositoryUrl" placeholder="请输入仓库地址" class="url-input" />
+              <a-input v-model:value="formData.gitUrl" placeholder="请输入仓库地址" class="url-input" />
             </div>
           </div>
 
@@ -837,14 +911,14 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
 
                       <a-form-item label="难度系数" name="difficulty" required>
                         <a-radio-group v-model:value="taskLevelFormData.difficulty" class="custom-radio">
-                          <a-radio value="困难">困难</a-radio>
-                          <a-radio value="适中">适中</a-radio>
-                          <a-radio value="简单">简单</a-radio>
+                          <a-radio :value="3">困难</a-radio>
+                          <a-radio :value="2">适中</a-radio>
+                          <a-radio :value="1">简单</a-radio>
                         </a-radio-group>
                       </a-form-item>
 
-                      <a-form-item label="技能标签" name="skillTag" required>
-                        <a-input v-model:value="taskLevelFormData.skillTag" placeholder="请输入技能标签" />
+                      <a-form-item label="技能标签" name="tag" required>
+                        <a-input v-model:value="taskLevelFormData.tag" placeholder="请输入技能标签" />
                       </a-form-item>
                       <a-form-item v-if="isKernelTask" label="内嵌链接" name="kernelLink" required>
                         <a-input v-model:value="taskLevelFormData.kernelLink" placeholder="请输入内嵌链接" />
@@ -1832,6 +1906,14 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
         }
       }
     }
+  }
+}
+
+/* 图片预览样式 */
+.image-preview {
+  img {
+    border: 1px solid #d9d9d9;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 }
 

@@ -1,18 +1,18 @@
 // 表单数据类型
 export interface FormData {
   name: string
-  skillTag: string
-  domainCategory?: string
-  difficulty: string
-  studyHours: string
-  backgroundImage: File | null
-  coverImage: File | null
+  tag: string
+  fieldType?: number
+  difficulty: number
+  classHour: string
+  topCover: File | null
+  cover: File | null
   description: string
-  showTaskRequirement: boolean
-  trainingScope: string
+  showTaskRequire: boolean
+  authType: number
   enableCodeRepository: boolean
   repositoryType: string
-  repositoryUrl: string
+  gitUrl: string
 }
 
 // 文件树节点类型
@@ -60,8 +60,8 @@ export interface TaskLevel {
   learningResources: UploadedFile[]
   taskRequirement: string
   referenceAnswer: string
-  difficulty: '困难' | '适中' | '简单'
-  skillTag: string
+  difficulty: number
+  tag: string
   taskHours: string
   kernelLink?: string // 内核链接
   questions?: Question[] // 选择题题目列表
@@ -84,8 +84,8 @@ export interface TaskLevelForm {
   learningResources: UploadedFile[]
   taskRequirement: string
   referenceAnswer: string
-  difficulty: '困难' | '适中' | '简单'
-  skillTag: string
+  difficulty: number
+  tag: string
   taskHours: string
   kernelLink?: string // 内核链接
 }
