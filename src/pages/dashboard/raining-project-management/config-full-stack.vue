@@ -282,8 +282,8 @@ const handleBackgroundUpload = async (file: File) => {
   try {
     uploadingTopCover.value = true
     const fileUrl = await uploadFileApi(file)
-    topCoverUrl.value = imageUrlPrefix + fileUrl
-    formData.value.topCover = topCoverUrl.value // 保存图片地址而不是 File 对象
+    topCoverUrl.value = imageUrlPrefix + fileUrl // 用于显示，加前缀
+    formData.value.topCover = fileUrl // 保存原始路径，不加前缀
     formRef.value?.validateFields(['topCover'])
     message.success('顶部背景图上传成功')
   } catch (error) {
@@ -313,8 +313,8 @@ const handleCoverUpload = async (file: File) => {
   try {
     uploadingCover.value = true
     const fileUrl = await uploadFileApi(file)
-    coverUrl.value = imageUrlPrefix + fileUrl
-    formData.value.cover = coverUrl.value // 保存图片地址而不是 File 对象
+    coverUrl.value = imageUrlPrefix + fileUrl // 用于显示，加前缀
+    formData.value.cover = fileUrl // 保存原始路径，不加前缀
     formRef.value?.validateFields(['cover'])
     message.success('封面图上传成功')
   } catch (error) {
@@ -1051,7 +1051,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
                       </a-form-item>
 
                       <a-form-item label="任务学时" name="classHour" required>
-                        <a-input v-model:value="taskLevelFormData.classHour" placeholder="请输入任务学时" />
+                        <a-input-number style="width:100%;" :min="0" v-model:value="taskLevelFormData.classHour" placeholder="请输入任务学时" />
                       </a-form-item>
 
                       

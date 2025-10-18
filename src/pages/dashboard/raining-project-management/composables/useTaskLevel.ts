@@ -329,22 +329,10 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       url: f.response?.url || f.url || '',
     }))
     
-    // 将文件列表转换为逗号隔开的字符串保存到表单数据，并添加前缀
+    // 将文件列表转换为逗号隔开的字符串保存到表单数据，不添加前缀
     const urls = learningResourceFileList.value
       .filter(f => f.url)
-      .map(f => {
-        const url = f.url!
-        // 如果 URL 以 / 开头（相对路径），添加完整的服务器地址前缀
-        if (url.startsWith('/')) {
-          return `http://101.200.13.193:8080${url}`
-        }
-        // 如果已经是完整 URL（http://或https://开头），直接返回
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-          return url
-        }
-        // 其他情况，添加前缀
-        return `http://101.200.13.193:8080/${url}`
-      })
+      .map(f => f.url!)
       .join(',')
     taskLevelFormData.value.source = urls
     
