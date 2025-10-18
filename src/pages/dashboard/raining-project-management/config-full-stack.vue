@@ -1152,10 +1152,10 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
                   </a-select>
                 </a-form-item>
 
-                <a-form-item label="应用关卡">
+                <a-form-item label="任务关卡">
                   <a-select 
                     v-model:value="env.config.applicationCard"
-                    placeholder="请选择应用关卡"
+                    placeholder="请选择任务关卡"
                     allowClear
                   >
                     <a-select-option value="level1">关卡1</a-select-option>

@@ -438,14 +438,14 @@ const handleCoverUpload = (file: File) => {
                     </a-form-item>
 
                     <template v-if="evaluationData.enableEvaluation">
-                      <a-form-item label="默认打开文件" required>
+                      <a-form-item label="评测文件" required>
                         <div class="flex items-center gap-16px">
                           <a-upload 
                             :before-upload="handleCodeFileUpload"
                             :show-upload-list="false"
                             accept=".py,.ipynb"
                           >
-                            <a-button type="primary">点击选择代码文件</a-button>
+                            <a-button type="primary">点击选择评测文件</a-button>
                           </a-upload>
                           <span v-if="evaluationData.defaultFileName" class="file-name">
                             {{ evaluationData.defaultFileName }}

@@ -4,6 +4,7 @@ import { Empty, message } from 'ant-design-vue'
 import { ApartmentOutlined, SearchOutlined, InfoCircleOutlined } from '@ant-design/icons-vue'
 import type { PersonnelModel, PersonnelQueryParams } from '@/api/system/personnel'
 import { getPersonnelListApi, updatePersonnelStatusApi } from '@/api/system/personnel'
+import { getAllOrganizationListApi, type RawOrganizationModel, type OrganizationModel } from '@/api/system/organization'
 
 defineOptions({
   name: 'PersonnelManagement',
@@ -16,6 +17,7 @@ const selectedOrg = ref<any>(null)
 const expandedKeys = ref<(string | number)[]>([])
 const selectedKeys = ref<(string | number)[]>([])
 const searchKeyword = ref<string>('')
+const treeLoading = ref<boolean>(false)
 
 // 人员列表相关
 const queryForm = reactive<PersonnelQueryParams>({
@@ -179,102 +181,97 @@ watch(searchKeyword, (newKeyword) => {
   }
 })
 
-// 初始化组织树数据
-const initTreeData = () => {
-  const mockData = [
-    {
-      id: '1',
-      name: '计算机网络信息中心',
-      code: '241711',
-      parentId: null,
-      parentName: '中国科学院',
-      isActive: true,
-      order: 0,
-      isIndependentTraining: true,
-      isVirtual: false,
-      children: [
-        {
-          id: '1-1',
-          name: '大数据技术与应用发展部',
-          code: '241711001',
-          parentId: '1',
-          parentName: '计算机网络信息中心',
-          isActive: true,
-          order: 1,
-          isIndependentTraining: false,
-          isVirtual: false,
-          children: [
-            {
-              id: '1-1-1',
-              name: '党群办公室',
-              code: '241711001001',
-              parentId: '1-1',
-              parentName: '大数据技术与应用发展部',
-              isActive: true,
-              order: 1,
-              isIndependentTraining: false,
-              isVirtual: false,
-            },
-          ],
-        },
-        {
-          id: '1-2',
-          name: '高性能计算技术与应用发展部',
-          code: '241711002',
-          parentId: '1',
-          parentName: '计算机网络信息中心',
-          isActive: true,
-          order: 2,
-          isIndependentTraining: false,
-          isVirtual: false,
-        },
-        {
-          id: '1-3',
-          name: '管理信息化技术与应用发展部',
-          code: '241711003',
-          parentId: '1',
-          parentName: '计算机网络信息中心',
-          isActive: true,
-          order: 3,
-          isIndependentTraining: false,
-          isVirtual: false,
-          children: [
-            {
-              id: '1-3-1',
-              name: '广州中心',
-              code: '241711003001',
-              parentId: '1-3',
-              parentName: '管理信息化技术与应用发展部',
-              isActive: true,
-              order: 1,
-              isIndependentTraining: false,
-              isVirtual: false,
-            },
-            {
-              id: '1-3-2',
-              name: '基地办公室',
-              code: '241711003002',
-              parentId: '1-3',
-              parentName: '管理信息化技术与应用发展部',
-              isActive: true,
-              order: 2,
-              isIndependentTraining: false,
-              isVirtual: false,
-            },
-          ],
-        },
-      ],
-    },
-  ]
+// 将原始 API 数据转换为组织模型
+const convertRawToOrganization = (raw: RawOrganizationModel): OrganizationModel => {
+  return {
+    id: raw.orgID,
+    name: raw.orgName,
+    code: raw.orgCode,
+    parentId: raw.parentOrgID || null,
+    parentName: raw.parentOrgName,
+    isActive: raw.status === 1,
+    order: raw.sortID,
+    isIndependentTraining: raw.isOrg === 1,
+    isVirtual: raw.isVirOrg === 1,
+  }
+}
+
+// 将扁平列表转换为树形结构
+const buildTree = (list: OrganizationModel[]): OrganizationModel[] => {
+  const map = new Map<string | number, OrganizationModel>()
+  const roots: OrganizationModel[] = []
   
-  originalTreeData.value = deepClone(mockData)
-  treeData.value = deepClone(mockData)
-  expandedKeys.value = getAllKeys(treeData.value)
+  // 先将所有节点放入 map
+  list.forEach((item) => {
+    map.set(item.id!, { ...item, children: [] })
+  })
   
-  if (treeData.value.length > 0) {
-    selectedKeys.value = [treeData.value[0].id!]
-    selectedOrg.value = treeData.value[0]
-    queryForm.organizationId = treeData.value[0].id
+  // 构建树形结构
+  list.forEach((item) => {
+    const node = map.get(item.id!)
+    if (!node) return
+    
+    if (item.parentId && map.has(item.parentId)) {
+      // 有父节点，添加到父节点的 children 中
+      const parent = map.get(item.parentId)
+      if (parent) {
+        if (!parent.children) {
+          parent.children = []
+        }
+        parent.children.push(node)
+      }
+    } else {
+      // 没有父节点或父节点不存在，作为根节点
+      roots.push(node)
+    }
+  })
+  
+  return roots
+}
+
+// 初始化组织树数据（调用真实接口）
+const initTreeData = async () => {
+  try {
+    treeLoading.value = true
+    
+    // 调用真实接口获取组织列表
+    const response = await getAllOrganizationListApi({
+      limit: 10000, // 获取所有数据
+      page: 1,
+      startNum: 0,
+      orderbyFiled: 'orgCode:asc',
+    })
+    
+    if (response && response.data && response.data.list) {
+      // 转换数据格式
+      const organizations = response.data.list.map(convertRawToOrganization)
+      
+      // 构建树形结构
+      const treeStructure = buildTree(organizations)
+      
+      // 保存原始数据
+      originalTreeData.value = deepClone(treeStructure)
+      treeData.value = deepClone(treeStructure)
+      
+      // 默认展开所有节点
+      expandedKeys.value = getAllKeys(treeData.value)
+      
+      // 默认选中第一个节点
+      if (treeData.value.length > 0) {
+        selectedKeys.value = [treeData.value[0].id!]
+        selectedOrg.value = treeData.value[0]
+        queryForm.organizationId = treeData.value[0].id
+      }
+      
+      message.success(`成功加载 ${organizations.length} 个组织`)
+    } else {
+      message.warning('未获取到组织数据')
+    }
+  } catch (error) {
+    console.error('获取组织列表失败:', error)
+    message.error('获取组织列表失败，请稍后重试')
+  } finally {
+    treeLoading.value = false
   }
 }
 
@@ -368,6 +365,7 @@ onMounted(() => {
             placeholder="搜索组织名称..." 
             allow-clear
             class="modern-search"
+            :disabled="treeLoading"
           >
             <template #prefix>
               <SearchOutlined />
@@ -375,7 +373,11 @@ onMounted(() => {
           </a-input>
         </div>
 
-        <div v-if="searchKeyword && treeData.length === 0" class="empty-search">
+        <div v-if="treeLoading" class="loading-container">
+          <a-spin size="large" tip="加载中..." />
+        </div>
+
+        <div v-else-if="searchKeyword && treeData.length === 0" class="empty-search">
           <a-empty 
             description="未找到匹配的组织"
             :image="Empty.PRESENTED_IMAGE_SIMPLE"
@@ -385,7 +387,7 @@ onMounted(() => {
         <div v-else class="tree-container">
           <div v-if="searchKeyword" class="search-result-tip">
             <InfoCircleOutlined />
-            <span>搜索到 {{ getAllKeys(treeData).length }} 个匹配结果</span>
+            <span class="ml-6px">搜索到 {{ getAllKeys(treeData).length }} 个匹配结果</span>
           </div>
           
           <a-tree
@@ -530,11 +532,14 @@ onMounted(() => {
     display: flex;
     gap: 20px;
     min-height: calc(100vh - 180px);
+    align-items: flex-start;
   }
 
   // 左侧组织树样式（复用组织架构页面）
   .left-panel {
     width: 320px;
+    height: fit-content;
+    max-height: calc(100vh - 40px);
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 16px;
     padding: 0;
@@ -542,7 +547,8 @@ onMounted(() => {
     flex-direction: column;
     box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
     overflow: hidden;
-    position: relative;
+    position: sticky;
+    top: 20px;
 
     &::before {
       content: '';
@@ -629,6 +635,33 @@ onMounted(() => {
       }
     }
 
+    .loading-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: rgba(255, 255, 255, 0.95);
+      margin: 0 12px 16px;
+      border-radius: 12px;
+      position: relative;
+      z-index: 1;
+
+      :deep(.ant-spin) {
+        .ant-spin-text {
+          color: rgba(0, 0, 0, 0.65);
+          font-size: 14px;
+          margin-top: 8px;
+        }
+
+        .ant-spin-dot {
+          .ant-spin-dot-item {
+            background-color: #667eea;
+          }
+        }
+      }
+    }
+
     .empty-search {
       flex: 1;
       display: flex;
@@ -640,6 +673,17 @@ onMounted(() => {
       border-radius: 12px;
       position: relative;
       z-index: 1;
+
+      :deep(.ant-empty) {
+        .ant-empty-image {
+          opacity: 0.6;
+        }
+
+        .ant-empty-description {
+          color: rgba(0, 0, 0, 0.45);
+          font-size: 14px;
+        }
+      }
     }
 
     .tree-container {
@@ -656,16 +700,33 @@ onMounted(() => {
       .search-result-tip {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 0px;
         padding: 8px 12px;
         margin-bottom: 12px;
         background: linear-gradient(90deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
         border-radius: 8px;
         font-size: 13px;
         color: rgba(0, 0, 0, 0.65);
+        animation: slideDown 0.3s ease;
+
+        span {
+          font-weight: 500;
+        }
 
         .anticon {
           color: #667eea;
+          font-size: 14px;
+        }
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
       }
 
@@ -689,38 +750,141 @@ onMounted(() => {
 
       :deep(.ant-tree) {
         background: transparent;
+        color: rgba(0, 0, 0, 0.85);
+
+        .ant-tree-treenode {
+          padding: 4px 0;
+          transition: all 0.3s ease;
+
+          &:hover {
+            .ant-tree-node-content-wrapper {
+              background: linear-gradient(90deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            }
+          }
+        }
+
+        .ant-tree-list-holder-inner {
+          .ant-tree-treenode {
+            width: 100%;
+
+            .ant-tree-treenode-switcher-open,
+            .ant-tree-treenode-switcher-close {
+              width: 100%;
+            }
+          }
+        }
 
         .ant-tree-node-content-wrapper {
           border-radius: 8px;
           padding: 8px 12px;
-          transition: all 0.3s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          align-items: center;
+          min-height: 40px;
+          position: relative;
+          flex: 1;
+          overflow: hidden;
+
+          &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+            transition: height 0.3s ease;
+          }
 
           &:hover {
             background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+
+            &::before {
+              height: 24px;
+            }
           }
+
+          .ant-tree-title {
+            flex: 1;
+            overflow: hidden;
+            min-width: 0;
+          }
+        }
+
+        .ant-tree-title {
+          flex: 1;
+          overflow: hidden;
+          min-width: 0;
         }
 
         .ant-tree-node-selected {
           .ant-tree-node-content-wrapper {
             background: linear-gradient(90deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            box-shadow: 0 3px 12px rgba(102, 126, 234, 0.2);
+            transform: translateX(6px);
+            font-weight: 500;
+
+            &::before {
+              height: 30px;
+            }
             
-            .node-name {
-              color: #667eea;
-              font-weight: 600;
+            .tree-node-title {
+              .node-name {
+                color: #667eea;
+                font-weight: 600;
+              }
             }
           }
         }
 
         .ant-tree-switcher {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
           color: rgba(102, 126, 234, 0.7);
+          transition: all 0.3s ease;
           margin-top: 7px;
+          &:hover {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 4px;
+          }
+
+          .ant-tree-switcher-icon {
+            font-size: 12px;
+          }
+        }
+
+        .ant-tree-iconEle {
+          display: none;
         }
       }
 
       .tree-node-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        overflow: hidden;
+        min-width: 0; // 确保flex子元素可以缩小
+
         .node-name {
           font-size: 14px;
           color: rgba(0, 0, 0, 0.85);
+          transition: all 0.3s ease;
+          line-height: 1.5;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex: 1;
+          min-width: 0; // 确保flex子元素可以缩小
+          display: block;
         }
       }
     }
