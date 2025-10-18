@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { shallowRef, onBeforeUnmount } from 'vue'
+import { shallowRef, onBeforeUnmount, watch } from 'vue'
 // @ts-ignore
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
@@ -47,16 +47,32 @@ const toolbarConfig: Partial<IToolbarConfig> = {
 
 const editorConfig: Partial<IEditorConfig> = {
   placeholder: props.placeholder,
+  autoFocus: false,
   MENU_CONF: {},
 }
 
 const handleCreated = (editor: any) => {
   editorRef.value = editor
+  // 如果有初始值，设置到编辑器中
+  if (props.modelValue) {
+    editor.setHtml(props.modelValue)
+  }
 }
 
 const handleChange = (editor: any) => {
   emit('update:modelValue', editor.getHtml())
 }
+
+// 监听 modelValue 变化，同步到编辑器
+watch(() => props.modelValue, (newValue) => {
+  const editor = editorRef.value
+  if (editor == null) return
+  
+  // 只有当编辑器内容与新值不同时才更新，避免循环更新
+  if (editor.getHtml() !== newValue) {
+    editor.setHtml(newValue || '')
+  }
+})
 
 onBeforeUnmount(() => {
   const editor = editorRef.value

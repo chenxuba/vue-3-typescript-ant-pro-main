@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
@@ -84,6 +84,32 @@ const coverUrl = ref<string>('')
 const uploadingTopCover = ref(false)
 const uploadingCover = ref(false)
 const imageUrlPrefix = 'http://101.200.13.193:8080/'
+
+// 从路由接收数据并填充表单
+onMounted(() => {
+  const routeData = history.state as any
+  console.log('接收到的路由数据:', routeData)
+  
+  if (routeData && routeData.name) {
+    // 填充基础信息
+    formData.value.name = routeData.name || ''
+    formData.value.description = routeData.description || ''
+    formData.value.difficulty = routeData.difficulty || 1
+    formData.value.classHour = routeData.classHour || ''
+    formData.value.showTaskRequire = routeData.showTaskRequire || false
+    
+    console.log('已自动填充表单数据:', {
+      name: formData.value.name,
+      description: formData.value.description,
+      descriptionLength: formData.value.description?.length || 0,
+      difficulty: formData.value.difficulty,
+      classHour: formData.value.classHour,
+      showTaskRequire: formData.value.showTaskRequire
+    })
+  } else {
+    console.log('未接收到路由数据')
+  }
+})
 
 // 表单验证规则
 const formRules: Record<string, Rule[]> = {

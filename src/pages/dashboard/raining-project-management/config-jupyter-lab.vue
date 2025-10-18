@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
@@ -85,6 +85,39 @@ const formData = ref<FormData>({
   enableCodeRepository: false,
   repositoryType: '代码仓库',
   repositoryUrl: 'https://git.educoder.net/pmper166s9/test9',
+})
+
+// 从路由接收数据并填充表单
+onMounted(() => {
+  const routeData = history.state as any
+  console.log('接收到的路由数据:', routeData)
+  
+  if (routeData && routeData.name) {
+    // 难度映射：数字转字符串
+    const difficultyMap: Record<number, string> = {
+      1: '简单',
+      2: '适中',
+      3: '困难',
+    }
+    
+    // 填充基础信息
+    formData.value.name = routeData.name || ''
+    formData.value.description = routeData.description || ''
+    formData.value.difficulty = difficultyMap[routeData.difficulty] || '简单'
+    formData.value.studyHours = routeData.classHour || ''
+    formData.value.showTaskRequirement = routeData.showTaskRequire || false
+    
+    console.log('已自动填充表单数据:', {
+      name: formData.value.name,
+      description: formData.value.description,
+      descriptionLength: formData.value.description?.length || 0,
+      difficulty: formData.value.difficulty,
+      studyHours: formData.value.studyHours,
+      showTaskRequirement: formData.value.showTaskRequirement
+    })
+  } else {
+    console.log('未接收到路由数据')
+  }
 })
 
 // 表单验证规则

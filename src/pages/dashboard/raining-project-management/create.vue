@@ -1,21 +1,14 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount, shallowRef } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-// @ts-ignore
-import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
-import type { IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
-import '@wangeditor/editor/dist/css/style.css'
+import RichTextEditor from './components/RichTextEditor.vue'
 
 defineOptions({
   name: 'CreateRainingProject',
 })
 
 const router = useRouter()
-
-// 富文本编辑器
-const editorRef = shallowRef()
-const valueHtml = ref('')
 
 // 表单引用
 const formRef = ref()
@@ -144,13 +137,34 @@ const handleNext = async () => {
     ...createForm.value,
   })
   
-  // 根据项目类型跳转到不同的配置页面
+  // 准备传递给下一个页面的数据
+  const routeData = {
+    projectType: projectType.value,
+    name: createForm.value.name,
+    description: createForm.value.description,
+    difficulty: createForm.value.difficulty,
+    environment: createForm.value.environment,
+    secondType: createForm.value.secondType,
+    classHour: createForm.value.classHour,
+    showTaskRequire: createForm.value.showTaskRequire,
+  }
+  
+  // 根据项目类型跳转到不同的配置页面，并传递数据
   if (projectType.value === 1) {
-    router.push('/dashboard/raining-project-management/config-full-stack')
+    router.push({
+      path: '/dashboard/raining-project-management/config-full-stack',
+      state: routeData,
+    })
   } else if (projectType.value === 2) {
-    router.push('/dashboard/raining-project-management/config-jupyter-notebook')
+    router.push({
+      path: '/dashboard/raining-project-management/config-jupyter-notebook',
+      state: routeData,
+    })
   } else if (projectType.value === 3) {
-    router.push('/dashboard/raining-project-management/config-jupyter-lab')
+    router.push({
+      path: '/dashboard/raining-project-management/config-jupyter-lab',
+      state: routeData,
+    })
   }
 }
 
@@ -179,56 +193,6 @@ const getEnvironmentName = computed(() => {
   return option?.label || ''
 })
 
-// 富文本编辑器配置
-const toolbarConfig: Partial<IToolbarConfig> = {
-  toolbarKeys: [
-    'bold',
-    'italic',
-    'underline',
-    'through',
-    '|',
-    'bulletedList',
-    'numberedList',
-    '|',
-    'justifyLeft',
-    'justifyCenter',
-    'justifyRight',
-    '|',
-    'insertLink',
-    'insertImage',
-    '|',
-    'undo',
-    'redo',
-  ],
-}
-
-const editorConfig: Partial<IEditorConfig> = {
-  placeholder: '请输入简介内容',
-  autoFocus: false,
-  MENU_CONF: {},
-}
-
-// 编辑器创建完成
-const handleCreated = (editor: any) => {
-  editorRef.value = editor
-}
-
-// 编辑器内容变化
-const handleChange = (editor: any) => {
-  createForm.value.description = editor.getHtml()
-  // 如果有内容，清除该字段的验证错误
-  const textContent = createForm.value.description?.replace(/<[^>]*>/g, '').trim() || ''
-  if (textContent) {
-    formRef.value?.clearValidate(['description'])
-  }
-}
-
-// 组件销毁时，销毁编辑器
-onBeforeUnmount(() => {
-  const editor = editorRef.value
-  if (editor == null) return
-  editor.destroy()
-})
 </script>
 
 <template>
@@ -279,22 +243,11 @@ onBeforeUnmount(() => {
           </a-form-item>
 
           <a-form-item label="简介" name="description" required>
-            <div class="editor-container">
-              <Toolbar
-                :editor="editorRef"
-                :defaultConfig="toolbarConfig"
-                :mode="'default'"
-                class="editor-toolbar"
-              />
-              <Editor
-                v-model="valueHtml"
-                :defaultConfig="editorConfig"
-                :mode="'default'"
-                class="editor-content"
-                @onCreated="handleCreated"
-                @onChange="handleChange"
-              />
-            </div>
+            <RichTextEditor 
+              v-model="createForm.description" 
+              placeholder="请输入简介内容"
+              :height="200"
+            />
           </a-form-item>
 
           <a-form-item 
@@ -420,40 +373,6 @@ onBeforeUnmount(() => {
 
         :deep(.ant-form-item-label) {
           font-weight: 500;
-        }
-
-        .editor-container {
-          border: 1px solid #d9d9d9;
-          border-radius: 2px;
-          transition: all 0.3s;
-
-          &:hover {
-            border-color: #40a9ff;
-          }
-
-          &:focus-within {
-            border-color: #1890ff;
-            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
-          }
-
-          .editor-toolbar {
-            border-bottom: 1px solid #e8e8e8;
-            background: #fafafa;
-          }
-
-          .editor-content {
-            height: 200px !important;
-            overflow-y: auto;
-            background: #fff;
-
-            :deep(.w-e-text-container) {
-              background: #fff;
-            }
-
-            :deep(.w-e-text-placeholder) {
-              color: #bfbfbf;
-            }
-          }
         }
       }
     }
