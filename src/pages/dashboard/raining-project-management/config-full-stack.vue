@@ -503,7 +503,7 @@ const handleCreateProject = async () => {
   try {
     // 准备提交的数据
     const submitData: any = {
-      mode:1,//全栈环境实训项目
+      projectType:1,//全栈环境实训项目
       name: formData.value.name,
       tag: formData.value.tag,
       fieldType: formData.value.fieldType,
