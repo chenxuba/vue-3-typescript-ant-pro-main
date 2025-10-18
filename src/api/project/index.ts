@@ -117,6 +117,14 @@ export interface CreateProjectTaskParams {
   jumpUrl?: string
   type: number // 1: 内核链接任务, 2: 选择题任务, 3: 编程任务
   projectId?: number
+  // 评测设置相关字段（编程任务使用）
+  timeLimitM?: number // 评测时长限制（单位：分钟）
+  passType?: number // 通关判定：1-实际输出与期望输出对比 2-实际输出满足规则
+  blankCode?: number // 空格处理：1-不忽略空格 2-忽略首尾空格 3-忽略所有空格
+  scoreRule?: number // 得分规则：1-通过全部测试集 2-通过部分测试集
+  testValidateSh?: string // 评测执行命令
+  testValidateType?: number // 用例类型：1-文本 2-文件
+  testContent?: string // 测试集（JSON字符串格式）
 }
 
 /**

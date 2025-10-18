@@ -32,14 +32,15 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
 
   // 评测设置表单数据
   const evaluationFormData = ref<EvaluationForm>({
-    timeLimit: '',
+    timeLimitM: 0,
     studentTaskFile: [],
     evaluationFile: [],
-    passJudgment: 'output_compare',
-    spaceHandling: 'no_ignore',
-    scoreRule: 'all_pass',
-    caseType: 'text',
-    testCases: [],
+    testValidateSh: '',
+    passType: 1,
+    blankCode: 1,
+    scoreRule: 1,
+    testValidateType: 1,
+    testContent: [],
   })
 
   // 自定义校验：检查富文本编辑器内容是否为空
@@ -87,7 +88,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
 
   // 评测设置表单验证规则
   const evaluationFormRules: Record<string, Rule[]> = {
-    timeLimit: [
+    timeLimitM: [
       { required: true, message: '请输入评测时长限制', trigger: 'blur' },
     ],
     studentTaskFile: [
@@ -95,6 +96,9 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     ],
     evaluationFile: [
       { required: true, message: '请上传评测执行文件', trigger: 'change', type: 'array', min: 1 },
+    ],
+    testValidateSh: [
+      { required: true, message: '请输入评测执行命令', trigger: 'blur' },
     ],
   }
 
@@ -128,15 +132,25 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       return
     }
     
-    // 检查当前选中的关卡是否是已保存的选择题任务，且没有题目
+    // 检查当前选中的关卡
     if (selectedTaskLevelId.value) {
       const currentLevel = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
-      if (currentLevel && currentLevel.type === 'choice' && currentLevel.taskId) {
+      if (currentLevel && currentLevel.taskId) {
         // 是已保存的选择题任务，检查是否有题目
-        if (!currentLevel.questions || currentLevel.questions.length === 0) {
-          message.warning('请至少新增一条题目')
-          currentTab.value = 'questions' // 切换到题目标签页
-          return
+        if (currentLevel.type === 'choice') {
+          if (!currentLevel.questions || currentLevel.questions.length === 0) {
+            message.warning('请至少新增一条题目')
+            currentTab.value = 'questions' // 切换到题目标签页
+            return
+          }
+        }
+        // 是已保存的编程任务，检查是否配置了评测设置
+        if (currentLevel.type === 'programming') {
+          if (!currentLevel.evaluationSettings || !currentLevel.evaluationSettings.testContent || currentLevel.evaluationSettings.testContent.length === 0) {
+            message.warning('请先配置评测设置后再添加新关卡')
+            currentTab.value = 'evaluation' // 切换到评测设置标签页
+            return
+          }
         }
       }
     }
@@ -272,14 +286,15 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       } else {
         // 重置为默认值
         evaluationFormData.value = {
-          timeLimit: '',
+          timeLimitM: 0,
           studentTaskFile: [],
           evaluationFile: [],
-          passJudgment: 'output_compare',
-          spaceHandling: 'no_ignore',
-          scoreRule: 'all_pass',
-          caseType: 'text',
-          testCases: [],
+          testValidateSh: '',
+          passType: 1,
+          blankCode: 1,
+          scoreRule: 1,
+          testValidateType: 1,
+          testContent: [],
         }
       }
     }
@@ -374,21 +389,47 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         ])
       }
       
-      console.log('准备提交的 taskLevelFormData:', taskLevelFormData.value)
+      // 准备提交的数据
+      let submitData: any = {
+        ...taskLevelFormData.value,
+      }
+      
+      // 如果是编程任务，添加评测设置数据
+      if (isProgrammingTask.value) {
+        // 将测试集数据转换为符合后端格式的数组
+        const testContentArray = evaluationFormData.value.testContent.map(tc => ({
+          args: tc.args,
+          answer: tc.answer,
+          select: tc.select,
+        }))
+        
+        submitData = {
+          ...submitData,
+          timeLimitM: evaluationFormData.value.timeLimitM,
+          passType: evaluationFormData.value.passType,
+          blankCode: evaluationFormData.value.blankCode,
+          scoreRule: evaluationFormData.value.scoreRule,
+          testValidateSh: evaluationFormData.value.testValidateSh,
+          testValidateType: evaluationFormData.value.testValidateType,
+          testContent: JSON.stringify(testContentArray), // 转换为 JSON 字符串
+        }
+      }
+      
+      console.log('准备提交的数据:', submitData)
       
       let response
       // 根据是否有 taskId 决定创建还是更新
       if (taskLevelFormData.value.taskId) {
         // 更新任务关卡
         response = await updateProjectTaskApi({
-          ...taskLevelFormData.value,
+          ...submitData,
           taskId: taskLevelFormData.value.taskId,
         })
         console.log('任务关卡更新成功，返回数据:', response)
         message.success('更新成功')
       } else {
         // 创建任务关卡
-        response = await createProjectTaskApi(taskLevelFormData.value)
+        response = await createProjectTaskApi(submitData)
         console.log('任务关卡创建成功，返回数据:', response)
         
         // 保存返回的 taskId 到表单数据
@@ -448,14 +489,15 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         
         // 重置评测设置表单数据为初始值
         evaluationFormData.value = {
-          timeLimit: '',
+          timeLimitM: 0,
           studentTaskFile: [],
           evaluationFile: [],
-          passJudgment: 'output_compare',
-          spaceHandling: 'no_ignore',
-          scoreRule: 'all_pass',
-          caseType: 'text',
-          testCases: [],
+          testValidateSh: '',
+          passType: 1,
+          blankCode: 1,
+          scoreRule: 1,
+          testValidateType: 1,
+          testContent: [],
         }
         
         // 清空学习资源文件列表
@@ -500,25 +542,26 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
 
   // 新增测试集
   const addTestCase = () => {
-    evaluationFormData.value.testCases.push({
+    evaluationFormData.value.testContent.push({
       id: Date.now().toString(),
-      input: '',
-      output: '',
+      args: '',
+      answer: '',
+      select: 1,
     })
   }
 
   // 删除测试集
   const removeTestCase = (id: string) => {
-    const index = evaluationFormData.value.testCases.findIndex(tc => tc.id === id)
+    const index = evaluationFormData.value.testContent.findIndex(tc => tc.id === id)
     if (index !== -1) {
-      evaluationFormData.value.testCases.splice(index, 1)
+      evaluationFormData.value.testContent.splice(index, 1)
       message.success('删除成功')
     }
   }
 
   // 一键删除测试用例
   const clearAllTestCases = () => {
-    evaluationFormData.value.testCases = []
+    evaluationFormData.value.testContent = []
     message.success('已清空所有测试用例')
   }
 

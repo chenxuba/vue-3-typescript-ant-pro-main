@@ -508,6 +508,19 @@ const handleNext = async () => {
       currentTab.value = 'questions'
       return
     }
+    // 检查所有编程任务是否都配置了评测设置
+                    const programmingLevelWithoutEvaluation = taskLevels.value.find(level => 
+                      level.type === 'programming' && 
+                      level.taskId && 
+                      (!level.evaluationSettings || !level.evaluationSettings.testContent || level.evaluationSettings.testContent.length === 0)
+                    )
+    if (programmingLevelWithoutEvaluation) {
+      message.warning('请配置评测设置')
+      // 选中该关卡并切换到评测设置标签页
+      selectTaskLevel(programmingLevelWithoutEvaluation.id)
+      currentTab.value = 'evaluation'
+      return
+    }
     currentStep.value = 3
     scrollToTop()
   }
@@ -800,6 +813,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
 // 处理标签页切换
 const handleTabChange = async (activeKey: string | number) => {
   const key = String(activeKey)
+  
   // 如果是选择题任务，且要切换到题目标签页
   if (isChoiceTask.value && key === 'questions') {
     // 检查是否已保存
@@ -813,8 +827,24 @@ const handleTabChange = async (activeKey: string | number) => {
       await loadQuestions(taskLevelFormData.value.taskId)
     }
   }
+  
+  // 如果是编程任务，且要切换到评测设置标签页
+  if (isProgrammingTask.value && key === 'evaluation') {
+    // 检查是否已保存
+    if (!taskLevelFormData.value.taskId) {
+      message.warning('请先保存创建任务后再配置评测设置')
+      // 阻止切换，保持在当前标签页
+      return
+    }
+  }
+  
   // 允许切换
   currentTab.value = key
+}
+
+// 处理测试集选中状态变化
+const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
+  testCase.select = checked ? 1 : 2
 }
 </script>
 
@@ -1204,8 +1234,14 @@ const handleTabChange = async (activeKey: string | number) => {
                           :label-col="{ span: 4 }" 
                           :wrapper-col="{ span: 18 }"
                         >
-                          <a-form-item label="评测时长限制" name="timeLimit" required>
-                            <a-input v-model:value="evaluationFormData.timeLimit" placeholder="请输入任务名称" />
+                          <a-form-item label="评测时长限制" name="timeLimitM" required>
+                            <a-input-number 
+                              v-model:value="evaluationFormData.timeLimitM" 
+                              :min="0"
+                              placeholder="请输入评测时长限制" 
+                              style="width: 200px;"
+                            />
+                            <span style="margin-left: 8px;">分钟</span>
                           </a-form-item>
 
                           <a-form-item label="学员任务文件" name="studentTaskFile" required>
@@ -1235,6 +1271,17 @@ const handleTabChange = async (activeKey: string | number) => {
                               （点击评测按钮时调用的文件，用于检验学员任务结果是否正确，可与"学员任务文件"一致）
                             </div>
                           </a-form-item>
+
+                          <a-form-item label="评测执行命令" name="testValidateSh" required>
+                            <a-input 
+                              v-model:value="evaluationFormData.testValidateSh" 
+                              placeholder="请输入评测执行命令，例如：python main.py" 
+                            />
+                            <div class="upload-hint">
+                              （执行评测文件的命令，如：python main.py、node index.js、java Main 等）
+                            </div>
+                          </a-form-item>
+
                         </a-form>
                       </div>
 
@@ -1243,17 +1290,17 @@ const handleTabChange = async (activeKey: string | number) => {
                         <div class="section-header">评测规则</div>
                         <a-form layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
                           <a-form-item label="通关判定">
-                            <a-radio-group v-model:value="evaluationFormData.passJudgment" class="custom-radio">
-                              <a-radio value="output_compare">实际输出与期望输出对比</a-radio>
-                              <a-radio value="rule_match">实际输出满足规则</a-radio>
+                            <a-radio-group v-model:value="evaluationFormData.passType" class="custom-radio">
+                              <a-radio :value="1">实际输出与期望输出对比</a-radio>
+                              <a-radio :value="2">实际输出满足规则</a-radio>
                             </a-radio-group>
                           </a-form-item>
 
                           <a-form-item label="空格处理">
-                            <a-radio-group v-model:value="evaluationFormData.spaceHandling" class="custom-radio">
-                              <a-radio value="no_ignore">不忽略空格</a-radio>
-                              <a-radio value="ignore_edge">忽略首尾空格</a-radio>
-                              <a-radio value="ignore_all">忽略所有空格(仅通过空格中自动添加所有空格进行对比)</a-radio>
+                            <a-radio-group v-model:value="evaluationFormData.blankCode" class="custom-radio">
+                              <a-radio :value="1">不忽略空格</a-radio>
+                              <a-radio :value="2">忽略首尾空格</a-radio>
+                              <a-radio :value="3">忽略所有空格(仅通过空格中自动添加所有空格进行对比)</a-radio>
                             </a-radio-group>
                           </a-form-item>
                         </a-form>
@@ -1265,16 +1312,16 @@ const handleTabChange = async (activeKey: string | number) => {
                         <a-form layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
                           <a-form-item label="得分规则">
                             <a-radio-group v-model:value="evaluationFormData.scoreRule" class="custom-radio">
-                              <a-radio value="all_pass">通过全部测试集（所有测试集都正确，才获取对应积分；否则得0分学分）</a-radio>
-                              <a-radio value="partial_pass">通过部分测试集（选中的测试数全部正确，获取任务学分；获取在0学分）</a-radio>
+                              <a-radio :value="1">通过全部测试集（所有测试集都正确，才获取对应积分；否则得0分学分）</a-radio>
+                              <a-radio :value="2">通过部分测试集（选中的测试数全部正确，获取任务学分；获取在0学分）</a-radio>
                             </a-radio-group>
                           </a-form-item>
 
                           <a-form-item label="用例类型">
                             <div class="case-type-row">
-                              <a-radio-group v-model:value="evaluationFormData.caseType" class="custom-radio">
-                                <a-radio value="text">文本</a-radio>
-                                <a-radio value="file">文件</a-radio>
+                              <a-radio-group v-model:value="evaluationFormData.testValidateType" class="custom-radio">
+                                <a-radio :value="1">文本</a-radio>
+                                <a-radio :value="2">文件</a-radio>
                               </a-radio-group>
                               <div class="test-case-buttons">
                                 <a-button type="primary" @click="addTestCase">新增测试集</a-button>
@@ -1286,21 +1333,25 @@ const handleTabChange = async (activeKey: string | number) => {
                           </a-form-item>
 
                           <!-- 测试集列表 -->
-                          <div v-if="evaluationFormData.testCases.length > 0" class="test-cases-list">
+                          <div v-if="evaluationFormData.testContent.length > 0" class="test-cases-list">
                             <div 
-                              v-for="(testCase, index) in evaluationFormData.testCases" 
+                              v-for="(testCase, index) in evaluationFormData.testContent" 
                               :key="testCase.id"
                               class="test-case-item"
                             >
-                              <a-checkbox class="test-case-checkbox" />
+                              <a-checkbox 
+                                :checked="testCase.select === 1" 
+                                @change="(e) => handleTestCaseSelectChange(testCase, e.target.checked)"
+                                class="test-case-checkbox" 
+                              />
                               <span class="test-case-label">测试集{{ index + 1 }}</span>
                               <a-input 
-                                v-model:value="testCase.input" 
+                                v-model:value="testCase.args" 
                                 placeholder="请输入输入内容" 
                                 class="test-case-input"
                               />
                               <a-input 
-                                v-model:value="testCase.output" 
+                                v-model:value="testCase.answer" 
                                 placeholder="请输入期望输出" 
                                 class="test-case-output"
                               />

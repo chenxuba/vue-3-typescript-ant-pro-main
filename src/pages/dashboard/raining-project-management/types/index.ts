@@ -67,14 +67,15 @@ export interface TaskLevel {
   questions?: Question[] // 选择题题目列表
   // 评测设置
   evaluationSettings?: {
-    timeLimit: string
+    timeLimitM: number // 评测时长限制（单位：分钟）
     studentTaskFile: UploadedFile[]
     evaluationFile: UploadedFile[]
-    passJudgment: 'output_compare' | 'rule_match'
-    spaceHandling: 'no_ignore' | 'ignore_edge' | 'ignore_all'
-    scoreRule: 'all_pass' | 'partial_pass'
-    caseType: 'text' | 'file'
-    testCases: TestCase[]
+    testValidateSh: string // 评测执行命令
+    passType: number // 通关判定：1-实际输出与期望输出对比 2-实际输出满足规则
+    blankCode: number // 空格处理：1-不忽略空格 2-忽略首尾空格 3-忽略所有空格
+    scoreRule: number // 得分规则：1-通过全部测试集 2-通过部分测试集
+    testValidateType: number // 用例类型：1-文本 2-文件
+    testContent: TestCase[]  // 测试集
   }
 }
 
@@ -96,20 +97,22 @@ export interface TaskLevelForm {
 // 测试集
 export interface TestCase {
   id: string
-  input: string
-  output: string
+  args: string  // 输入内容
+  answer: string  // 期望输出
+  select: number  // 1选中 2未选中
 }
 
 // 评测设置表单
 export interface EvaluationForm {
-  timeLimit: string
+  timeLimitM: number // 评测时长限制（单位：分钟）
   studentTaskFile: UploadedFile[]
   evaluationFile: UploadedFile[]
-  passJudgment: 'output_compare' | 'rule_match'
-  spaceHandling: 'no_ignore' | 'ignore_edge' | 'ignore_all'
-  scoreRule: 'all_pass' | 'partial_pass'
-  caseType: 'text' | 'file'
-  testCases: TestCase[]
+  testValidateSh: string // 评测执行命令
+  passType: number // 通关判定：1-实际输出与期望输出对比 2-实际输出满足规则
+  blankCode: number // 空格处理：1-不忽略空格 2-忽略首尾空格 3-忽略所有空格
+  scoreRule: number // 得分规则：1-通过全部测试集 2-通过部分测试集
+  testValidateType: number // 用例类型：1-文本 2-文件
+  testContent: TestCase[]  // 测试集
 }
 
 // 选择题选项
