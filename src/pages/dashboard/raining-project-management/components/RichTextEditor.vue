@@ -13,6 +13,7 @@ interface Props {
 
 interface Emits {
   (e: 'update:modelValue', value: string): void
+  (e: 'change', value: string): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -60,7 +61,9 @@ const handleCreated = (editor: any) => {
 }
 
 const handleChange = (editor: any) => {
-  emit('update:modelValue', editor.getHtml())
+  const html = editor.getHtml()
+  emit('update:modelValue', html)
+  emit('change', html)
 }
 
 // 监听 modelValue 变化，同步到编辑器

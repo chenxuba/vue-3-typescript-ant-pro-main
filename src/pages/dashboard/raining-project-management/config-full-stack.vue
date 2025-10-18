@@ -5,7 +5,7 @@ import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
-import { createProjectApi } from '@/api/project'
+import { createProjectApi, updateProjectApi } from '@/api/project'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -227,6 +227,7 @@ const {
   evaluationFormRef,
   taskLevelFormData,
   evaluationFormData,
+  learningResourceFileList,
   taskLevelFormRules,
   evaluationFormRules,
   isKernelTask,
@@ -237,6 +238,7 @@ const {
   selectTaskLevel,
   saveTaskLevel,
   resetTaskLevel,
+  handleLearningResourceCustomRequest,
   handleLearningResourceUpload,
   handleStudentTaskFileUpload,
   handleEvaluationFileUpload,
@@ -250,7 +252,7 @@ const {
   deleteQuestion,
   updateQuestion,
   updateQuestionsOrder,
-} = useTaskLevel()
+} = useTaskLevel(projectId)
 
 // 弹窗状态
 const showRepositoryModal = ref(false)
@@ -479,12 +481,24 @@ const handleNext = async () => {
     // 提交创建项目
     await handleCreateProject()
   } else if (currentStep.value === 2) {
+    // 第三步：任务关卡验证
+    // 检查是否有关卡
+    if (taskLevels.value.length === 0) {
+      message.error('请至少添加一个任务关卡')
+      return
+    }
+    // 检查是否所有关卡都已保存
+    const hasUnsavedLevel = taskLevels.value.some(level => !level.taskId)
+    if (hasUnsavedLevel) {
+      message.error('请先保存所有任务关卡后再进行下一步')
+      return
+    }
     currentStep.value = 3
     scrollToTop()
   }
 }
 
-// 创建项目
+// 创建或更新项目
 const handleCreateProject = async () => {
   try {
     // 准备提交的数据
@@ -511,24 +525,34 @@ const handleCreateProject = async () => {
 
     console.log('提交项目数据：', submitData)
     
-    // 调用创建项目API
-    const response = await createProjectApi(submitData)
-    
-    // 保存项目ID
-    if (response && response.id) {
-      projectId.value = response.id
-      console.log('项目ID已保存：', projectId.value)
+    let response
+    // 判断是创建还是更新
+    if (projectId.value) {
+      // 如果已有 projectId，调用更新接口
+      submitData.id = projectId.value
+      response = await updateProjectApi(submitData)
+      message.success('项目更新成功！')
+      console.log('更新成功：', response)
+    } else {
+      // 如果没有 projectId，调用创建接口
+      response = await createProjectApi(submitData)
+      
+      // 保存项目ID
+      if (response && response.id) {
+        projectId.value = response.id
+        console.log('项目ID已保存：', projectId.value)
+      }
+      
+      message.success('项目创建成功！')
+      console.log('创建成功：', response)
     }
-    
-    message.success('项目创建成功！')
-    console.log('创建成功：', response)
     
     // 跳转到下一步
     currentStep.value = 2
     scrollToTop()
   } catch (error) {
-    console.error('创建失败：', error)
-    message.error('项目创建失败，请稍后重试')
+    console.error('操作失败：', error)
+    message.error(projectId.value ? '项目更新失败，请稍后重试' : '项目创建失败，请稍后重试')
   }
 }
 
@@ -565,6 +589,24 @@ const handleSave = async () => {
   } catch (error) {
     console.error('保存失败：', error)
     message.error('请完善必填信息')
+  }
+}
+
+// 任务要求内容变化处理
+const handleTaskRequirementChange = (value: string) => {
+  // 去除HTML标签后检查是否有内容
+  const textContent = value.replace(/<[^>]*>/g, '').trim()
+  if (textContent) {
+    taskLevelFormRef.value?.clearValidate(['require'])
+  }
+}
+
+// 参考答案内容变化处理
+const handleReferenceAnswerChange = (value: string) => {
+  // 去除HTML标签后检查是否有内容
+  const textContent = value.replace(/<[^>]*>/g, '').trim()
+  if (textContent) {
+    taskLevelFormRef.value?.clearValidate(['referenceAnswer'])
   }
 }
 
@@ -959,14 +1001,13 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
                       :label-col="{ span: 4 }"
                       :wrapper-col="{ span: 18 }"
                     >
-                      <a-form-item label="任务名称" name="taskName" required>
-                        <a-input v-model:value="taskLevelFormData.taskName" placeholder="请输入任务名称" />
+                      <a-form-item label="任务名称" name="name" required>
+                        <a-input v-model:value="taskLevelFormData.name" placeholder="请输入任务名称" />
                       </a-form-item>
-
-                      <a-form-item label="学习资源" name="learningResources" required>
+                      <a-form-item label="学习资源" name="source" required>
                         <a-upload
-                          v-model:file-list="taskLevelFormData.learningResources"
-                          :before-upload="() => false"
+                          v-model:file-list="learningResourceFileList"
+                          :custom-request="handleLearningResourceCustomRequest"
                           @change="handleLearningResourceUpload"
                           accept=".doc,.docx,.pdf,.ppt,.pptx,.mp4"
                           :max-count="10"
@@ -978,10 +1019,11 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
                         </div>
                       </a-form-item>
 
-                      <a-form-item label="任务要求" name="taskRequirement" required>
+                      <a-form-item label="任务要求" name="require" required>
                         <RichTextEditor 
-                          v-model="taskLevelFormData.taskRequirement" 
+                          v-model="taskLevelFormData.require" 
                           placeholder="请输入任务要求"
+                          @change="handleTaskRequirementChange"
                         />
                       </a-form-item>
 
@@ -989,25 +1031,26 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
                         <RichTextEditor 
                           v-model="taskLevelFormData.referenceAnswer" 
                           placeholder="请输入参考答案"
+                          @change="handleReferenceAnswerChange"
                         />
                       </a-form-item>
 
                       <a-form-item label="难度系数" name="difficulty" required>
                         <a-radio-group v-model:value="taskLevelFormData.difficulty" class="custom-radio">
-                          <a-radio :value="3">困难</a-radio>
-                          <a-radio :value="2">适中</a-radio>
                           <a-radio :value="1">简单</a-radio>
+                          <a-radio :value="2">适中</a-radio>
+                          <a-radio :value="3">困难</a-radio>
                         </a-radio-group>
                       </a-form-item>
 
                       <a-form-item label="技能标签" name="tag" required>
                         <a-input v-model:value="taskLevelFormData.tag" placeholder="请输入技能标签" />
                       </a-form-item>
-                      <a-form-item v-if="isKernelTask" label="内嵌链接" name="kernelLink" required>
-                        <a-input v-model:value="taskLevelFormData.kernelLink" placeholder="请输入内嵌链接" />
+                      <a-form-item v-if="isKernelTask" label="内嵌链接" name="jumpUrl" required>
+                        <a-input v-model:value="taskLevelFormData.jumpUrl" placeholder="请输入内嵌链接" />
                       </a-form-item>
 
-                      <a-form-item label="任务学时" name="classHour">
+                      <a-form-item label="任务学时" name="classHour" required>
                         <a-input v-model:value="taskLevelFormData.classHour" placeholder="请输入任务学时" />
                       </a-form-item>
 
@@ -1200,8 +1243,10 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
                 
                 <!-- 底部按钮 -->
                 <div class="form-footer-buttons">
-                  <a-button @click="resetTaskLevel">重置</a-button>
-                  <a-button type="primary" @click="saveTaskLevel">保存</a-button>
+                  <a-button v-if="!taskLevelFormData.taskId" @click="resetTaskLevel">重置</a-button>
+                  <a-button type="primary" @click="saveTaskLevel">
+                    {{ taskLevelFormData.taskId ? '更新' : '保存' }}
+                  </a-button>
                 </div>
               </div>
               <div v-else class="empty-detail">

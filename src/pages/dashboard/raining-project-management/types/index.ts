@@ -56,14 +56,14 @@ export interface TaskLevel {
   id: string
   name: string
   type: 'programming' | 'choice' | 'kernel'
-  taskName: string
-  learningResources: UploadedFile[]
-  taskRequirement: string
+  source: string // 学习资源，逗号隔开的字符串
+  require: string
   referenceAnswer: string
   difficulty: number
   tag: string
   classHour: string
-  kernelLink?: string // 内核链接
+  jumpUrl?: string // 内嵌链接
+  taskId?: number // 任务关卡ID，存在表示已保存到服务器
   questions?: Question[] // 选择题题目列表
   // 评测设置
   evaluationSettings?: {
@@ -80,14 +80,17 @@ export interface TaskLevel {
 
 // 任务关卡表单
 export interface TaskLevelForm {
-  taskName: string
-  learningResources: UploadedFile[]
-  taskRequirement: string
+  name: string
+  source: string // 学习资源，逗号隔开的字符串
+  require: string
   referenceAnswer: string
   difficulty: number
   tag: string
   classHour: string
-  kernelLink?: string // 内核链接
+  jumpUrl?: string // 内嵌链接
+  type: number // 1: 内核链接任务, 2: 选择题任务, 3: 编程任务
+  projectId?: number // 项目ID
+  taskId?: number // 任务关卡ID，存在表示已保存过
 }
 
 // 测试集
