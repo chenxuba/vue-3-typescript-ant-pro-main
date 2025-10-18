@@ -119,6 +119,8 @@ export interface CreateProjectTaskParams {
   projectId?: number
   // 评测设置相关字段（编程任务使用）
   timeLimitM?: number // 评测时长限制（单位：分钟）
+  userFiles?: string // 学员任务文件（多个文件URL，逗号隔开）
+  testValidateFiles?: string // 评测执行文件（多个文件URL，逗号隔开）
   passType?: number // 通关判定：1-实际输出与期望输出对比 2-实际输出满足规则
   blankCode?: number // 空格处理：1-不忽略空格 2-忽略首尾空格 3-忽略所有空格
   scoreRule?: number // 得分规则：1-通过全部测试集 2-通过部分测试集

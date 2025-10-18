@@ -33,8 +33,8 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
   // 评测设置表单数据
   const evaluationFormData = ref<EvaluationForm>({
     timeLimitM: 0,
-    studentTaskFile: [],
-    evaluationFile: [],
+    userFiles: [],
+    testValidateFiles: [],
     testValidateSh: '',
     passType: 1,
     blankCode: 1,
@@ -42,6 +42,12 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     testValidateType: 1,
     testContent: [],
   })
+  
+  // 用于上传组件的临时文件列表（学员任务文件）
+  const userFileList = ref<UploadedFile[]>([])
+  
+  // 用于上传组件的临时文件列表（评测执行文件）
+  const testValidateFileList = ref<UploadedFile[]>([])
 
   // 自定义校验：检查富文本编辑器内容是否为空
   const validateRichText = (_rule: any, value: string) => {
@@ -91,10 +97,10 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     timeLimitM: [
       { required: true, message: '请输入评测时长限制', trigger: 'blur' },
     ],
-    studentTaskFile: [
+    userFiles: [
       { required: true, message: '请上传学员任务文件', trigger: 'change', type: 'array', min: 1 },
     ],
-    evaluationFile: [
+    testValidateFiles: [
       { required: true, message: '请上传评测执行文件', trigger: 'change', type: 'array', min: 1 },
     ],
     testValidateSh: [
@@ -287,8 +293,8 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         // 重置为默认值
         evaluationFormData.value = {
           timeLimitM: 0,
-          studentTaskFile: [],
-          evaluationFile: [],
+          userFiles: [],
+          testValidateFiles: [],
           testValidateSh: '',
           passType: 1,
           blankCode: 1,
@@ -296,6 +302,9 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
           testValidateType: 1,
           testContent: [],
         }
+        // 同时清空临时文件列表
+        userFileList.value = []
+        testValidateFileList.value = []
       }
     }
   }
@@ -387,6 +396,21 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
           taskLevelFormRef.value?.validate(),
           evaluationFormRef.value?.validate()
         ])
+        
+        // 只在更新时验证用例类型为文本时必须有至少一条测试集
+        if (taskLevelFormData.value.taskId && evaluationFormData.value.testValidateType === 1 && evaluationFormData.value.testContent.length === 0) {
+          message.error('用例类型为文本时，必须至少创建一条测试集')
+          return
+        }
+        
+        // 只在更新时验证测试集的输入内容和期望输出不能为空
+        if (taskLevelFormData.value.taskId && evaluationFormData.value.testContent.length > 0) {
+          const emptyTestCase = evaluationFormData.value.testContent.find(tc => !tc.args.trim() || !tc.answer.trim())
+          if (emptyTestCase) {
+            message.error('测试集的输入内容和期望输出不能为空')
+            return
+          }
+        }
       }
       
       // 准备提交的数据
@@ -403,9 +427,23 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
           select: tc.select,
         }))
         
+        // 将学员任务文件转换为逗号隔开的字符串
+        const userFilesStr = evaluationFormData.value.userFiles
+          .filter(f => f.url)
+          .map(f => f.url!)
+          .join(',')
+        
+        // 将评测执行文件转换为逗号隔开的字符串
+        const testValidateFilesStr = evaluationFormData.value.testValidateFiles
+          .filter(f => f.url)
+          .map(f => f.url!)
+          .join(',')
+        
         submitData = {
           ...submitData,
           timeLimitM: evaluationFormData.value.timeLimitM,
+          userFiles: userFilesStr,
+          testValidateFiles: testValidateFilesStr,
           passType: evaluationFormData.value.passType,
           blankCode: evaluationFormData.value.blankCode,
           scoreRule: evaluationFormData.value.scoreRule,
@@ -490,8 +528,8 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         // 重置评测设置表单数据为初始值
         evaluationFormData.value = {
           timeLimitM: 0,
-          studentTaskFile: [],
-          evaluationFile: [],
+          userFiles: [],
+          testValidateFiles: [],
           testValidateSh: '',
           passType: 1,
           blankCode: 1,
@@ -502,6 +540,9 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         
         // 清空学习资源文件列表
         learningResourceFileList.value = []
+        // 清空评测文件列表
+        userFileList.value = []
+        testValidateFileList.value = []
         
         // 清除所有表单校验
         taskLevelFormRef.value?.clearValidate()
@@ -513,31 +554,53 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
   }
 
   // 学员任务文件上传处理
-  const handleStudentTaskFileUpload = (info: any) => {
-    const { fileList } = info
-    evaluationFormData.value.studentTaskFile = fileList.map((f: any) => ({
+  const handleUserFilesUpload = (info: any) => {
+    const { file, fileList } = info
+    
+    if (file.status === 'done') {
+      message.success(`${file.name} 文件上传成功`)
+    } else if (file.status === 'error') {
+      message.error(`${file.name} 文件上传失败`)
+    }
+    
+    // 更新临时文件列表
+    userFileList.value = fileList.map((f: any) => ({
       uid: f.uid,
       name: f.name,
       status: f.status,
-      url: f.response?.url || f.url,
+      url: f.response?.url || f.url || '',
     }))
     
+    // 同步到表单数据
+    evaluationFormData.value.userFiles = [...userFileList.value]
+    
     // 触发表单验证
-    evaluationFormRef.value?.validateFields(['studentTaskFile'])
+    evaluationFormRef.value?.validateFields(['userFiles'])
   }
 
   // 评测执行文件上传处理
-  const handleEvaluationFileUpload = (info: any) => {
-    const { fileList } = info
-    evaluationFormData.value.evaluationFile = fileList.map((f: any) => ({
+  const handleTestValidateFilesUpload = (info: any) => {
+    const { file, fileList } = info
+    
+    if (file.status === 'done') {
+      message.success(`${file.name} 文件上传成功`)
+    } else if (file.status === 'error') {
+      message.error(`${file.name} 文件上传失败`)
+    }
+    
+    // 更新临时文件列表
+    testValidateFileList.value = fileList.map((f: any) => ({
       uid: f.uid,
       name: f.name,
       status: f.status,
-      url: f.response?.url || f.url,
+      url: f.response?.url || f.url || '',
     }))
     
+    // 同步到表单数据
+    evaluationFormData.value.testValidateFiles = [...testValidateFileList.value]
+    
     // 触发表单验证
-    evaluationFormRef.value?.validateFields(['evaluationFile'])
+    evaluationFormRef.value?.validateFields(['testValidateFiles'])
   }
 
   // 新增测试集
@@ -762,8 +825,10 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     resetTaskLevel,
     handleLearningResourceCustomRequest,
     handleLearningResourceUpload,
-    handleStudentTaskFileUpload,
-    handleEvaluationFileUpload,
+    handleUserFilesUpload,
+    handleTestValidateFilesUpload,
+    userFileList,
+    testValidateFileList,
     addTestCase,
     removeTestCase,
     clearAllTestCases,

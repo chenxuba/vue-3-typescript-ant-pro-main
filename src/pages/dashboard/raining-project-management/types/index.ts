@@ -68,8 +68,8 @@ export interface TaskLevel {
   // 评测设置
   evaluationSettings?: {
     timeLimitM: number // 评测时长限制（单位：分钟）
-    studentTaskFile: UploadedFile[]
-    evaluationFile: UploadedFile[]
+    userFiles: UploadedFile[] // 学员任务文件（支持多个）
+    testValidateFiles: UploadedFile[] // 评测执行文件（支持多个）
     testValidateSh: string // 评测执行命令
     passType: number // 通关判定：1-实际输出与期望输出对比 2-实际输出满足规则
     blankCode: number // 空格处理：1-不忽略空格 2-忽略首尾空格 3-忽略所有空格
@@ -105,8 +105,8 @@ export interface TestCase {
 // 评测设置表单
 export interface EvaluationForm {
   timeLimitM: number // 评测时长限制（单位：分钟）
-  studentTaskFile: UploadedFile[]
-  evaluationFile: UploadedFile[]
+  userFiles: UploadedFile[] // 学员任务文件（支持多个）
+  testValidateFiles: UploadedFile[] // 评测执行文件（支持多个）
   testValidateSh: string // 评测执行命令
   passType: number // 通关判定：1-实际输出与期望输出对比 2-实际输出满足规则
   blankCode: number // 空格处理：1-不忽略空格 2-忽略首尾空格 3-忽略所有空格

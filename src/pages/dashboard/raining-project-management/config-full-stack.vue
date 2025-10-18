@@ -240,8 +240,10 @@ const {
   resetTaskLevel,
   handleLearningResourceCustomRequest,
   handleLearningResourceUpload,
-  handleStudentTaskFileUpload,
-  handleEvaluationFileUpload,
+  handleUserFilesUpload,
+  handleTestValidateFilesUpload,
+  userFileList,
+  testValidateFileList,
   addTestCase,
   removeTestCase,
   clearAllTestCases,
@@ -509,13 +511,18 @@ const handleNext = async () => {
       return
     }
     // 检查所有编程任务是否都配置了评测设置
-                    const programmingLevelWithoutEvaluation = taskLevels.value.find(level => 
-                      level.type === 'programming' && 
-                      level.taskId && 
-                      (!level.evaluationSettings || !level.evaluationSettings.testContent || level.evaluationSettings.testContent.length === 0)
-                    )
+    const programmingLevelWithoutEvaluation = taskLevels.value.find(level => {
+      if (level.type !== 'programming' || !level.taskId || !level.evaluationSettings) {
+        return false
+      }
+      // 如果用例类型为文本（1），必须有至少一条测试集
+      if (level.evaluationSettings.testValidateType === 1) {
+        return !level.evaluationSettings.testContent || level.evaluationSettings.testContent.length === 0
+      }
+      return false
+    })
     if (programmingLevelWithoutEvaluation) {
-      message.warning('请配置评测设置')
+      message.warning('用例类型为文本时，必须至少创建一条测试集')
       // 选中该关卡并切换到评测设置标签页
       selectTaskLevel(programmingLevelWithoutEvaluation.id)
       currentTab.value = 'evaluation'
@@ -1244,31 +1251,33 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                             <span style="margin-left: 8px;">分钟</span>
                           </a-form-item>
 
-                          <a-form-item label="学员任务文件" name="studentTaskFile" required>
+                          <a-form-item label="学员任务文件" name="userFiles" required>
                             <a-upload
-                              v-model:file-list="evaluationFormData.studentTaskFile"
-                              :before-upload="() => false"
-                              @change="handleStudentTaskFileUpload"
+                              v-model:file-list="userFileList"
+                              :custom-request="handleLearningResourceCustomRequest"
+                              @change="handleUserFilesUpload"
                               accept=".js,.ts,.py,.java,.cpp,.c"
+                              :max-count="10"
                             >
-                              <a-button type="primary">点击选择代码文件</a-button>
+                              <a-button type="primary">点击上传</a-button>
                             </a-upload>
                             <div class="upload-hint">
-                              （学员评测基本任务时名称，查看效果页上需要编辑的文件类型）
+                              说明：支持上传多个代码文件，每个文件大小不能超过500M。（学员评测基本任务时名称，查看效果页上需要编辑的文件类型）
                             </div>
                           </a-form-item>
 
-                          <a-form-item label="评测执行文件" name="evaluationFile" required>
+                          <a-form-item label="评测执行文件" name="testValidateFiles" required>
                             <a-upload
-                              v-model:file-list="evaluationFormData.evaluationFile"
-                              :before-upload="() => false"
-                              @change="handleEvaluationFileUpload"
+                              v-model:file-list="testValidateFileList"
+                              :custom-request="handleLearningResourceCustomRequest"
+                              @change="handleTestValidateFilesUpload"
                               accept=".js,.ts,.py,.java,.cpp,.c"
+                              :max-count="10"
                             >
-                              <a-button type="primary">点击选择代码文件</a-button>
+                              <a-button type="primary">点击上传</a-button>
                             </a-upload>
                             <div class="upload-hint">
-                              （点击评测按钮时调用的文件，用于检验学员任务结果是否正确，可与"学员任务文件"一致）
+                              说明：支持上传多个代码文件，每个文件大小不能超过500M。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确，可与"学员任务文件"一致）
                             </div>
                           </a-form-item>
 
@@ -1312,8 +1321,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                         <a-form layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
                           <a-form-item label="得分规则">
                             <a-radio-group v-model:value="evaluationFormData.scoreRule" class="custom-radio">
-                              <a-radio :value="1">通过全部测试集（所有测试集都正确，才获取对应积分；否则得0分学分）</a-radio>
-                              <a-radio :value="2">通过部分测试集（选中的测试数全部正确，获取任务学分；获取在0学分）</a-radio>
+                              <a-radio :value="1">通过全部测试集（所有测试集都正确，才获取对应积分；否则得0学分）</a-radio>
+                              <a-radio :value="2">通过部分测试集（选中的测试集全部正确，获取任务学分；否则得0学分）</a-radio>
                             </a-radio-group>
                           </a-form-item>
 
@@ -1323,7 +1332,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                                 <a-radio :value="1">文本</a-radio>
                                 <a-radio :value="2">文件</a-radio>
                               </a-radio-group>
-                              <div class="test-case-buttons">
+                              <!-- 只在文本类型时显示操作按钮 -->
+                              <div v-if="evaluationFormData.testValidateType === 1" class="test-case-buttons">
                                 <a-button type="primary" @click="addTestCase">新增测试集</a-button>
                                 <a-button @click="clearAllTestCases">一键删除测试用例</a-button>
                                 <a-button @click="downloadTemplate">下载测试用例模板</a-button>
@@ -1332,8 +1342,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                             </div>
                           </a-form-item>
 
-                          <!-- 测试集列表 -->
-                          <div v-if="evaluationFormData.testContent.length > 0" class="test-cases-list">
+                          <!-- 测试集列表（只在文本类型时显示） -->
+                          <div v-if="evaluationFormData.testValidateType === 1 && evaluationFormData.testContent.length > 0" class="test-cases-list">
                             <div 
                               v-for="(testCase, index) in evaluationFormData.testContent" 
                               :key="testCase.id"
