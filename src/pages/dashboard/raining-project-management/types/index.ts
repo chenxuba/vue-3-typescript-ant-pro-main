@@ -137,12 +137,12 @@ export interface Question {
 
 // 实验环境表单
 export interface ExperimentEnvironmentForm {
-  experimentImage: string // 实验镜像
-  experimentInterfaces: string[] // 实验界面（多选）
-  attachedEnvironment?: string // 附带环境
-  applicationCard?: string // 应用关卡
-  programmingLanguage?: string // 编程语言
-  startupCommand?: string // 开启时触发命令
+  dockerImage: number // 实验镜像（从 create 页面传递的 environment 值）
+  viewTypes: number[] // 实验界面（多选：1-代码编辑器 2-命令行终端 3-容器内服务）
+  environment?: string // 附带环境
+  taskId?: string // 任务关卡
+  codeType?: string // 编程语言
+  shellBegin?: string // 开启时触发命令
   containerPort?: string // 容器端口
-  route?: string // 路由（选填）
+  containerPath?: string // 路由（选填）
 }

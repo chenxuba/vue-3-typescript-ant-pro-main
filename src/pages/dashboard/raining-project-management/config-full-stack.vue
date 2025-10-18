@@ -5,7 +5,7 @@ import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
-import { createProjectApi, updateProjectApi } from '@/api/project'
+import { createProjectApi, updateProjectApi, updateProjectEnvironmentApi } from '@/api/project'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -89,6 +89,19 @@ const uploadingTopCover = ref(false)
 const uploadingCover = ref(false)
 const imageUrlPrefix = 'http://101.200.13.193:8080/'
 
+// 实验环境相关
+const selectedEnvironment = ref<number | undefined>(undefined)
+
+// 获取实验环境名称
+const getEnvironmentName = () => {
+  const environmentMap: Record<number, string> = {
+    1: 'Python3.6',
+    2: 'Python3.13',
+    3: 'Python3.12/VNC',
+  }
+  return environmentMap[selectedEnvironment.value || 1] || 'Python3.6'
+}
+
 // 从路由接收数据并填充表单
 onMounted(() => {
   const routeData = history.state as any
@@ -101,6 +114,8 @@ onMounted(() => {
     formData.value.difficulty = routeData.difficulty || 1
     formData.value.classHour = routeData.classHour || ''
     formData.value.showTaskRequire = routeData.showTaskRequire || false
+    // 保存实验环境
+    selectedEnvironment.value = routeData.environment || 1
     
     console.log('已自动填充表单数据:', {
       name: formData.value.name,
@@ -108,11 +123,17 @@ onMounted(() => {
       descriptionLength: formData.value.description?.length || 0,
       difficulty: formData.value.difficulty,
       classHour: formData.value.classHour,
-      showTaskRequire: formData.value.showTaskRequire
+      showTaskRequire: formData.value.showTaskRequire,
+      environment: selectedEnvironment.value
     })
   } else {
     console.log('未接收到路由数据')
+    // 如果没有路由数据，默认使用 Python3.6
+    selectedEnvironment.value = 1
   }
+  
+  // 初始化实验环境（使用接收到的 environment 值）
+  initializeExperimentEnvironments()
 })
 
 // 表单验证规则
@@ -163,34 +184,51 @@ interface ExperimentEnvironment {
   config: ExperimentEnvironmentForm
 }
 
-const experimentEnvironments = ref<ExperimentEnvironment[]>([
-  {
-    id: '1',
-    name: '实验环境1',
-    isEditing: false,
-    config: {
-      experimentImage: 'Python3.6',
-      experimentInterfaces: [],
-      attachedEnvironment: undefined,
-      applicationCard: undefined,
-      programmingLanguage: undefined,
-      startupCommand: undefined,
-      containerPort: undefined,
-      route: undefined,
-    }
+const experimentEnvironments = ref<ExperimentEnvironment[]>([])
+
+// 初始化实验环境（需要在获取到 selectedEnvironment 后）
+const initializeExperimentEnvironments = () => {
+  if (experimentEnvironments.value.length === 0) {
+    experimentEnvironments.value = [{
+      id: '1',
+      name: '实验环境1',
+      isEditing: false,
+      config: {
+        dockerImage: selectedEnvironment.value || 1,
+        viewTypes: [],
+        environment: undefined,
+        taskId: undefined,
+        codeType: undefined,
+        shellBegin: undefined,
+        containerPort: undefined,
+        containerPath: undefined,
+      }
+    }]
   }
-])
+}
 
 const activeEnvironmentKey = ref('1')
 const editingEnvironmentName = ref('')
 
 // 实验环境验证规则
 const experimentFormRules: Record<string, Rule[]> = {
-  experimentImage: [
+  dockerImage: [
     { required: true, message: '请选择实验镜像', trigger: 'change' },
   ],
-  experimentInterfaces: [
+  viewTypes: [
     { required: true, type: 'array', min: 1, message: '请至少选择一个实验界面', trigger: 'change' },
+  ],
+  environment: [
+    { required: true, message: '请选择附带环境', trigger: 'change' },
+  ],
+  taskId: [
+    { required: true, message: '请选择任务关卡', trigger: 'change' },
+  ],
+  codeType: [
+    { required: true, message: '请选择编程语言', trigger: 'change' },
+  ],
+  shellBegin: [
+    { required: true, message: '请输入开启时触发命令', trigger: 'blur' },
   ],
   containerPort: [
     { required: true, message: '请输入容器端口', trigger: 'blur' },
@@ -597,25 +635,38 @@ const handleSave = async () => {
     // 验证实验环境表单
     await experimentFormRef.value?.validate()
     
-    // 收集所有数据
-    const projectData = {
-      basicInfo: formData.value,
-      repository: {
-        enabled: formData.value.enableCodeRepository,
-        type: formData.value.repositoryType,
-        url: formData.value.gitUrl,
-        fileTree: fileTreeData.value,
-      },
-      taskLevels: taskLevels.value,
-      experimentEnvironments: experimentEnvironments.value,
+    // 调用更新接口，传递实验环境参数
+    if (!projectId.value) {
+      message.error('项目ID不存在，无法保存')
+      return
     }
     
-    console.log('保存项目数据：', projectData)
+    // 获取第一个实验环境的数据（扁平化传参）
+    const firstEnv = experimentEnvironments.value[0]
+    if (!firstEnv) {
+      message.error('请至少配置一个实验环境')
+      return
+    }
     
-    // 这里可以调用后端API保存数据
-    // await saveProject(projectData)
+    const updateData = {
+      title: firstEnv.name,
+      dockerImage: firstEnv.config.dockerImage,
+      viewTypes: firstEnv.config.viewTypes.join(','), // 数组转为逗号隔开的字符串
+      environment: firstEnv.config.environment,
+      taskId: firstEnv.config.taskId ? Number(firstEnv.config.taskId) : undefined,
+      codeType: firstEnv.config.codeType,
+      shellBegin: firstEnv.config.shellBegin,
+      containerPort: firstEnv.config.containerPort,
+      containerPath: firstEnv.config.containerPath,
+      projectId: projectId.value,
+    }
     
-    message.success('项目创建成功！')
+    console.log('保存实验环境数据：', updateData)
+    
+    // 调用后端API更新实验环境
+    await updateProjectEnvironmentApi(updateData)
+    
+    message.success('项目保存成功！')
     
     // 延迟返回列表页，让用户看到成功提示
     setTimeout(() => {
@@ -739,25 +790,30 @@ const handleDragEnd = () => {
 }
 
 // 实验界面切换
-const toggleInterface = (type: string) => {
+const toggleInterface = (type: number) => {
   const config = currentEnvironmentConfig.value
   if (!config) return
   
-  const index = config.experimentInterfaces.indexOf(type)
+  const index = config.viewTypes.indexOf(type)
   if (index > -1) {
-    config.experimentInterfaces.splice(index, 1)
+    config.viewTypes.splice(index, 1)
     // 清除对应的条件字段
-    if (type === 'editor') {
-      config.programmingLanguage = undefined
-    } else if (type === 'terminal') {
-      config.startupCommand = undefined
-    } else if (type === 'service') {
+    if (type === 1) { // 代码编辑器
+      config.codeType = undefined
+    } else if (type === 2) { // 命令行终端
+      config.shellBegin = undefined
+    } else if (type === 3) { // 容器内服务
       config.containerPort = undefined
-      config.route = undefined
+      config.containerPath = undefined
     }
   } else {
-    config.experimentInterfaces.push(type)
+    config.viewTypes.push(type)
   }
+  
+  // 清除验证错误提示
+  nextTick(() => {
+    experimentFormRef.value?.clearValidate(['viewTypes'])
+  })
 }
 
 // 添加实验环境
@@ -768,14 +824,14 @@ const handleAddEnvironment = () => {
     name: `实验环境${experimentEnvironments.value.length + 1}`,
     isEditing: false,
     config: {
-      experimentImage: 'Python3.6',
-      experimentInterfaces: [],
-      attachedEnvironment: undefined,
-      applicationCard: undefined,
-      programmingLanguage: undefined,
-      startupCommand: undefined,
+      dockerImage: selectedEnvironment.value || 1,
+      viewTypes: [],
+      environment: undefined,
+      taskId: undefined,
+      codeType: undefined,
+      shellBegin: undefined,
       containerPort: undefined,
-      route: undefined,
+      containerPath: undefined,
     }
   }
   experimentEnvironments.value.push(newEnv)
@@ -1444,34 +1500,34 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                     </template>
                   </div>
                 </template>
-                <a-form-item label="实验镜像" name="experimentImage" required>
+                <a-form-item label="实验镜像" name="dockerImage" required>
                   <div class="experiment-image-info">
-                    系统实验镜像默认认为Python3.6。
+                    系统实验镜像默认为{{ getEnvironmentName() }}。
                   </div>
                 </a-form-item>
 
-                <a-form-item label="实验界面" name="experimentInterfaces" required>
+                <a-form-item label="实验界面" name="viewTypes" required>
                   <div class="experiment-interfaces">
                     <div 
                       class="interface-card"
-                      :class="{ active: env.config.experimentInterfaces.includes('editor') }"
-                      @click="toggleInterface('editor')"
+                      :class="{ active: env.config.viewTypes.includes(1) }"
+                      @click="toggleInterface(1)"
                     >
                       <div class="card-title">代码编辑器</div>
                       <div class="card-desc">提供代码编辑器，编辑器，调试器等工具</div>
                     </div>
                     <div 
                       class="interface-card"
-                      :class="{ active: env.config.experimentInterfaces.includes('terminal') }"
-                      @click="toggleInterface('terminal')"
+                      :class="{ active: env.config.viewTypes.includes(2) }"
+                      @click="toggleInterface(2)"
                     >
                       <div class="card-title">命令行终端</div>
                       <div class="card-desc">提供命令行窗口</div>
                     </div>
                     <div 
                       class="interface-card"
-                      :class="{ active: env.config.experimentInterfaces.includes('service') }"
-                      @click="toggleInterface('service')"
+                      :class="{ active: env.config.viewTypes.includes(3) }"
+                      @click="toggleInterface(3)"
                     >
                       <div class="card-title">容器内服务</div>
                       <div class="card-desc">直接预览容器内部Web服务</div>
@@ -1479,9 +1535,9 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                   </div>
                 </a-form-item>
 
-                <a-form-item label="附带环境">
+                <a-form-item label="附带环境" name="environment" required>
                   <a-select 
-                    v-model:value="env.config.attachedEnvironment"
+                    v-model:value="env.config.environment"
                     placeholder="请选择附带环境"
                     allowClear
                   >
@@ -1490,67 +1546,78 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                   </a-select>
                 </a-form-item>
 
-                <a-form-item label="任务关卡">
+                <a-form-item label="任务关卡" name="taskId" required>
                   <a-select 
-                    v-model:value="env.config.applicationCard"
+                    v-model:value="env.config.taskId"
                     placeholder="请选择任务关卡"
                     allowClear
                   >
-                    <a-select-option value="level1">关卡1</a-select-option>
-                    <a-select-option value="level2">关卡2</a-select-option>
+                    <a-select-option 
+                      v-for="level in taskLevels" 
+                      :key="level.taskId || level.id" 
+                      :value="level.taskId"
+                      :disabled="!level.taskId"
+                    >
+                      {{ level.name }}
+                      <span v-if="!level.taskId" style="color: #999;"> (未保存)</span>
+                    </a-select-option>
                   </a-select>
                 </a-form-item>
 
                 <!-- 选择代码编辑器时显示编程语言 -->
                 <a-form-item 
-                  v-if="env.config.experimentInterfaces.includes('editor')"
+                  v-if="env.config.viewTypes.includes(1)"
                   label="编程语言"
+                  name="codeType"
+                  required
                 >
                   <a-select 
-                    v-model:value="env.config.programmingLanguage"
-                    placeholder="请选择附带语言"
+                    v-model:value="env.config.codeType"
+                    placeholder="请选择编程语言"
                     allowClear
                   >
-                    <a-select-option value="python">Python</a-select-option>
-                    <a-select-option value="javascript">JavaScript</a-select-option>
-                    <a-select-option value="java">Java</a-select-option>
-                    <a-select-option value="cpp">C++</a-select-option>
+                    <a-select-option value="1">Python</a-select-option>
+                    <a-select-option value="2">JavaScript</a-select-option>
+                    <a-select-option value="3">Java</a-select-option>
+                    <a-select-option value="4">C++</a-select-option>
                   </a-select>
                 </a-form-item>
 
                 <!-- 选择命令行终端时显示开启时触发命令 -->
                 <a-form-item 
-                  v-if="env.config.experimentInterfaces.includes('terminal')"
+                  v-if="env.config.viewTypes.includes(2)"
                   label="开启时触发命令"
+                  name="shellBegin"
+                  required
                 >
                   <a-input 
-                    v-model:value="env.config.startupCommand"
+                    v-model:value="env.config.shellBegin"
                     placeholder="请输入命令"
                   />
                 </a-form-item>
 
                 <!-- 选择容器内服务时显示容器端口和路由 -->
                 <a-form-item 
-                  v-if="env.config.experimentInterfaces.includes('service')"
+                  v-if="env.config.viewTypes.includes(3)"
                   label="容器端口" 
                   name="containerPort" 
                   required
                 >
-                  <a-row :gutter="16">
-                    <a-col :span="12">
-                      <a-input 
-                        v-model:value="env.config.containerPort"
-                        placeholder="请输入容器端口"
-                      />
-                    </a-col>
-                    <a-col :span="12">
-                      <a-input 
-                        v-model:value="env.config.route"
-                        placeholder="请输入路由"
-                        addon-before="路由（选填）"
-                      />
-                    </a-col>
-                  </a-row>
+                  <a-input 
+                    v-model:value="env.config.containerPort"
+                    placeholder="请输入容器端口"
+                  />
+                </a-form-item>
+
+                <!-- 选择容器内服务时显示路由（选填） -->
+                <a-form-item 
+                  v-if="env.config.viewTypes.includes(3)"
+                  label="路由"
+                >
+                  <a-input 
+                    v-model:value="env.config.containerPath"
+                    placeholder="请输入路由（选填）"
+                  />
                 </a-form-item>
               </a-tab-pane>
             </a-tabs>

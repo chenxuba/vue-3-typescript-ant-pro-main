@@ -80,6 +80,22 @@ export async function createProjectApi(params: CreateProjectParams): Promise<Cre
 }
 
 /**
+ * 更新项目的请求参数（实验环境）
+ */
+export interface UpdateProjectEnvironmentParams {
+  title: string // 环境名称
+  dockerImage: number // 实验镜像
+  viewTypes: string // 实验界面（逗号隔开的字符串，如："1,2,3"）
+  environment?: string // 附带环境
+  taskId?: number // 任务关卡
+  codeType?: string // 编程语言
+  shellBegin?: string // 开启时触发命令
+  containerPort?: string // 容器端口
+  containerPath?: string // 路由
+  projectId: number // 项目ID
+}
+
+/**
  * 更新项目的请求参数
  */
 export interface UpdateProjectParams extends CreateProjectParams {
@@ -101,6 +117,23 @@ export async function updateProjectApi(params: UpdateProjectParams): Promise<Cre
   }
   
   throw new Error('项目更新失败')
+}
+
+/**
+ * 更新项目实验环境
+ * @param params 实验环境数据
+ * @returns 返回更新结果
+ */
+export async function updateProjectEnvironmentApi(params: UpdateProjectEnvironmentParams): Promise<CreateProjectResponse> {
+  const response = await usePost<CreateProjectResponse>('/admin/api/projectTask/update', params, {
+    customDev: true,
+  })
+  
+  if (response) {
+    return response as any
+  }
+  
+  throw new Error('实验环境更新失败')
 }
 
 /**
