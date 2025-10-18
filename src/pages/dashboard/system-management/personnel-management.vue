@@ -2,8 +2,8 @@
 import { ref, onMounted, watch, reactive } from 'vue'
 import { Empty, message } from 'ant-design-vue'
 import { ApartmentOutlined, SearchOutlined, InfoCircleOutlined } from '@ant-design/icons-vue'
-import type { PersonnelModel, PersonnelQueryParams } from '@/api/system/personnel'
-import { getPersonnelListApi, updatePersonnelStatusApi } from '@/api/system/personnel'
+import type { AllUserModel, AllUsersQueryParams } from '@/api/system/personnel'
+import { getAllUsersApi } from '@/api/system/personnel'
 import { getAllOrganizationListApi, type RawOrganizationModel, type OrganizationModel } from '@/api/system/organization'
 
 defineOptions({
@@ -19,57 +19,58 @@ const selectedKeys = ref<(string | number)[]>([])
 const searchKeyword = ref<string>('')
 const treeLoading = ref<boolean>(false)
 
-// 人员列表相关
-const queryForm = reactive<PersonnelQueryParams>({
-  userCode: '',
-  userName: '',
-  organization: '',
-  organizationId: undefined,
-  pageNum: 1,
+// 全量用户列表查询参数
+const queryForm = reactive({
+  userID: '',
+  operatorName: '',
+  orgName: '',
+  page: 1,
   pageSize: 10,
+  orderbyFiled: 'createTime:desc',
 })
 
 const loading = ref(false)
-const personnelList = ref<PersonnelModel[]>([])
+const usersList = ref<AllUserModel[]>([])
 const total = ref(0)
 
 // 表格列定义
 const columns = [
   {
     title: '用户编号',
-    dataIndex: 'userCode',
-    key: 'userCode',
+    dataIndex: 'operatorID',
+    key: 'operatorID',
     width: 160,
   },
   {
-    title: '用户姓名',
-    dataIndex: 'userName',
-    key: 'userName',
+    title: '用户昵称',
+    dataIndex: 'operatorName',
+    key: 'operatorName',
     width: 140,
   },
   {
     title: '单位',
-    dataIndex: 'organization',
-    key: 'organization',
+    dataIndex: 'orgName',
+    key: 'orgName',
+    width: 200,
     ellipsis: true,
   },
   {
-    title: '是否自然人',
-    dataIndex: 'isNaturalPerson',
-    key: 'isNaturalPerson',
-    width: 140,
+    title: '是否管理人',
+    dataIndex: 'isAdmin',
+    key: 'isAdmin',
+    width: 120,
   },
   {
     title: '手机号',
-    dataIndex: 'phone',
-    key: 'phone',
-    width: 180,
+    dataIndex: 'mobileNO',
+    key: 'mobileNO',
+    width: 140,
   },
   {
     title: '邮箱',
-    dataIndex: 'email',
-    key: 'email',
-    width: 260,
+    dataIndex: 'oEmail',
+    key: 'oEmail',
+    width: 200,
     ellipsis: true,
   },
   {
@@ -256,13 +257,6 @@ const initTreeData = async () => {
       // 默认展开所有节点
       expandedKeys.value = getAllKeys(treeData.value)
       
-      // 默认选中第一个节点
-      if (treeData.value.length > 0) {
-        selectedKeys.value = [treeData.value[0].id!]
-        selectedOrg.value = treeData.value[0]
-        queryForm.organizationId = treeData.value[0].id
-      }
-      
       message.success(`成功加载 ${organizations.length} 个组织`)
     } else {
       message.warning('未获取到组织数据')
@@ -280,23 +274,36 @@ const onSelectTree = (keys: (string | number)[], info: any) => {
   if (keys.length > 0) {
     selectedKeys.value = keys
     selectedOrg.value = info.node
-    queryForm.organizationId = info.node.id
+    queryForm.orgName = info.node.name || ''
     // 自动查询该组织下的人员
     handleQuery()
   }
 }
 
-// 获取人员列表
-const fetchPersonnelList = async () => {
+// 获取全量用户列表
+const fetchList = async () => {
   loading.value = true
   try {
-    const result = await getPersonnelListApi(queryForm)
-    if (result.data) {
-      personnelList.value = result.data.list
+    const params: AllUsersQueryParams = {
+      limit: queryForm.pageSize,
+      page: queryForm.page,
+      startNum: (queryForm.page - 1) * queryForm.pageSize,
+      orderbyFiled: queryForm.orderbyFiled,
+    }
+    
+    const result = await getAllUsersApi(params)
+    console.log(result);
+    
+    if (result.result === 1 && result.data) {
+      usersList.value = result.data.list
       total.value = result.data.total
+      message.success(`成功加载 ${result.data.list.length} 条用户数据`)
+    } else {
+      message.error(result.msg || '获取用户列表失败')
     }
   } catch (error) {
-    message.error('获取人员列表失败')
+    console.error('获取全量用户列表失败:', error)
+    message.error('获取用户列表失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -304,27 +311,29 @@ const fetchPersonnelList = async () => {
 
 // 查询
 const handleQuery = () => {
-  queryForm.pageNum = 1
-  fetchPersonnelList()
+  queryForm.page = 1
+  fetchList()
 }
 
 // 重置
 const handleReset = () => {
-  queryForm.userCode = ''
-  queryForm.userName = ''
-  queryForm.organization = ''
-  queryForm.pageNum = 1
+  queryForm.userID = ''
+  queryForm.operatorName = ''
+  queryForm.orgName = ''
+  queryForm.page = 1
   queryForm.pageSize = 10
-  fetchPersonnelList()
+  fetchList()
 }
 
 // 切换状态
 const handleToggleStatus = async (record: any) => {
   try {
-    const newStatus = !record.status
-    await updatePersonnelStatusApi(record.id, newStatus)
+    // 状态处理 (1为正常，0为禁用)
+    const newStatus = record.status === 1 ? 0 : 1
+    // TODO: 调用状态更新接口
+    // await updateUserStatusApi(record.operatorID, newStatus)
     record.status = newStatus
-    message.success(record.status ? '启用成功' : '禁用成功')
+    message.success(newStatus === 1 ? '启用成功' : '禁用成功')
   } catch (error) {
     message.error('操作失败')
   }
@@ -332,14 +341,14 @@ const handleToggleStatus = async (record: any) => {
 
 // 分页变化
 const handleTableChange = (pagination: any) => {
-  queryForm.pageNum = pagination.current
+  queryForm.page = pagination.current
   queryForm.pageSize = pagination.pageSize
-  fetchPersonnelList()
+  fetchList()
 }
 
 onMounted(() => {
   initTreeData()
-  fetchPersonnelList()
+  fetchList()
 })
 </script>
 
@@ -426,28 +435,31 @@ onMounted(() => {
 
         <div class="query-form">
           <a-form layout="inline">
-            <a-form-item label="用户编号">
+            <a-form-item label="用户ID">
               <a-input 
-                v-model:value="queryForm.userCode" 
+                v-model:value="queryForm.userID" 
                 placeholder="请输入" 
                 allow-clear
                 style="width: 180px"
+                @pressEnter="handleQuery"
               />
             </a-form-item>
             <a-form-item label="姓名">
               <a-input 
-                v-model:value="queryForm.userName" 
+                v-model:value="queryForm.operatorName" 
                 placeholder="请输入" 
                 allow-clear
                 style="width: 180px"
+                @pressEnter="handleQuery"
               />
             </a-form-item>
-            <a-form-item label="单位">
+            <a-form-item label="组织名称">
               <a-input 
-                v-model:value="queryForm.organization" 
+                v-model:value="queryForm.orgName" 
                 placeholder="请输入" 
                 allow-clear
                 style="width: 200px"
+                @pressEnter="handleQuery"
               />
             </a-form-item>
             <a-form-item>
@@ -475,10 +487,10 @@ onMounted(() => {
         <div class="table-container">
           <a-table
             :columns="columns"
-            :data-source="personnelList"
+            :data-source="usersList"
             :loading="loading"
             :pagination="{
-              current: queryForm.pageNum,
+              current: queryForm.page,
               pageSize: queryForm.pageSize,
               total: total,
               showSizeChanger: true,
@@ -486,22 +498,25 @@ onMounted(() => {
               showTotal: (total) => `共 ${total} 条`,
             }"
             :scroll="{ x: 1400 }"
-            row-key="id"
+            row-key="operatorID"
             @change="handleTableChange"
           >
             <template #bodyCell="{ column, record }">
-              <template v-if="column.key === 'userName'">
-                <a class="user-link">{{ record.userName }}</a>
+              <template v-if="column.key === 'operatorName'">
+                <a class="user-link">{{ record.operatorName }}</a>
               </template>
-              <template v-else-if="column.key === 'isNaturalPerson'">
-                <span>{{ record.isNaturalPerson ? '否' : '是' }}</span>
+              <template v-else-if="column.key === 'isAdmin'">
+                <span>-</span>
               </template>
-              <template v-else-if="column.key === 'phone'">
-                <span>{{ record.phone || '-' }}</span>
+              <template v-else-if="column.key === 'mobileNO'">
+                <span>{{ record.mobileNO || '-' }}</span>
+              </template>
+              <template v-else-if="column.key === 'oEmail'">
+                <span>{{ record.oEmail || '-' }}</span>
               </template>
               <template v-else-if="column.key === 'status'">
-                <a-tag :color="record.status ? 'green' : 'red'">
-                  {{ record.status ? '启用' : '禁用' }}
+                <a-tag :color="record.status === 1 ? 'green' : 'red'">
+                  {{ record.status === 1 ? '启用' : '禁用' }}
                 </a-tag>
               </template>
               <template v-else-if="column.key === 'action'">
@@ -511,7 +526,7 @@ onMounted(() => {
                     size="small"
                     @click="handleToggleStatus(record)"
                   >
-                    {{ record.status ? '禁用' : '启用' }}
+                    {{ record.status === 1 ? '禁用' : '启用' }}
                   </a-button>
                 </a-space>
               </template>
