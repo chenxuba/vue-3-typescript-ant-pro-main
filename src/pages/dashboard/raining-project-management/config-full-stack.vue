@@ -125,9 +125,6 @@ const formRules: Record<string, Rule[]> = {
   difficulty: [
     { required: true, message: '请选择难度', trigger: 'change' },
   ],
-  classHour: [
-    { required: true, message: '请输入学时', trigger: 'blur' },
-  ],
   topCover: [
     { required: true, message: '请上传顶部背景图', trigger: 'change' },
   ],
@@ -699,7 +696,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
               </a-radio-group>
             </a-form-item>
 
-            <a-form-item label="学时" name="classHour" required>
+            <a-form-item label="学时" name="classHour">
               <a-input v-model:value="formData.classHour" placeholder="配置任务后自动计算" disabled />
             </a-form-item>
 
@@ -950,8 +947,8 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
                         <a-input v-model:value="taskLevelFormData.kernelLink" placeholder="请输入内嵌链接" />
                       </a-form-item>
 
-                      <a-form-item label="任务学时" name="taskHours" required>
-                        <a-input v-model:value="taskLevelFormData.taskHours" placeholder="请输入任务学时" />
+                      <a-form-item label="任务学时" name="classHour">
+                        <a-input v-model:value="taskLevelFormData.classHour" placeholder="请输入任务学时" />
                       </a-form-item>
 
                       

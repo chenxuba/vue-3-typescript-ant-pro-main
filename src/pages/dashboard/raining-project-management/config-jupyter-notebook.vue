@@ -187,9 +187,6 @@ const formRules: Record<string, Rule[]> = {
   difficulty: [
     { required: true, message: '请选择难度', trigger: 'change' },
   ],
-  studyHours: [
-    { required: true, message: '请输入学时', trigger: 'blur' },
-  ],
   backgroundImage: [
     { required: true, message: '请上传顶部背景图', trigger: 'change' },
   ],
@@ -351,7 +348,7 @@ const handleCoverUpload = (file: File) => {
               </a-radio-group>
             </a-form-item>
 
-            <a-form-item label="学时" name="studyHours" required>
+            <a-form-item label="学时" name="studyHours">
               <a-input v-model:value="formData.studyHours" placeholder="请输入学时" />
             </a-form-item>
 

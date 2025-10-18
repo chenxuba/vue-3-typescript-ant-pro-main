@@ -62,7 +62,7 @@ export interface TaskLevel {
   referenceAnswer: string
   difficulty: number
   tag: string
-  taskHours: string
+  classHour: string
   kernelLink?: string // 内核链接
   questions?: Question[] // 选择题题目列表
   // 评测设置
@@ -86,7 +86,7 @@ export interface TaskLevelForm {
   referenceAnswer: string
   difficulty: number
   tag: string
-  taskHours: string
+  classHour: string
   kernelLink?: string // 内核链接
 }
 

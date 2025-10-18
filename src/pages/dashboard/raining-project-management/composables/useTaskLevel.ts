@@ -19,7 +19,7 @@ export function useTaskLevel() {
     referenceAnswer: '',
     difficulty: 2,
     tag: '',
-    taskHours: '',
+    classHour: '',
     kernelLink: '',
   })
 
@@ -69,9 +69,6 @@ export function useTaskLevel() {
     ],
     tag: [
       { required: true, message: '请输入技能标签', trigger: 'blur' },
-    ],
-    taskHours: [
-      { required: true, message: '请输入任务学时', trigger: 'blur' },
     ],
     kernelLink: [
       { required: true, message: '请输入内嵌链接', trigger: 'blur' },
@@ -130,7 +127,7 @@ export function useTaskLevel() {
       referenceAnswer: '',
       difficulty: 2,
       tag: '',
-      taskHours: '',
+      classHour: '',
     }
     
     taskLevels.value.push(newLevel)
@@ -176,7 +173,7 @@ export function useTaskLevel() {
         referenceAnswer: level.referenceAnswer,
         difficulty: level.difficulty,
         tag: level.tag,
-        taskHours: level.taskHours,
+        classHour: level.classHour,
         kernelLink: level.kernelLink || '',
       }
       
