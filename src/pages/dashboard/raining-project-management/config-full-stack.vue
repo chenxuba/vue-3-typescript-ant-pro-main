@@ -493,6 +493,19 @@ const handleNext = async () => {
       message.error('请先保存所有任务关卡后再进行下一步')
       return
     }
+    // 检查所有选择题任务是否都有题目
+    const choiceLevelWithoutQuestions = taskLevels.value.find(level => 
+      level.type === 'choice' && 
+      level.taskId && 
+      (!level.questions || level.questions.length === 0)
+    )
+    if (choiceLevelWithoutQuestions) {
+      message.warning('请至少新增一条题目')
+      // 选中该关卡并切换到题目标签页
+      selectTaskLevel(choiceLevelWithoutQuestions.id)
+      currentTab.value = 'questions'
+      return
+    }
     currentStep.value = 3
     scrollToTop()
   }
@@ -741,6 +754,22 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
     message.warning('名称不能为空')
   }
 }
+
+// 处理标签页切换
+const handleTabChange = (activeKey: string | number) => {
+  const key = String(activeKey)
+  // 如果是选择题任务，且要切换到题目标签页
+  if (isChoiceTask.value && key === 'questions') {
+    // 检查是否已保存
+    if (!taskLevelFormData.value.taskId) {
+      message.warning('请先保存创建任务后再添加题目')
+      // 阻止切换，保持在当前标签页
+      return
+    }
+  }
+  // 允许切换
+  currentTab.value = key
+}
 </script>
 
 <template>
@@ -982,7 +1011,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
             <!-- 右侧：任务详情 -->
             <div class="task-level-detail">
               <div v-if="selectedTaskLevelId" class="detail-content">
-                <a-tabs v-model:activeKey="currentTab">
+                <a-tabs :activeKey="currentTab" @change="handleTabChange">
                   <!-- 标签栏右侧额外内容 -->
                   <template #tabBarExtraContent v-if="isChoiceTask && currentTab === 'questions'">
                     <a-button type="primary" @click="handleAddQuestion">
@@ -1241,8 +1270,8 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
                   </a-tab-pane>
                 </a-tabs>
                 
-                <!-- 底部按钮 -->
-                <div class="form-footer-buttons">
+                <!-- 底部按钮（题目标签页内隐藏） -->
+                <div v-if="currentTab !== 'questions'" class="form-footer-buttons">
                   <a-button v-if="!taskLevelFormData.taskId" @click="resetTaskLevel">重置</a-button>
                   <a-button type="primary" @click="saveTaskLevel">
                     {{ taskLevelFormData.taskId ? '更新' : '保存' }}

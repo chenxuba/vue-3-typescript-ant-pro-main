@@ -128,6 +128,19 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       return
     }
     
+    // 检查当前选中的关卡是否是已保存的选择题任务，且没有题目
+    if (selectedTaskLevelId.value) {
+      const currentLevel = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+      if (currentLevel && currentLevel.type === 'choice' && currentLevel.taskId) {
+        // 是已保存的选择题任务，检查是否有题目
+        if (!currentLevel.questions || currentLevel.questions.length === 0) {
+          message.warning('请至少新增一条题目')
+          currentTab.value = 'questions' // 切换到题目标签页
+          return
+        }
+      }
+    }
+    
     const typeNames = {
       programming: '编程实训任务关卡',
       choice: '选择题实训任务关卡',
