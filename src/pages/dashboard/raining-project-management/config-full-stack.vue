@@ -67,7 +67,7 @@ const formData = ref<FormData>({
   tag: '',
   fieldType: undefined,
   difficulty: 1,
-  classHour: '配置任务后自动计算',
+  classHour: '',
   topCover: null,
   cover: null,
   description: '',
@@ -674,7 +674,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
             </a-form-item>
 
             <a-form-item label="学时" name="classHour" required>
-              <a-input v-model:value="formData.classHour" disabled />
+              <a-input v-model:value="formData.classHour" placeholder="配置任务后自动计算" disabled />
             </a-form-item>
 
             <a-form-item label="顶部背景图" name="topCover" required>
