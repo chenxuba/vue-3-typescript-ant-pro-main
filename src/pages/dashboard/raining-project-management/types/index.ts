@@ -5,8 +5,8 @@ export interface FormData {
   fieldType?: number
   difficulty: number
   classHour: string
-  topCover: File | null
-  cover: File | null
+  topCover: string
+  cover: string
   description: string
   showTaskRequire: boolean
   authType: number

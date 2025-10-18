@@ -5,6 +5,7 @@ import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
+import { createProjectApi } from '@/api/project'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -56,6 +57,9 @@ const router = useRouter()
 // 当前步骤
 const currentStep = ref(0)
 
+// 项目ID
+const projectId = ref<number | null>(null)
+
 // 表单引用
 const formRef = ref<FormInstance>()
 const trainingScopeFormRef = ref<FormInstance>()
@@ -68,14 +72,14 @@ const formData = ref<FormData>({
   fieldType: undefined,
   difficulty: 1,
   classHour: '',
-  topCover: null,
-  cover: null,
+  topCover: '',
+  cover: '',
   description: '',
   showTaskRequire: false,
   authType: 1,
   enableCodeRepository: false,
   repositoryType: '代码仓库',
-  gitUrl: 'https://git.educoder.net/pmper166s9/test9',
+  gitUrl: '',
 })
 
 // 图片上传相关
@@ -277,7 +281,7 @@ const handleBackgroundUpload = async (file: File) => {
     uploadingTopCover.value = true
     const fileUrl = await uploadFileApi(file)
     topCoverUrl.value = imageUrlPrefix + fileUrl
-    formData.value.topCover = file
+    formData.value.topCover = topCoverUrl.value // 保存图片地址而不是 File 对象
     formRef.value?.validateFields(['topCover'])
     message.success('顶部背景图上传成功')
   } catch (error) {
@@ -308,7 +312,7 @@ const handleCoverUpload = async (file: File) => {
     uploadingCover.value = true
     const fileUrl = await uploadFileApi(file)
     coverUrl.value = imageUrlPrefix + fileUrl
-    formData.value.cover = file
+    formData.value.cover = coverUrl.value // 保存图片地址而不是 File 对象
     formRef.value?.validateFields(['cover'])
     message.success('封面图上传成功')
   } catch (error) {
@@ -464,11 +468,67 @@ const handleNext = async () => {
       scrollToTop()
     }
   } else if (currentStep.value === 1) {
-    currentStep.value = 2
-    scrollToTop()
+    // 第二步：代码仓库验证并创建项目
+    if (formData.value.enableCodeRepository) {
+      // 如果开启了代码仓库，验证仓库地址
+      if (!formData.value.gitUrl || formData.value.gitUrl.trim() === '') {
+        message.error('请输入仓库地址')
+        return
+      }
+    }
+    // 提交创建项目
+    await handleCreateProject()
   } else if (currentStep.value === 2) {
     currentStep.value = 3
     scrollToTop()
+  }
+}
+
+// 创建项目
+const handleCreateProject = async () => {
+  try {
+    // 准备提交的数据
+    const submitData: any = {
+      mode:1,//全栈环境实训项目
+      name: formData.value.name,
+      tag: formData.value.tag,
+      fieldType: formData.value.fieldType,
+      difficulty: formData.value.difficulty,
+      classHour: formData.value.classHour,
+      topCover: formData.value.topCover,
+      cover: formData.value.cover,
+      description: formData.value.description,
+      showTaskRequire: formData.value.showTaskRequire ? 1 : 2, // 转换为 1 或 2
+      authType: formData.value.authType,
+      enableCodeRepository: formData.value.enableCodeRepository,
+    }
+
+    // 如果开启了代码仓库，才传递仓库相关信息
+    if (formData.value.enableCodeRepository) {
+      submitData.repositoryType = formData.value.repositoryType
+      submitData.gitUrl = formData.value.gitUrl
+    }
+
+    console.log('提交项目数据：', submitData)
+    
+    // 调用创建项目API
+    const response = await createProjectApi(submitData)
+    
+    // 保存项目ID
+    if (response && response.id) {
+      projectId.value = response.id
+      console.log('项目ID已保存：', projectId.value)
+    }
+    
+    message.success('项目创建成功！')
+    console.log('创建成功：', response)
+    
+    // 跳转到下一步
+    currentStep.value = 2
+    scrollToTop()
+  } catch (error) {
+    console.error('创建失败：', error)
+    message.error('项目创建失败，请稍后重试')
   }
 }
 
