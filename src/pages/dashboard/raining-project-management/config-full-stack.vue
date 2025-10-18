@@ -36,7 +36,7 @@ import { useFileTree } from './composables/useFileTree'
 import { useTaskLevel } from './composables/useTaskLevel'
 
 // Types
-import type { FormData, NewFileForm, NewFolderForm, ExperimentEnvironmentForm } from './types'
+import type { FormData, NewFileForm, NewFolderForm, ExperimentEnvironmentForm, Question } from './types'
 
 // 注册语言
 hljs.registerLanguage('javascript', javascript)
@@ -252,6 +252,8 @@ const {
   deleteQuestion,
   updateQuestion,
   updateQuestionsOrder,
+  loadQuestions,
+  saveQuestionsOrder,
 } = useTaskLevel(projectId)
 
 // 弹窗状态
@@ -636,15 +638,41 @@ const handleEditQuestion = (question: any) => {
 }
 
 // 确认添加/编辑题目
-const handleConfirmQuestion = (question: any) => {
+const handleConfirmQuestion = async (question: any) => {
   if (currentEditingQuestion.value) {
     // 编辑模式：更新题目
     updateQuestion(question)
   } else {
-    // 新增模式：添加题目
+    // 新增模式：添加题目（由QuestionModal内部调用接口创建）
     addQuestion(question)
   }
   currentEditingQuestion.value = null
+  
+  // 刷新题目列表
+  if (taskLevelFormData.value.taskId) {
+    await loadQuestions(taskLevelFormData.value.taskId)
+  }
+}
+
+// 解析题目选项
+const parseQuestionSelects = (question: Question) => {
+  try {
+    const selectsArray = JSON.parse(question.selects || '[]')
+    return selectsArray.map((item: any) => {
+      const key = Object.keys(item)[0]
+      return {
+        label: key,
+        content: item[key]
+      }
+    })
+  } catch (e) {
+    return []
+  }
+}
+
+// 判断是否为正确答案
+const isCorrectAnswer = (question: Question, label: string) => {
+  return question.answer.includes(label)
 }
 
 // 拖拽相关
@@ -658,16 +686,30 @@ const handleDragOver = (e: DragEvent) => {
   e.preventDefault()
 }
 
-const handleDrop = (e: DragEvent, dropIndex: number) => {
+const handleDrop = async (e: DragEvent, dropIndex: number) => {
   e.preventDefault()
   if (draggedIndex.value !== null && draggedIndex.value !== dropIndex) {
     const questions = [...getCurrentQuestions.value]
     const [draggedItem] = questions.splice(draggedIndex.value, 1)
     questions.splice(dropIndex, 0, draggedItem)
     
+    // 重新分配 weight 值（从1开始）
+    questions.forEach((question, index) => {
+      question.weight = index + 1
+    })
+    
     // 更新题目顺序
     updateQuestionsOrder(questions)
-    message.success('题目顺序已更新')
+    
+    // 调用接口保存排序
+    try {
+      console.log('开始保存题目排序...')
+      await saveQuestionsOrder(questions)
+      message.success('题目顺序已更新')
+    } catch (error: any) {
+      console.error('保存题目排序失败:', error)
+      message.error(error.message || '保存题目排序失败，请重试')
+    }
   }
   draggedIndex.value = null
 }
@@ -756,7 +798,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
 }
 
 // 处理标签页切换
-const handleTabChange = (activeKey: string | number) => {
+const handleTabChange = async (activeKey: string | number) => {
   const key = String(activeKey)
   // 如果是选择题任务，且要切换到题目标签页
   if (isChoiceTask.value && key === 'questions') {
@@ -765,6 +807,10 @@ const handleTabChange = (activeKey: string | number) => {
       message.warning('请先保存创建任务后再添加题目')
       // 阻止切换，保持在当前标签页
       return
+    }
+    // 加载题目列表
+    if (taskLevelFormData.value.taskId) {
+      await loadQuestions(taskLevelFormData.value.taskId)
     }
   }
   // 允许切换
@@ -1115,28 +1161,28 @@ const handleTabChange = (activeKey: string | number) => {
                           </div>
                         </div>
                         <div class="question-title">
-                          <div v-if="question.title" class="flex">
+                          <div v-if="question.name" class="flex">
                             {{ index + 1 }}、
-                          <div  v-html="question.title"></div>
+                          <div  v-html="question.name"></div>
                           </div>
                           <div v-else style="color: #bfbfbf;">暂无题干</div>
                         </div>
                         <div class="question-options">
                           <div 
-                            v-for="option in question.options" 
-                            :key="option.id"
+                            v-for="(option, optIndex) in parseQuestionSelects(question)" 
+                            :key="optIndex"
                             class="option-row"
-                            :class="{ 'is-correct': option.isCorrect }"
+                            :class="{ 'is-correct': isCorrectAnswer(question, option.label) }"
                           >
                             <span class="option-label">{{ option.label }}.</span>
                             <span class="option-content">{{ option.content }}</span>
-                            <span v-if="option.isCorrect" class="correct-tag">正确答案</span>
+                            <span v-if="isCorrectAnswer(question, option.label)" class="correct-tag">正确答案</span>
                           </div>
                         </div>
                         <div class="question-explanation">
                           <div class="explanation-label">答案解析：</div>
                           <div class="explanation-content">
-                            <span v-if="question.explanation">{{ question.explanation }}</span>
+                            <span v-if="question.answerKey">{{ question.answerKey }}</span>
                             <span v-else style="color: #bfbfbf;">暂无答案解析</span>
                           </div>
                         </div>
@@ -1484,6 +1530,9 @@ const handleTabChange = (activeKey: string | number) => {
     <QuestionModal 
       v-model:open="showQuestionModal"
       :question="currentEditingQuestion"
+      :project-id="projectId ?? undefined"
+      :task-id="taskLevelFormData.taskId"
+      :existing-questions="getCurrentQuestions"
       @confirm="handleConfirmQuestion"
     />
   </div>

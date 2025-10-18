@@ -3,7 +3,7 @@ import { message, Modal } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import type { TaskLevel, TaskLevelForm, EvaluationForm, Question, UploadedFile } from '../types'
 import { uploadFileApi } from '@/api/common/file'
-import { createProjectTaskApi, updateProjectTaskApi } from '@/api/project'
+import { createProjectTaskApi, updateProjectTaskApi, getTaskQuestionListApi, deleteTaskQuestionApi, updateTaskQuestionApi, type TaskQuestionItem } from '@/api/project'
 
 export function useTaskLevel(projectId?: Ref<number | null>) {
   // 状态
@@ -210,13 +210,19 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
   }
 
   // 选择任务关卡
-  const selectTaskLevel = (id: string) => {
+  const selectTaskLevel = async (id: string) => {
     if (selectedTaskLevelId.value && selectedTaskLevelId.value !== id) {
       saveTaskLevelFormData(selectedTaskLevelId.value)
     }
     selectedTaskLevelId.value = id
     currentTab.value = 'task' // 切换到第一个标签页（关联任务）
     loadTaskLevelFormData(id)
+    
+    // 如果是选择题任务且已保存，加载题目列表
+    const level = taskLevels.value.find(l => l.id === id)
+    if (level && level.type === 'choice' && level.taskId) {
+      await loadQuestions(level.taskId)
+    }
   }
 
   // 加载任务关卡表单数据
@@ -547,16 +553,45 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
   }
 
   // 删除题目
-  const deleteQuestion = (questionId: string) => {
+  const deleteQuestion = async (questionId: string) => {
     if (!selectedTaskLevelId.value) return
-    const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
-    if (level && level.questions) {
-      const index = level.questions.findIndex(q => q.id === questionId)
-      if (index !== -1) {
-        level.questions.splice(index, 1)
-        message.success('题目删除成功')
+    
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这道题目吗？删除后无法恢复。',
+      okText: '确定',
+      cancelText: '取消',
+      async onOk() {
+        try {
+          console.log('开始删除题目，ID:', questionId)
+          
+          // 调用删除接口
+          await deleteTaskQuestionApi({
+            id: parseInt(questionId)
+          })
+          
+          console.log('题目删除成功')
+          message.success('题目删除成功')
+          
+          // 从本地列表中删除
+          const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+          if (level && level.questions) {
+            const index = level.questions.findIndex(q => q.id === questionId)
+            if (index !== -1) {
+              level.questions.splice(index, 1)
+            }
+          }
+          
+          // 刷新题目列表
+          if (level && level.taskId) {
+            await loadQuestions(level.taskId)
+          }
+        } catch (error: any) {
+          console.error('题目删除失败:', error)
+          message.error(error.message || '题目删除失败，请重试')
+        }
       }
-    }
+    })
   }
 
   // 更新题目
@@ -578,6 +613,81 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
     if (level) {
       level.questions = questions
+    }
+  }
+
+  // 保存题目排序（调用接口）
+  const saveQuestionsOrder = async (questions: Question[]) => {
+    if (!projectId?.value) {
+      throw new Error('项目ID不存在')
+    }
+
+    try {
+      console.log('批量更新题目排序，共', questions.length, '个题目')
+      
+      // 批量调用更新接口
+      const updatePromises = questions.map(question => {
+        return updateTaskQuestionApi({
+          id: parseInt(question.id),
+          name: question.name,
+          answer: question.answer,
+          answerKey: question.answerKey,
+          selects: question.selects,
+          projectId: question.projectId || projectId.value!,
+          taskId: question.taskId!,
+          weight: question.weight!,
+        })
+      })
+      
+      await Promise.all(updatePromises)
+      console.log('题目排序保存成功')
+    } catch (error: any) {
+      console.error('保存题目排序失败:', error)
+      throw error
+    }
+  }
+
+  // 加载题目列表
+  const loadQuestions = async (taskId: number) => {
+    if (!projectId?.value) {
+      console.error('项目ID不存在')
+      return
+    }
+
+    try {
+      console.log('开始加载题目列表，参数:', { projectId: projectId.value, taskId })
+      const questionList = await getTaskQuestionListApi({
+        projectId: projectId.value,
+        taskId
+      })
+      
+      console.log('题目列表加载成功:', questionList)
+      
+      // 将接口返回的数据转换为 Question 格式，并按 weight 排序
+      const questions: Question[] = questionList
+        .map((item: TaskQuestionItem) => ({
+          id: item.id.toString(),
+          name: item.name,
+          answer: item.answer,
+          answerKey: item.answerKey,
+          selects: item.selects,
+          projectId: item.projectId,
+          taskId: item.taskId,
+          weight: item.weight
+        }))
+        .sort((a, b) => (a.weight || 0) - (b.weight || 0)) // 按 weight 升序排序
+
+      // 更新当前选中任务的题目列表
+      if (selectedTaskLevelId.value) {
+        const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
+        if (level) {
+          level.questions = questions
+          console.log('题目列表已更新到任务关卡:', level.name, '题目数量:', questions.length)
+        }
+      }
+    } catch (error: any) {
+      console.error('加载题目列表失败:', error)
+      message.error(error.message || '加载题目列表失败')
     }
   }
 
@@ -623,6 +733,8 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     deleteQuestion,
     updateQuestion,
     updateQuestionsOrder,
+    loadQuestions,
+    saveQuestionsOrder,
   }
 }
 

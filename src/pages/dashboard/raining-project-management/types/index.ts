@@ -123,9 +123,13 @@ export interface QuestionOption {
 // 选择题题目
 export interface Question {
   id: string
-  title: string
-  options: QuestionOption[]
-  explanation: string // 答案解析
+  name: string // 题干
+  answer: string // 答案
+  answerKey: string // 答案解析
+  selects: string // 选项（格式为数组字符串：[{"A":"选项内容A"},{"B":"选项内容B"},{"C":"选项内容C"},{"D":"选项内容D"}]）
+  projectId?: number // 项目ID
+  taskId?: number // 任务关卡ID
+  weight?: number // 排序权重
 }
 
 // 实验环境表单

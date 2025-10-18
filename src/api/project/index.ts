@@ -168,3 +168,166 @@ export async function updateProjectTaskApi(params: UpdateProjectTaskParams): Pro
   throw new Error('任务关卡更新失败')
 }
 
+/**
+ * 创建题目的请求参数
+ */
+export interface CreateTaskQuestionParams {
+  name: string // 题干
+  answer: string // 答案
+  answerKey: string // 答案解析
+  selects: string // 选项（JSON字符串）
+  projectId: number // 项目ID
+  taskId: number // 任务关卡ID
+  weight: number // 排序权重
+}
+
+/**
+ * 创建题目的响应数据
+ */
+export interface CreateTaskQuestionResponse {
+  id: number
+  [key: string]: any // 允许其他字段
+}
+
+/**
+ * 创建题目
+ * @param params 题目数据
+ * @returns 返回创建结果
+ */
+export async function createTaskQuestionApi(params: CreateTaskQuestionParams): Promise<CreateTaskQuestionResponse> {
+  const response = await usePost<CreateTaskQuestionResponse>('/admin/api/taskQuestion/create', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  throw new Error('题目创建失败')
+}
+
+/**
+ * 获取题目列表的请求参数
+ */
+export interface GetTaskQuestionListParams {
+  projectId: number // 项目ID
+  taskId: number // 任务关卡ID
+}
+
+/**
+ * 题目数据结构
+ */
+export interface TaskQuestionItem {
+  id: number
+  name: string
+  content: string | null
+  selects: string
+  answer: string
+  answerKey: string
+  weight: number
+  projectId: number
+  taskId: number
+  tag: string | null
+  classHour: string | null
+  config: string | null
+  createTime: number
+  updateTime: number
+  userId: number
+}
+
+/**
+ * 获取题目列表的响应数据
+ */
+export interface GetTaskQuestionListResponse {
+  result: number
+  msg: string
+  data: TaskQuestionItem[]
+}
+
+/**
+ * 获取题目列表
+ * @param params 查询参数
+ * @returns 返回题目列表
+ */
+export async function getTaskQuestionListApi(params: GetTaskQuestionListParams): Promise<TaskQuestionItem[]> {
+  const response = await usePost<TaskQuestionItem[]>('/admin/api/taskQuestion/getList', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  return []
+}
+
+/**
+ * 更新题目的请求参数
+ */
+export interface UpdateTaskQuestionParams {
+  id: number // 题目ID
+  name: string // 题干
+  answer: string // 答案
+  answerKey: string // 答案解析
+  selects: string // 选项（JSON字符串）
+  projectId: number // 项目ID
+  taskId: number // 任务关卡ID
+  weight: number // 排序权重
+}
+
+/**
+ * 更新题目的响应数据
+ */
+export interface UpdateTaskQuestionResponse {
+  id: number
+  [key: string]: any // 允许其他字段
+}
+
+/**
+ * 更新题目
+ * @param params 题目数据
+ * @returns 返回更新结果
+ */
+export async function updateTaskQuestionApi(params: UpdateTaskQuestionParams): Promise<UpdateTaskQuestionResponse> {
+  const response = await usePost<UpdateTaskQuestionResponse>('/admin/api/taskQuestion/update', params, {
+    customDev: true,
+  })
+  
+  if (response) {
+    return response as any
+  }
+  
+  throw new Error('题目更新失败')
+}
+
+/**
+ * 删除题目的请求参数
+ */
+export interface DeleteTaskQuestionParams {
+  id: number // 题目ID
+}
+
+/**
+ * 删除题目的响应数据
+ */
+export interface DeleteTaskQuestionResponse {
+  [key: string]: any
+}
+
+/**
+ * 删除题目
+ * @param params 删除参数
+ * @returns 返回删除结果
+ */
+export async function deleteTaskQuestionApi(params: DeleteTaskQuestionParams): Promise<DeleteTaskQuestionResponse> {
+  const response = await usePost<DeleteTaskQuestionResponse>('/admin/api/taskQuestion/del', params, {
+    customDev: true,
+  })
+  
+  if (response) {
+    return response as any
+  }
+  
+  throw new Error('题目删除失败')
+}
+

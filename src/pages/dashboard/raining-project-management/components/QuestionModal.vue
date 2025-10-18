@@ -5,10 +5,14 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { CloseCircleOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import type { Question } from '../types'
 import RichTextEditor from './RichTextEditor.vue'
+import { createTaskQuestionApi, updateTaskQuestionApi } from '@/api/project'
 
 interface Props {
   open: boolean
   question?: Question
+  projectId?: number
+  taskId?: number
+  existingQuestions?: Question[] // 已有的题目列表
 }
 
 interface Emits {
@@ -21,17 +25,24 @@ const emit = defineEmits<Emits>()
 
 const formRef = ref<FormInstance>()
 
-// 表单数据
-const formData = ref<Question>({
+// 内部表单数据（用于编辑界面）
+interface InternalFormData {
+  id: string
+  name: string
+  options: { id: string; label: string; content: string; isCorrect: boolean }[]
+  answerKey: string
+}
+
+const formData = ref<InternalFormData>({
   id: '',
-  title: '',
+  name: '',
   options: [
     { id: '1', label: 'A', content: '', isCorrect: false },
     { id: '2', label: 'B', content: '', isCorrect: false },
     { id: '3', label: 'C', content: '', isCorrect: false },
     { id: '4', label: 'D', content: '', isCorrect: false },
   ],
-  explanation: '',
+  answerKey: '',
 })
 
 // 自定义校验：检查富文本编辑器内容是否为空
@@ -49,13 +60,46 @@ const validateRichText = (_rule: any, value: string) => {
 
 // 表单验证规则
 const rules: Record<string, Rule[]> = {
-  title: [
+  name: [
     { required: true, message: '请输入题干' },
     { validator: validateRichText },
   ],
-  explanation: [
+  answerKey: [
     { required: true, message: '请输入答案解析', trigger: 'blur' },
   ],
+}
+
+// 将 Question 转换为内部表单数据
+const convertToInternalFormat = (question: Question): InternalFormData => {
+  // 解析 selects 字符串为 options 数组
+  let options: { id: string; label: string; content: string; isCorrect: boolean }[] = []
+  try {
+    const selectsArray = JSON.parse(question.selects || '[]')
+    options = selectsArray.map((item: any, index: number) => {
+      const key = Object.keys(item)[0]
+      return {
+        id: (index + 1).toString(),
+        label: key,
+        content: item[key],
+        isCorrect: question.answer.includes(key), // 检查该选项是否为正确答案
+      }
+    })
+  } catch (e) {
+    // 如果解析失败，使用默认的空选项
+    options = [
+      { id: '1', label: 'A', content: '', isCorrect: false },
+      { id: '2', label: 'B', content: '', isCorrect: false },
+      { id: '3', label: 'C', content: '', isCorrect: false },
+      { id: '4', label: 'D', content: '', isCorrect: false },
+    ]
+  }
+
+  return {
+    id: question.id,
+    name: question.name,
+    options,
+    answerKey: question.answerKey,
+  }
 }
 
 // 监听弹窗打开/关闭
@@ -63,19 +107,19 @@ watch(() => props.open, (newVal) => {
   if (newVal) {
     if (props.question) {
       // 编辑模式
-      formData.value = JSON.parse(JSON.stringify(props.question))
+      formData.value = convertToInternalFormat(props.question)
     } else {
       // 新增模式
       formData.value = {
         id: Date.now().toString(),
-        title: '',
+        name: '',
         options: [
           { id: '1', label: 'A', content: '', isCorrect: false },
           { id: '2', label: 'B', content: '', isCorrect: false },
           { id: '3', label: 'C', content: '', isCorrect: false },
           { id: '4', label: 'D', content: '', isCorrect: false },
         ],
-        explanation: '',
+        answerKey: '',
       }
     }
   }
@@ -85,6 +129,42 @@ watch(() => props.open, (newVal) => {
 const handleCancel = () => {
   emit('update:open', false)
   formRef.value?.resetFields()
+}
+
+// 将内部表单数据转换为 Question 格式
+const convertToQuestionFormat = (internalData: InternalFormData): Question => {
+  // 将 options 数组转换为 selects 字符串
+  const selectsArray = internalData.options
+    .filter(opt => opt.content.trim()) // 只保留有内容的选项
+    .map(opt => ({ [opt.label]: opt.content }))
+  
+  // 获取正确答案（多个正确答案用逗号分隔）
+  const correctAnswers = internalData.options
+    .filter(opt => opt.isCorrect)
+    .map(opt => opt.label)
+    .join(',')
+
+  // 生成 weight 权重值
+  let weight = 1
+  // 如果是编辑模式，保留原有的 weight
+  if (props.question && props.question.weight) {
+    weight = props.question.weight
+  } else if (props.existingQuestions && props.existingQuestions.length > 0) {
+    // 新增模式：从1开始，基于已有题目列表中最后一个题目的 weight + 1
+    const maxWeight = Math.max(...props.existingQuestions.map(q => q.weight || 0))
+    weight = maxWeight + 1
+  }
+
+  return {
+    id: internalData.id,
+    name: internalData.name,
+    answer: correctAnswers,
+    answerKey: internalData.answerKey,
+    selects: JSON.stringify(selectsArray),
+    projectId: props.projectId || props.question?.projectId,
+    taskId: props.taskId || props.question?.taskId,
+    weight,
+  }
 }
 
 // 确认
@@ -105,13 +185,80 @@ const handleConfirm = async () => {
       message.error('请至少设置一个正确答案')
       return
     }
+
+    // 验证必要参数
+    if (!props.projectId) {
+      message.error('项目ID不存在')
+      return
+    }
+
+    if (!props.taskId) {
+      message.error('任务关卡ID不存在，请先保存任务关卡')
+      return
+    }
     
-    // 创建深拷贝，避免resetFields后数据被清空
-    const questionCopy = JSON.parse(JSON.stringify(formData.value))
+    // 转换为 Question 格式
+    const question = convertToQuestionFormat(formData.value)
+    // 判断是新增还是编辑模式
+    const isEditMode = props.question && props.question.id
     
-    emit('confirm', questionCopy)
-    emit('update:open', false)
-    formRef.value?.resetFields()
+    console.log('=== 题目参数 ===')
+    console.log('操作模式:', isEditMode ? '编辑' : '新增')
+    console.log('题目ID (id):', question.id)
+    console.log('题目数据:', question)
+    console.log('项目ID (projectId):', question.projectId)
+    console.log('任务ID (taskId):', question.taskId)
+    console.log('排序权重 (weight):', question.weight)
+    console.log('已有题目数量:', props.existingQuestions?.length || 0)
+    console.log('==================')
+    
+    try {
+      if (isEditMode) {
+        // 编辑模式：调用更新接口
+        console.log('编辑模式：调用更新接口')
+        const response = await updateTaskQuestionApi({
+          id: parseInt(question.id), // 将字符串ID转换为数字
+          name: question.name,
+          answer: question.answer,
+          answerKey: question.answerKey,
+          selects: question.selects,
+          projectId: question.projectId!,
+          taskId: question.taskId!,
+          weight: question.weight!,
+        })
+        
+        console.log('题目更新成功，返回数据:', response)
+        message.success('题目更新成功')
+        
+        emit('confirm', question)
+        emit('update:open', false)
+        formRef.value?.resetFields()
+      } else {
+        // 新增模式：调用接口创建题目
+        const response = await createTaskQuestionApi({
+          name: question.name,
+          answer: question.answer,
+          answerKey: question.answerKey,
+          selects: question.selects,
+          projectId: question.projectId!,
+          taskId: question.taskId!,
+          weight: question.weight!,
+        })
+        
+        console.log('题目创建成功，返回数据:', response)
+        message.success('题目创建成功')
+        
+        // 更新题目ID
+        question.id = response.id.toString()
+        
+        emit('confirm', question)
+        emit('update:open', false)
+        formRef.value?.resetFields()
+      }
+    } catch (error: any) {
+      console.error(isEditMode ? '题目更新失败:' : '题目创建失败:', error)
+      message.error(error.message || (isEditMode ? '题目更新失败，请重试' : '题目创建失败，请重试'))
+    }
   } catch (error) {
     message.error('请完善必填信息')
   }
@@ -181,10 +328,10 @@ const addOption = () => {
       :rules="rules"
       layout="vertical"
     >
-      <a-form-item label="题干" name="title" required>
+      <a-form-item label="题干" name="name" required>
         <div class="title-input-wrapper">
           <RichTextEditor 
-            v-model="formData.title" 
+            v-model="formData.name" 
             placeholder="请您输入题干"
             :height="150"
             class="title-input"
@@ -232,9 +379,9 @@ const addOption = () => {
         </div>
       </a-form-item>
 
-      <a-form-item label="答案解析" name="explanation" required>
+      <a-form-item label="答案解析" name="answerKey" required>
         <a-textarea 
-          v-model:value="formData.explanation" 
+          v-model:value="formData.answerKey" 
           placeholder="请输入答案解析"
           :rows="1"
         />
