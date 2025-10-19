@@ -13,6 +13,7 @@ export interface FormData {
   enableCodeRepository: boolean
   repositoryType: string
   gitUrl: string
+  environment?: number // 实验环境
 }
 
 // 文件树节点类型

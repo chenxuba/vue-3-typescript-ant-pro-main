@@ -80,6 +80,7 @@ const formData = ref<FormData>({
   enableCodeRepository: false,
   repositoryType: '代码仓库',
   gitUrl: '',
+  environment: undefined,
 })
 
 // 图片上传相关
@@ -634,6 +635,7 @@ const handleCreateProject = async () => {
     // 准备提交的数据
     const submitData: any = {
       projectType: 1,//全栈环境实训项目
+      environment:formData.value.environment,
       name: formData.value.name,
       tag: formData.value.tag,
       fieldType: formData.value.fieldType,

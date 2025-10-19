@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { MoreOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
+// import { message } from 'ant-design-vue'
 import type { FileTreeNode } from '../types'
 
 interface Props {
   fileTreeData: FileTreeNode[]
-  expandedKeys: string[]
+  expandedKeys: (string | number)[]
 }
 
 interface Emits {
-  (e: 'update:expandedKeys', value: string[]): void
+  (e: 'update:expandedKeys', value: (string | number)[]): void
   (e: 'select', selectedKeys: any[], info: any): void
   (e: 'menu-click', info: any, nodeData: any): void
 }
@@ -17,7 +17,7 @@ interface Emits {
 defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const handleUpdateExpandedKeys = (keys: string[]) => {
+const handleUpdateExpandedKeys = (keys: (string | number)[]) => {
   emit('update:expandedKeys', keys)
 }
 

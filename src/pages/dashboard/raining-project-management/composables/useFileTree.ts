@@ -45,7 +45,7 @@ export function useFileTree() {
   ])
 
   // 展开的节点
-  const expandedKeys = ref<string[]>(['0-0', '0-0-0'])
+  const expandedKeys = ref<(string | number)[]>(['0-0', '0-0-0'])
 
   // 选中的文件
   const selectedFile = ref<SelectedFile | null>(null)
