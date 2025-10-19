@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
-import { getProjectListPagerApi, type ProjectListItem } from '@/api/project'
+import { message, Modal } from 'ant-design-vue'
+import { getProjectListPagerApi, updateProjectApi, type ProjectListItem } from '@/api/project'
 
 defineOptions({
   name: 'RainingProjectManagement',
@@ -150,7 +150,32 @@ const handleStatistics = (record: any) => {
 
 // 发布/取消发布
 const handlePublish = (record: any) => {
-  console.log('发布/取消发布', record)
+  const isPublished = record.status === 1
+  const actionText = isPublished ? '取消发布' : '发布'
+  const newStatus = isPublished ? 0 : 1
+  
+  Modal.confirm({
+    title: `确认${actionText}`,
+    content: `确定要${actionText}项目"${record.name}"吗？`,
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        await updateProjectApi({
+          id: record.id,
+          status: newStatus,
+        } as any)
+        
+        message.success(`${actionText}成功`)
+        
+        // 刷新列表
+        fetchProjectList()
+      } catch (error: any) {
+        console.error(`${actionText}失败：`, error)
+        message.error(error.message || `${actionText}失败`)
+      }
+    },
+  })
 }
 
 // 编辑
