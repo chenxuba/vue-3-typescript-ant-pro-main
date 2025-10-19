@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { getProjectListPagerApi, updateProjectApi, type ProjectListItem } from '@/api/project'
+import { getProjectListPagerApi, updateProjectApi, deleteProjectApi, type ProjectListItem } from '@/api/project'
 
 defineOptions({
   name: 'RainingProjectManagement',
@@ -185,7 +185,33 @@ const handleEdit = (record: any) => {
 
 // 删除
 const handleDelete = (record: any) => {
-  console.log('删除', record)
+  Modal.confirm({
+    title: '确认删除',
+    content: `确定要删除项目"${record.name}"吗？删除后数据将无法恢复！`,
+    okText: '确认删除',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        await deleteProjectApi({
+          id: record.id,
+        })
+        
+        message.success('删除成功')
+        
+        // 如果删除的是当前页最后一条数据，且不是第一页，则返回上一页
+        if (dataSource.value.length === 1 && pagination.value.current > 1) {
+          pagination.value.current -= 1
+        }
+        
+        // 刷新列表
+        fetchProjectList()
+      } catch (error: any) {
+        console.error('删除失败：', error)
+        message.error(error.message || '删除失败')
+      }
+    },
+  })
 }
 </script>
 

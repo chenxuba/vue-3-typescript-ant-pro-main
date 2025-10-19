@@ -197,6 +197,39 @@ export async function updateProjectApi(params: UpdateProjectParams): Promise<Cre
 }
 
 /**
+ * 删除项目的请求参数
+ */
+export interface DeleteProjectParams {
+  id: number // 项目ID
+}
+
+/**
+ * 删除项目的响应数据
+ */
+export interface DeleteProjectResponse {
+  result: number
+  msg: string
+  [key: string]: any
+}
+
+/**
+ * 删除项目
+ * @param params 删除参数
+ * @returns 返回删除结果
+ */
+export async function deleteProjectApi(params: DeleteProjectParams): Promise<DeleteProjectResponse> {
+  const response = await usePost<DeleteProjectResponse>('/admin/api/project/del', params, {
+    customDev: true,
+  })
+  
+  if (response) {
+    return response as any
+  }
+  
+  throw new Error('项目删除失败')
+}
+
+/**
  * 更新项目实验环境
  * @param params 实验环境数据
  * @returns 返回更新结果
