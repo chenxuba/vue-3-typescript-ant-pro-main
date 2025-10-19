@@ -2082,7 +2082,7 @@ const accessMenuData = [
   }
 ];
 const index = eventHandler((event) => {
-  const token = getHeader(event, "Authorization");
+  const token = getHeader(event, "train_token");
   const username = Buffer.from(token, "base64").toString("utf-8");
   return {
     code: 200,
@@ -2872,14 +2872,14 @@ const test_put$1 = /*#__PURE__*/Object.freeze({
 });
 
 const info = eventHandler((event) => {
-  const token = getHeader(event, "Authorization");
-  const username = Buffer.from(token, "base64").toString("utf-8");
+  const token = getHeader(event, "train_token");
   if (!token) {
     return {
       code: 401,
       msg: "\u767B\u5F55\u5931\u6548"
     };
   }
+  const username = Buffer.from(token, "base64").toString("utf-8");
   return {
     code: 200,
     msg: "\u83B7\u53D6\u6210\u529F",

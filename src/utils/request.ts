@@ -1,7 +1,7 @@
 import type { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
 import { AxiosLoading } from './loading'
-import { STORAGE_AUTHORIZE_KEY, useAuthorization } from '~/composables/authorization'
+import { AUTH_HEADER_KEY, useAuthorization } from '~/composables/authorization'
 import { ContentTypeEnum, RequestEnum } from '~#/http-enum'
 import router from '~/router'
 
@@ -36,7 +36,7 @@ async function requestHandler(config: InternalAxiosRequestConfig & RequestConfig
   const token = useAuthorization()
 
   if (token.value && config.token !== false)
-    config.headers.set(STORAGE_AUTHORIZE_KEY, token.value)
+    config.headers.set(AUTH_HEADER_KEY, token.value)
 
   // 增加多语言的配置
   const { locale } = useI18nLocale()

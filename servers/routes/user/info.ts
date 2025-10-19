@@ -1,12 +1,12 @@
 export default eventHandler((event) => {
-  const token = getHeader(event, 'Authorization')
-  const username = Buffer.from(token, 'base64').toString('utf-8')
+  const token = getHeader(event, 'train_token')
   if (!token) {
     return {
       code: 401,
       msg: '登录失效',
     }
   }
+  const username = Buffer.from(token, 'base64').toString('utf-8')
   return {
     code: 200,
     msg: '获取成功',
