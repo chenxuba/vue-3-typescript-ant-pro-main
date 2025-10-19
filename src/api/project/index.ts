@@ -93,6 +93,7 @@ export interface UpdateProjectEnvironmentParams {
   containerPort?: string // 容器端口
   containerPath?: string // 路由
   projectId: number // 项目ID
+  envisDel?: number // 是否删除：0-保存/更新 1-删除，默认0
 }
 
 /**

@@ -106,7 +106,7 @@ const getEnvironmentName = () => {
 onMounted(() => {
   const routeData = history.state as any
   console.log('接收到的路由数据:', routeData)
-  
+
   if (routeData && routeData.name) {
     // 填充基础信息
     formData.value.name = routeData.name || ''
@@ -116,7 +116,7 @@ onMounted(() => {
     formData.value.showTaskRequire = routeData.showTaskRequire || false
     // 保存实验环境
     selectedEnvironment.value = routeData.environment || 1
-    
+
     console.log('已自动填充表单数据:', {
       name: formData.value.name,
       description: formData.value.description,
@@ -131,7 +131,7 @@ onMounted(() => {
     // 如果没有路由数据，默认使用 Python3.6
     selectedEnvironment.value = 1
   }
-  
+
   // 初始化实验环境（使用接收到的 environment 值）
   initializeExperimentEnvironments()
 })
@@ -181,6 +181,7 @@ interface ExperimentEnvironment {
   id: string
   name: string
   isEditing: boolean
+  isSaved: boolean // 标记是否已保存
   config: ExperimentEnvironmentForm
 }
 
@@ -193,6 +194,7 @@ const initializeExperimentEnvironments = () => {
       id: '1',
       name: '实验环境1',
       isEditing: false,
+      isSaved: false,
       config: {
         dockerImage: selectedEnvironment.value || 1,
         viewTypes: [],
@@ -313,14 +315,14 @@ const handleBackgroundUpload = async (file: File) => {
     message.error('图片大小不能超过 12MB!')
     return false
   }
-  
+
   // 验证文件类型
   const isImage = file.type === 'image/jpeg' || file.type === 'image/png'
   if (!isImage) {
     message.error('只能上传 JPG/PNG 格式的图片!')
     return false
   }
-  
+
   try {
     uploadingTopCover.value = true
     const fileUrl = await uploadFileApi(file)
@@ -333,7 +335,7 @@ const handleBackgroundUpload = async (file: File) => {
   } finally {
     uploadingTopCover.value = false
   }
-  
+
   return false
 }
 
@@ -344,14 +346,14 @@ const handleCoverUpload = async (file: File) => {
     message.error('图片大小不能超过 12MB!')
     return false
   }
-  
+
   // 验证文件类型
   const isImage = file.type === 'image/jpeg' || file.type === 'image/png'
   if (!isImage) {
     message.error('只能上传 JPG/PNG 格式的图片!')
     return false
   }
-  
+
   try {
     uploadingCover.value = true
     const fileUrl = await uploadFileApi(file)
@@ -364,7 +366,7 @@ const handleCoverUpload = async (file: File) => {
   } finally {
     uploadingCover.value = false
   }
-  
+
   return false
 }
 
@@ -410,7 +412,7 @@ const handleMenuClick = (info: any) => {
 const handleTreeNodeMenuClick = (info: any, nodeData: any) => {
   const menuKey = String(info.key)
   const nodePath = getNodePath(nodeData.key)
-  
+
   switch (menuKey) {
     case 'newFile':
       handleNewFile(nodePath)
@@ -465,17 +467,17 @@ const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
-    
+
     const pageContent = document.querySelector('.page-content')
     if (pageContent) {
       pageContent.scrollTop = 0
     }
-    
+
     const layoutContent = document.querySelector('.ant-layout-content')
     if (layoutContent) {
       layoutContent.scrollTop = 0
     }
-    
+
     const scrollableElements = document.querySelectorAll('*')
     scrollableElements.forEach((el) => {
       if (el.scrollTop > 0) {
@@ -536,9 +538,9 @@ const handleNext = async () => {
       return
     }
     // 检查所有选择题任务是否都有题目
-    const choiceLevelWithoutQuestions = taskLevels.value.find(level => 
-      level.type === 'choice' && 
-      level.taskId && 
+    const choiceLevelWithoutQuestions = taskLevels.value.find(level =>
+      level.type === 'choice' &&
+      level.taskId &&
       (!level.questions || level.questions.length === 0)
     )
     if (choiceLevelWithoutQuestions) {
@@ -576,7 +578,7 @@ const handleCreateProject = async () => {
   try {
     // 准备提交的数据
     const submitData: any = {
-      projectType:1,//全栈环境实训项目
+      projectType: 1,//全栈环境实训项目
       name: formData.value.name,
       tag: formData.value.tag,
       fieldType: formData.value.fieldType,
@@ -597,7 +599,7 @@ const handleCreateProject = async () => {
     }
 
     console.log('提交项目数据：', submitData)
-    
+
     let response
     // 判断是创建还是更新
     if (projectId.value) {
@@ -609,17 +611,17 @@ const handleCreateProject = async () => {
     } else {
       // 如果没有 projectId，调用创建接口
       response = await createProjectApi(submitData)
-      
+
       // 保存项目ID
       if (response && response.id) {
         projectId.value = response.id
         console.log('项目ID已保存：', projectId.value)
       }
-      
+
       message.success('项目创建成功！')
       console.log('创建成功：', response)
     }
-    
+
     // 跳转到下一步
     currentStep.value = 2
     scrollToTop()
@@ -629,53 +631,100 @@ const handleCreateProject = async () => {
   }
 }
 
-// 保存项目
-const handleSave = async () => {
+// 保存单个实验环境
+const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0) => {
   try {
-    // 验证实验环境表单
-    await experimentFormRef.value?.validate()
-    
+    // 如果是删除操作，跳过表单验证
+    if (envisDel !== 1) {
+      // 根据选中的 viewTypes 清除隐藏字段的校验
+      const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'environment', 'taskId']
+      const fieldsToClear: string[] = []
+
+      // 判断哪些字段需要校验，哪些需要清除
+      if (env.config.viewTypes.includes(1)) {
+        // 选中了代码编辑器，需要校验编程语言
+        fieldsToValidate.push('codeType')
+      } else {
+        fieldsToClear.push('codeType')
+      }
+
+      if (env.config.viewTypes.includes(2)) {
+        // 选中了命令行终端，需要校验开启时触发命令
+        fieldsToValidate.push('shellBegin')
+      } else {
+        fieldsToClear.push('shellBegin')
+      }
+
+      if (env.config.viewTypes.includes(3)) {
+        // 选中了容器内服务，需要校验容器端口
+        fieldsToValidate.push('containerPort')
+      } else {
+        fieldsToClear.push('containerPort')
+      }
+
+      // 清除隐藏字段的校验错误
+      if (fieldsToClear.length > 0) {
+        experimentFormRef.value?.clearValidate(fieldsToClear)
+      }
+
+      // 只验证需要的字段
+      await experimentFormRef.value?.validate(fieldsToValidate)
+    }
+
     // 调用更新接口，传递实验环境参数
     if (!projectId.value) {
       message.error('项目ID不存在，无法保存')
       return
     }
-    
-    // 获取第一个实验环境的数据（扁平化传参）
-    const firstEnv = experimentEnvironments.value[0]
-    if (!firstEnv) {
-      message.error('请至少配置一个实验环境')
-      return
-    }
-    
+
     const updateData = {
-      title: firstEnv.name,
-      dockerImage: firstEnv.config.dockerImage,
-      viewTypes: firstEnv.config.viewTypes.join(','), // 数组转为逗号隔开的字符串
-      environment: firstEnv.config.environment,
-      taskId: firstEnv.config.taskId ? Number(firstEnv.config.taskId) : undefined,
-      codeType: firstEnv.config.codeType,
-      shellBegin: firstEnv.config.shellBegin,
-      containerPort: firstEnv.config.containerPort,
-      containerPath: firstEnv.config.containerPath,
+      title: env.name,
+      dockerImage: env.config.dockerImage,
+      viewTypes: env.config.viewTypes.join(','), // 数组转为逗号隔开的字符串
+      environment: env.config.environment,
+      taskId: env.config.taskId ? Number(env.config.taskId) : undefined,
+      codeType: env.config.codeType,
+      shellBegin: env.config.shellBegin,
+      containerPort: env.config.containerPort,
+      containerPath: env.config.containerPath,
       projectId: projectId.value,
+      envisDel: envisDel, // 是否删除：0-保存/更新 1-删除
     }
-    
+
     console.log('保存实验环境数据：', updateData)
-    
+
     // 调用后端API更新实验环境
     await updateProjectEnvironmentApi(updateData)
-    
-    message.success('项目保存成功！')
-    
-    // 延迟返回列表页，让用户看到成功提示
-    setTimeout(() => {
-      router.push('/dashboard/analysis')
-    }, 500)
+
+    // 标记为已保存
+    if (envisDel !== 1) {
+      env.isSaved = true
+      message.success('实验环境保存成功！')
+    } else {
+      message.success('删除成功！')
+    }
   } catch (error) {
     console.error('保存失败：', error)
-    message.error('请完善必填信息')
+    message.error(envisDel === 1 ? '删除失败' : '请完善必填信息')
   }
+}
+
+// 完成项目创建
+const completeProject = () => {
+  // 校验每个实验环境是否都已保存
+  const unsavedEnvironments = experimentEnvironments.value.filter(env => !env.isSaved)
+
+  if (unsavedEnvironments.length > 0) {
+    message.error('请先保存实验环境配置')
+    return
+  }
+
+  message.success('项目创建成功！')
+
+  // 延迟返回列表页，让用户看到成功提示
+  setTimeout(() => {
+    router.push('/dashboard/analysis')
+  }, 500)
 }
 
 // 任务要求内容变化处理
@@ -718,7 +767,7 @@ const handleConfirmQuestion = async (question: any) => {
     addQuestion(question)
   }
   currentEditingQuestion.value = null
-  
+
   // 刷新题目列表
   if (taskLevelFormData.value.taskId) {
     await loadQuestions(taskLevelFormData.value.taskId)
@@ -763,15 +812,15 @@ const handleDrop = async (e: DragEvent, dropIndex: number) => {
     const questions = [...getCurrentQuestions.value]
     const [draggedItem] = questions.splice(draggedIndex.value, 1)
     questions.splice(dropIndex, 0, draggedItem)
-    
+
     // 重新分配 weight 值（从1开始）
     questions.forEach((question, index) => {
       question.weight = index + 1
     })
-    
+
     // 更新题目顺序
     updateQuestionsOrder(questions)
-    
+
     // 调用接口保存排序
     try {
       console.log('开始保存题目排序...')
@@ -793,7 +842,7 @@ const handleDragEnd = () => {
 const toggleInterface = (type: number) => {
   const config = currentEnvironmentConfig.value
   if (!config) return
-  
+
   const index = config.viewTypes.indexOf(type)
   if (index > -1) {
     config.viewTypes.splice(index, 1)
@@ -809,10 +858,24 @@ const toggleInterface = (type: number) => {
   } else {
     config.viewTypes.push(type)
   }
-  
+
   // 清除验证错误提示
   nextTick(() => {
     experimentFormRef.value?.clearValidate(['viewTypes'])
+  })
+}
+
+// 判断任务关卡是否已被其他环境选择
+const isTaskLevelSelectedByOther = (currentEnvId: string, taskId: number | string | undefined) => {
+  if (!taskId) return false
+  
+  // 统一转换为数字进行比较
+  const taskIdNum = typeof taskId === 'string' ? Number(taskId) : taskId
+  
+  return experimentEnvironments.value.some(env => {
+    if (!env.config.taskId) return false
+    const envTaskIdNum = typeof env.config.taskId === 'string' ? Number(env.config.taskId) : env.config.taskId
+    return env.id !== currentEnvId && envTaskIdNum === taskIdNum
   })
 }
 
@@ -823,6 +886,7 @@ const handleAddEnvironment = () => {
     id: newId,
     name: `实验环境${experimentEnvironments.value.length + 1}`,
     isEditing: false,
+    isSaved: false,
     config: {
       dockerImage: selectedEnvironment.value || 1,
       viewTypes: [],
@@ -840,19 +904,33 @@ const handleAddEnvironment = () => {
 }
 
 // 删除实验环境
-const handleDeleteEnvironment = (id: string) => {
+const handleDeleteEnvironment = async (id: string) => {
   if (experimentEnvironments.value.length === 1) {
     message.warning('至少保留一个实验环境')
     return
   }
+  
   const index = experimentEnvironments.value.findIndex(e => e.id === id)
   if (index > -1) {
+    const env = experimentEnvironments.value[index]
+    
+    // 如果环境已保存，先调用更新接口标记删除
+    if (env.isSaved) {
+      await saveEnvironment(env, 1) // envisDel: 1 表示删除
+    }
+    
+    // 从前端列表中移除
     experimentEnvironments.value.splice(index, 1)
+    
     // 如果删除的是当前激活的，切换到第一个
     if (activeEnvironmentKey.value === id) {
       activeEnvironmentKey.value = experimentEnvironments.value[0].id
     }
-    message.success('删除实验环境成功')
+    
+    // 如果未保存，只显示本地删除成功
+    if (!env.isSaved) {
+      message.success('删除实验环境成功')
+    }
   }
 }
 
@@ -867,7 +945,11 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
   if (editingEnvironmentName.value.trim()) {
     env.name = editingEnvironmentName.value.trim()
     env.isEditing = false
-    message.success('重命名成功')
+    // 只有当实验环境已保存时才调用更新接口
+    if (env.isSaved) {
+      message.success('重命名成功')
+      saveEnvironment(env)
+    }
   } else {
     message.warning('名称不能为空')
   }
@@ -876,7 +958,7 @@ const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
 // 处理标签页切换
 const handleTabChange = async (activeKey: string | number) => {
   const key = String(activeKey)
-  
+
   // 如果是选择题任务，且要切换到题目标签页
   if (isChoiceTask.value && key === 'questions') {
     // 检查是否已保存
@@ -890,7 +972,7 @@ const handleTabChange = async (activeKey: string | number) => {
       await loadQuestions(taskLevelFormData.value.taskId)
     }
   }
-  
+
   // 如果是编程任务，且要切换到评测设置标签页
   if (isProgrammingTask.value && key === 'evaluation') {
     // 检查是否已保存
@@ -900,7 +982,7 @@ const handleTabChange = async (activeKey: string | number) => {
       return
     }
   }
-  
+
   // 允许切换
   currentTab.value = key
 }
@@ -952,8 +1034,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
               <a-col :span="12">
                 <a-form-item label="领域类别" name="fieldType" required :label-col="{ span: 4 }"
                   :wrapper-col="{ span: 12 }">
-                  <a-select v-model:value="formData.fieldType" placeholder="请选择领域类别"
-                    :options="domainCategoryOptions" />
+                  <a-select v-model:value="formData.fieldType" placeholder="请选择领域类别" :options="domainCategoryOptions" />
                 </a-form-item>
               </a-col>
             </a-row>
@@ -981,7 +1062,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                     </a-button>
                   </a-upload>
                   <div v-if="topCoverUrl" class="image-preview">
-                    <img :src="topCoverUrl" alt="顶部背景图预览" style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
+                    <img :src="topCoverUrl" alt="顶部背景图预览"
+                      style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
                   </div>
                 </div>
                 <div class="upload-hint">
@@ -1080,13 +1162,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
               </div>
 
               <!-- 文件树 -->
-              <FileTreeComponent 
-                v-if="formData.enableCodeRepository"
-                :file-tree-data="fileTreeData"
-                v-model:expanded-keys="expandedKeys"
-                @select="handleSelectFile"
-                @menu-click="handleTreeNodeMenuClick"
-              />
+              <FileTreeComponent v-if="formData.enableCodeRepository" :file-tree-data="fileTreeData"
+                v-model:expanded-keys="expandedKeys" @select="handleSelectFile" @menu-click="handleTreeNodeMenuClick" />
 
               <div v-if="formData.enableCodeRepository" class="repository-tips">
                 <div class="tips-title">提示：</div>
@@ -1104,11 +1181,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
             <!-- 右侧：文件预览区域 -->
             <div class="repository-right">
-              <FilePreview 
-                v-if="formData.enableCodeRepository"
-                :selected-file="selectedFile"
-                :highlighted-code="highlightedCode"
-              />
+              <FilePreview v-if="formData.enableCodeRepository" :selected-file="selectedFile"
+                :highlighted-code="highlightedCode" />
               <div v-else class="empty-area">
                 在左侧代码仓库区域点击目录打开文件
               </div>
@@ -1135,12 +1209,9 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
             <div class="task-level-list">
               <div class="list-title">任务关卡 ({{ taskLevels.length }})</div>
               <div class="list-items">
-                <div 
-                  v-for="level in taskLevels" 
-                  :key="level.id"
+                <div v-for="level in taskLevels" :key="level.id"
                   :class="['list-item', { active: selectedTaskLevelId === level.id }]"
-                  @click="selectTaskLevel(level.id)"
-                >
+                  @click="selectTaskLevel(level.id)">
                   <span class="item-name">{{ level.name }}</span>
                   <DeleteOutlined class="delete-icon" @click.stop="deleteTaskLevel(level.id)" />
                 </div>
@@ -1158,28 +1229,18 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                       新增题目
                     </a-button>
                   </template>
-                  
+
                   <!-- 关联任务标签页 -->
                   <a-tab-pane key="task" tab="关联任务">
-                    <a-form 
-                      ref="taskLevelFormRef"
-                      :model="taskLevelFormData" 
-                      :rules="taskLevelFormRules"
-                      layout="horizontal"
-                      :label-col="{ span: 4 }"
-                      :wrapper-col="{ span: 18 }"
-                    >
+                    <a-form ref="taskLevelFormRef" :model="taskLevelFormData" :rules="taskLevelFormRules"
+                      layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
                       <a-form-item label="任务名称" name="name" required>
                         <a-input v-model:value="taskLevelFormData.name" placeholder="请输入任务名称" />
                       </a-form-item>
                       <a-form-item label="学习资源" name="source" required>
-                        <a-upload
-                          v-model:file-list="learningResourceFileList"
-                          :custom-request="handleLearningResourceCustomRequest"
-                          @change="handleLearningResourceUpload"
-                          accept=".doc,.docx,.pdf,.ppt,.pptx,.mp4"
-                          :max-count="10"
-                        >
+                        <a-upload v-model:file-list="learningResourceFileList"
+                          :custom-request="handleLearningResourceCustomRequest" @change="handleLearningResourceUpload"
+                          accept=".doc,.docx,.pdf,.ppt,.pptx,.mp4" :max-count="10">
                           <a-button type="primary">点击上传</a-button>
                         </a-upload>
                         <div class="upload-hint">
@@ -1188,19 +1249,13 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                       </a-form-item>
 
                       <a-form-item label="任务要求" name="require" required>
-                        <RichTextEditor 
-                          v-model="taskLevelFormData.require" 
-                          placeholder="请输入任务要求"
-                          @change="handleTaskRequirementChange"
-                        />
+                        <RichTextEditor v-model="taskLevelFormData.require" placeholder="请输入任务要求"
+                          @change="handleTaskRequirementChange" />
                       </a-form-item>
 
                       <a-form-item label="参考答案" name="referenceAnswer" required>
-                        <RichTextEditor 
-                          v-model="taskLevelFormData.referenceAnswer" 
-                          placeholder="请输入参考答案"
-                          @change="handleReferenceAnswerChange"
-                        />
+                        <RichTextEditor v-model="taskLevelFormData.referenceAnswer" placeholder="请输入参考答案"
+                          @change="handleReferenceAnswerChange" />
                       </a-form-item>
 
                       <a-form-item label="难度系数" name="difficulty" required>
@@ -1219,10 +1274,11 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                       </a-form-item>
 
                       <a-form-item label="任务学时" name="classHour" required>
-                        <a-input-number style="width:100%;" :min="0" v-model:value="taskLevelFormData.classHour" placeholder="请输入任务学时" />
+                        <a-input-number style="width:100%;" :min="0" v-model:value="taskLevelFormData.classHour"
+                          placeholder="请输入任务学时" />
                       </a-form-item>
 
-                      
+
                     </a-form>
                   </a-tab-pane>
 
@@ -1232,17 +1288,10 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                       <a-empty description="暂无题目，请点击右上方按钮新增题目" />
                     </div>
                     <div v-else class="questions-list">
-                      <div 
-                        v-for="(question, index) in getCurrentQuestions" 
-                        :key="question.id"
-                        class="question-item"
-                        draggable="true"
-                        :class="{ 'dragging': draggedIndex === index }"
-                        @dragstart="handleDragStart(index)"
-                        @dragover="handleDragOver"
-                        @drop="handleDrop($event, index)"
-                        @dragend="handleDragEnd"
-                      >
+                      <div v-for="(question, index) in getCurrentQuestions" :key="question.id" class="question-item"
+                        draggable="true" :class="{ 'dragging': draggedIndex === index }"
+                        @dragstart="handleDragStart(index)" @dragover="handleDragOver" @drop="handleDrop($event, index)"
+                        @dragend="handleDragEnd">
                         <div class="question-header">
                           <div class="question-number-with-drag">
                             <HolderOutlined class="drag-handle" />
@@ -1256,17 +1305,13 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                         <div class="question-title">
                           <div v-if="question.name" class="flex">
                             {{ index + 1 }}、
-                          <div  v-html="question.name"></div>
+                            <div v-html="question.name"></div>
                           </div>
                           <div v-else style="color: #bfbfbf;">暂无题干</div>
                         </div>
                         <div class="question-options">
-                          <div 
-                            v-for="(option, optIndex) in parseQuestionSelects(question)" 
-                            :key="optIndex"
-                            class="option-row"
-                            :class="{ 'is-correct': isCorrectAnswer(question, option.label) }"
-                          >
+                          <div v-for="(option, optIndex) in parseQuestionSelects(question)" :key="optIndex"
+                            class="option-row" :class="{ 'is-correct': isCorrectAnswer(question, option.label) }">
                             <span class="option-label">{{ option.label }}.</span>
                             <span class="option-content">{{ option.content }}</span>
                             <span v-if="isCorrectAnswer(question, option.label)" class="correct-tag">正确答案</span>
@@ -1289,32 +1334,18 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                       <!-- 评测文件 -->
                       <div class="evaluation-section">
                         <div class="section-header">评测文件</div>
-                        <a-form 
-                          ref="evaluationFormRef"
-                          :model="evaluationFormData"
-                          :rules="evaluationFormRules"
-                          layout="horizontal" 
-                          :label-col="{ span: 4 }" 
-                          :wrapper-col="{ span: 18 }"
-                        >
+                        <a-form ref="evaluationFormRef" :model="evaluationFormData" :rules="evaluationFormRules"
+                          layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
                           <a-form-item label="评测时长限制" name="timeLimitM" required>
-                            <a-input-number 
-                              v-model:value="evaluationFormData.timeLimitM" 
-                              :min="0"
-                              placeholder="请输入评测时长限制" 
-                              style="width: 200px;"
-                            />
+                            <a-input-number v-model:value="evaluationFormData.timeLimitM" :min="0"
+                              placeholder="请输入评测时长限制" style="width: 200px;" />
                             <span style="margin-left: 8px;">分钟</span>
                           </a-form-item>
 
                           <a-form-item label="学员任务文件" name="userFiles" required>
-                            <a-upload
-                              v-model:file-list="userFileList"
-                              :custom-request="handleLearningResourceCustomRequest"
-                              @change="handleUserFilesUpload"
-                              accept=".js,.ts,.py,.java,.cpp,.c"
-                              :max-count="10"
-                            >
+                            <a-upload v-model:file-list="userFileList"
+                              :custom-request="handleLearningResourceCustomRequest" @change="handleUserFilesUpload"
+                              accept=".js,.ts,.py,.java,.cpp,.c" :max-count="10">
                               <a-button type="primary">点击上传</a-button>
                             </a-upload>
                             <div class="upload-hint">
@@ -1323,13 +1354,10 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                           </a-form-item>
 
                           <a-form-item label="评测执行文件" name="testValidateFiles" required>
-                            <a-upload
-                              v-model:file-list="testValidateFileList"
+                            <a-upload v-model:file-list="testValidateFileList"
                               :custom-request="handleLearningResourceCustomRequest"
-                              @change="handleTestValidateFilesUpload"
-                              accept=".js,.ts,.py,.java,.cpp,.c"
-                              :max-count="10"
-                            >
+                              @change="handleTestValidateFilesUpload" accept=".js,.ts,.py,.java,.cpp,.c"
+                              :max-count="10">
                               <a-button type="primary">点击上传</a-button>
                             </a-upload>
                             <div class="upload-hint">
@@ -1338,10 +1366,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                           </a-form-item>
 
                           <a-form-item label="评测执行命令" name="testValidateSh" required>
-                            <a-input 
-                              v-model:value="evaluationFormData.testValidateSh" 
-                              placeholder="请输入评测执行命令，例如：python main.py" 
-                            />
+                            <a-input v-model:value="evaluationFormData.testValidateSh"
+                              placeholder="请输入评测执行命令，例如：python main.py" />
                             <div class="upload-hint">
                               （执行评测文件的命令，如：python main.py、node index.js、java Main 等）
                             </div>
@@ -1399,32 +1425,18 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                           </a-form-item>
 
                           <!-- 测试集列表（只在文本类型时显示） -->
-                          <div v-if="evaluationFormData.testValidateType === 1 && evaluationFormData.testContent.length > 0" class="test-cases-list">
-                            <div 
-                              v-for="(testCase, index) in evaluationFormData.testContent" 
-                              :key="testCase.id"
-                              class="test-case-item"
-                            >
-                              <a-checkbox 
-                                :checked="testCase.select === 1" 
+                          <div
+                            v-if="evaluationFormData.testValidateType === 1 && evaluationFormData.testContent.length > 0"
+                            class="test-cases-list">
+                            <div v-for="(testCase, index) in evaluationFormData.testContent" :key="testCase.id"
+                              class="test-case-item">
+                              <a-checkbox :checked="testCase.select === 1"
                                 @change="(e) => handleTestCaseSelectChange(testCase, e.target.checked)"
-                                class="test-case-checkbox" 
-                              />
+                                class="test-case-checkbox" />
                               <span class="test-case-label">测试集{{ index + 1 }}</span>
-                              <a-input 
-                                v-model:value="testCase.args" 
-                                placeholder="请输入输入内容" 
-                                class="test-case-input"
-                              />
-                              <a-input 
-                                v-model:value="testCase.answer" 
-                                placeholder="请输入期望输出" 
-                                class="test-case-output"
-                              />
-                              <DeleteOutlined 
-                                class="delete-test-case" 
-                                @click="removeTestCase(testCase.id)" 
-                              />
+                              <a-input v-model:value="testCase.args" placeholder="请输入输入内容" class="test-case-input" />
+                              <a-input v-model:value="testCase.answer" placeholder="请输入期望输出" class="test-case-output" />
+                              <DeleteOutlined class="delete-test-case" @click="removeTestCase(testCase.id)" />
                             </div>
                           </div>
                         </a-form>
@@ -1432,7 +1444,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                     </div>
                   </a-tab-pane>
                 </a-tabs>
-                
+
                 <!-- 底部按钮（题目标签页内隐藏） -->
                 <div v-if="currentTab !== 'questions'" class="form-footer-buttons">
                   <a-button v-if="!taskLevelFormData.taskId" @click="resetTaskLevel">重置</a-button>
@@ -1448,7 +1460,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
           </div>
         </div>
       </div>
-      
+
       <!-- 第四步：实验环境 -->
       <div v-if="currentStep === 3" class="step-content">
         <div class="content-card">
@@ -1459,28 +1471,15 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
               <a-button>设置</a-button>
             </div>
           </div>
-          <a-form
-            ref="experimentFormRef"
-            :model="currentEnvironmentConfig"
-            :rules="experimentFormRules"
-            :label-col="{ span: 4 }"
-            :wrapper-col="{ span: 18 }"
-          >
+          <a-form ref="experimentFormRef" :model="currentEnvironmentConfig" :rules="experimentFormRules"
+            :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
             <a-tabs v-model:activeKey="activeEnvironmentKey">
-              <a-tab-pane 
-                v-for="env in experimentEnvironments" 
-                :key="env.id"
-              >
+              <a-tab-pane v-for="env in experimentEnvironments" :key="env.id">
                 <template #tab>
                   <div class="tab-label">
                     <template v-if="env.isEditing">
-                      <a-input 
-                        v-model:value="editingEnvironmentName"
-                        size="small"
-                        style="width: 120px;"
-                        @pressEnter="handleSaveEnvironmentName(env)"
-                        @blur="handleSaveEnvironmentName(env)"
-                      />
+                      <a-input v-model:value="editingEnvironmentName" size="small" style="width: 120px;"
+                        @pressEnter="handleSaveEnvironmentName(env)" @blur="handleSaveEnvironmentName(env)" />
                     </template>
                     <template v-else>
                       <span @dblclick="handleEditEnvironmentName(env)">{{ env.name }}</span>
@@ -1508,27 +1507,18 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
                 <a-form-item label="实验界面" name="viewTypes" required>
                   <div class="experiment-interfaces">
-                    <div 
-                      class="interface-card"
-                      :class="{ active: env.config.viewTypes.includes(1) }"
-                      @click="toggleInterface(1)"
-                    >
+                    <div class="interface-card" :class="{ active: env.config.viewTypes.includes(1) }"
+                      @click="toggleInterface(1)">
                       <div class="card-title">代码编辑器</div>
                       <div class="card-desc">提供代码编辑器，编辑器，调试器等工具</div>
                     </div>
-                    <div 
-                      class="interface-card"
-                      :class="{ active: env.config.viewTypes.includes(2) }"
-                      @click="toggleInterface(2)"
-                    >
+                    <div class="interface-card" :class="{ active: env.config.viewTypes.includes(2) }"
+                      @click="toggleInterface(2)">
                       <div class="card-title">命令行终端</div>
                       <div class="card-desc">提供命令行窗口</div>
                     </div>
-                    <div 
-                      class="interface-card"
-                      :class="{ active: env.config.viewTypes.includes(3) }"
-                      @click="toggleInterface(3)"
-                    >
+                    <div class="interface-card" :class="{ active: env.config.viewTypes.includes(3) }"
+                      @click="toggleInterface(3)">
                       <div class="card-title">容器内服务</div>
                       <div class="card-desc">直接预览容器内部Web服务</div>
                     </div>
@@ -1536,46 +1526,27 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                 </a-form-item>
 
                 <a-form-item label="附带环境" name="environment" required>
-                  <a-select 
-                    v-model:value="env.config.environment"
-                    placeholder="请选择附带环境"
-                    allowClear
-                  >
+                  <a-select v-model:value="env.config.environment" placeholder="请选择附带环境" allowClear>
                     <a-select-option value="env1">环境1</a-select-option>
                     <a-select-option value="env2">环境2</a-select-option>
                   </a-select>
                 </a-form-item>
 
                 <a-form-item label="任务关卡" name="taskId" required>
-                  <a-select 
-                    v-model:value="env.config.taskId"
-                    placeholder="请选择任务关卡"
-                    allowClear
-                  >
-                    <a-select-option 
-                      v-for="level in taskLevels" 
-                      :key="level.taskId || level.id" 
-                      :value="level.taskId"
-                      :disabled="!level.taskId"
-                    >
+                  <a-select v-model:value="env.config.taskId" placeholder="请选择任务关卡" allowClear>
+                    <a-select-option v-for="level in taskLevels" :key="level.taskId || level.id" 
+                      :value="level.taskId ? String(level.taskId) : undefined"
+                      :disabled="!level.taskId || isTaskLevelSelectedByOther(env.id, level.taskId)">
                       {{ level.name }}
                       <span v-if="!level.taskId" style="color: #999;"> (未保存)</span>
+                      <span v-else-if="isTaskLevelSelectedByOther(env.id, level.taskId)" style="color: #999;"> (已被使用)</span>
                     </a-select-option>
                   </a-select>
                 </a-form-item>
 
                 <!-- 选择代码编辑器时显示编程语言 -->
-                <a-form-item 
-                  v-if="env.config.viewTypes.includes(1)"
-                  label="编程语言"
-                  name="codeType"
-                  required
-                >
-                  <a-select 
-                    v-model:value="env.config.codeType"
-                    placeholder="请选择编程语言"
-                    allowClear
-                  >
+                <a-form-item v-if="env.config.viewTypes.includes(1)" label="编程语言" name="codeType" required>
+                  <a-select v-model:value="env.config.codeType" placeholder="请选择编程语言" allowClear>
                     <a-select-option value="1">Python</a-select-option>
                     <a-select-option value="2">JavaScript</a-select-option>
                     <a-select-option value="3">Java</a-select-option>
@@ -1584,40 +1555,25 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                 </a-form-item>
 
                 <!-- 选择命令行终端时显示开启时触发命令 -->
-                <a-form-item 
-                  v-if="env.config.viewTypes.includes(2)"
-                  label="开启时触发命令"
-                  name="shellBegin"
-                  required
-                >
-                  <a-input 
-                    v-model:value="env.config.shellBegin"
-                    placeholder="请输入命令"
-                  />
+                <a-form-item v-if="env.config.viewTypes.includes(2)" label="开启时触发命令" name="shellBegin" required>
+                  <a-input v-model:value="env.config.shellBegin" placeholder="请输入命令" />
                 </a-form-item>
 
                 <!-- 选择容器内服务时显示容器端口和路由 -->
-                <a-form-item 
-                  v-if="env.config.viewTypes.includes(3)"
-                  label="容器端口" 
-                  name="containerPort" 
-                  required
-                >
-                  <a-input 
-                    v-model:value="env.config.containerPort"
-                    placeholder="请输入容器端口"
-                  />
+                <a-form-item v-if="env.config.viewTypes.includes(3)" label="容器端口" name="containerPort" required>
+                  <a-input v-model:value="env.config.containerPort" placeholder="请输入容器端口" />
                 </a-form-item>
 
                 <!-- 选择容器内服务时显示路由（选填） -->
-                <a-form-item 
-                  v-if="env.config.viewTypes.includes(3)"
-                  label="路由"
-                >
-                  <a-input 
-                    v-model:value="env.config.containerPath"
-                    placeholder="请输入路由（选填）"
-                  />
+                <a-form-item v-if="env.config.viewTypes.includes(3)" label="路由">
+                  <a-input v-model:value="env.config.containerPath" placeholder="请输入路由（选填）" />
+                </a-form-item>
+
+                <!-- 保存/更新按钮 -->
+                <a-form-item :wrapper-col="{ offset: 4, span: 18 }">
+                  <a-button class="w-full" type="primary" @click="saveEnvironment(env)">
+                    {{ env.isSaved ? '更新' : '保存' }}
+                  </a-button>
                 </a-form-item>
               </a-tab-pane>
             </a-tabs>
@@ -1629,40 +1585,25 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
       <div class="page-footer">
         <a-button v-if="currentStep === 0" @click="handleBack">返回</a-button>
         <a-button v-else @click="handleBack">上一步</a-button>
-        <a-button v-if="currentStep === 3" type="primary" @click="handleSave">保存</a-button>
+        <a-button v-if="currentStep === 3" type="primary" @click="completeProject">完成创建</a-button>
         <a-button v-else type="primary" @click="handleNext">下一步</a-button>
       </div>
     </div>
 
     <!-- 弹窗组件 -->
-    <RepositoryModal 
-      v-model:open="showRepositoryModal"
-      @confirm="handleConfirmRepository"
-      @cancel="handleCancelRepository"
-    />
+    <RepositoryModal v-model:open="showRepositoryModal" @confirm="handleConfirmRepository"
+      @cancel="handleCancelRepository" />
     <!-- 新建文件弹窗 -->
-    <NewFileModal 
-      v-model:open="showNewFileModal"
-      :parent-path="currentParentPath"
-      @confirm="handleConfirmNewFile"
-    />
+    <NewFileModal v-model:open="showNewFileModal" :parent-path="currentParentPath" @confirm="handleConfirmNewFile" />
 
     <!-- 新建文件夹弹窗 -->
-    <NewFolderModal 
-      v-model:open="showNewFolderModal"
-      :parent-path="currentFolderParentPath"
-      @confirm="handleConfirmNewFolder"
-    />
-    
+    <NewFolderModal v-model:open="showNewFolderModal" :parent-path="currentFolderParentPath"
+      @confirm="handleConfirmNewFolder" />
+
     <!-- 添加题目弹窗 -->
-    <QuestionModal 
-      v-model:open="showQuestionModal"
-      :question="currentEditingQuestion"
-      :project-id="projectId ?? undefined"
-      :task-id="taskLevelFormData.taskId"
-      :existing-questions="getCurrentQuestions"
-      @confirm="handleConfirmQuestion"
-    />
+    <QuestionModal v-model:open="showQuestionModal" :question="currentEditingQuestion"
+      :project-id="projectId ?? undefined" :task-id="taskLevelFormData.taskId" :existing-questions="getCurrentQuestions"
+      @confirm="handleConfirmQuestion" />
   </div>
 </template>
 
@@ -1695,13 +1636,14 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
     .steps-container {
       margin-bottom: 32px;
       padding: 0 100px;
+
       .custom-steps {
         max-width: 800px;
         margin: 0 auto;
       }
     }
 
-    .section-title{
+    .section-title {
       background: #40a9ff;
       padding: 8px 18px;
       border-radius: 4px;
@@ -1709,7 +1651,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
       font-size: 14px;
       font-weight: 500;
       margin-bottom: 24px;
-      h3{
+
+      h3 {
         margin: 0;
       }
     }
@@ -1865,7 +1808,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
     .task-level-section {
       .task-level-header {
         margin-bottom: 24px;
-        
+
         .header-buttons {
           display: flex;
           justify-content: flex-end;
@@ -2085,18 +2028,18 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                 line-height: 1.6;
                 min-height: 20px;
                 word-break: break-word;
-                
+
                 :deep(p) {
                   margin: 0 !important;
                   padding: 0 !important;
                   line-height: 1.6;
                   display: block;
                 }
-                
+
                 :deep(br) {
                   display: none;
                 }
-                
+
                 :deep(*) {
                   max-width: 100%;
                 }
