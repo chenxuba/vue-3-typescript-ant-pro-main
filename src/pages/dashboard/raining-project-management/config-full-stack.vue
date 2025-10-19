@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
@@ -175,6 +175,9 @@ const repositoryTypeOptions = [
   { label: '代码仓库', value: '代码仓库' },
   { label: '私密代码仓库', value: '私密代码仓库' },
 ]
+
+// 仓库地址是否锁定
+const isRepositoryUrlLocked = ref(false)
 
 // 实验环境列表
 interface ExperimentEnvironment {
@@ -380,16 +383,68 @@ const handleRepositorySwitchChange = (checked: boolean | string | number) => {
   }
 }
 
-// 确认开启版本库
-const handleConfirmRepository = () => {
-  formData.value.enableCodeRepository = true
-  showRepositoryModal.value = false
+// 模拟请求仓库文件
+const fetchRepositoryFiles = async () => {
+  try {
+    message.loading('正在查询仓库文件...', 1)
+    // 模拟请求延迟
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    message.success('仓库文件查询成功')
+    console.log('模拟请求仓库地址：', formData.value.gitUrl)
+  } catch (error) {
+    message.error('仓库文件查询失败')
+  }
 }
 
-// 取消开启版本库
+// 确认开启代码库
+const handleConfirmRepository = async () => {
+  // 校验是否有仓库地址
+  if (!formData.value.gitUrl || !formData.value.gitUrl.trim()) {
+    message.error('请先配置仓库地址')
+    handleCancelRepository()
+    return
+  }
+  
+  formData.value.enableCodeRepository = true
+  showRepositoryModal.value = false
+  
+  // 锁定仓库地址输入框
+  isRepositoryUrlLocked.value = true
+  
+  // 请求接口查询仓库文件（目前模拟）
+  await fetchRepositoryFiles()
+}
+
+// 取消开启代码库
 const handleCancelRepository = () => {
   formData.value.enableCodeRepository = false
   showRepositoryModal.value = false
+}
+
+// 监听仓库类型变化
+watch(() => formData.value.repositoryType, (newType) => {
+  if (newType === '切换仓库' && formData.value.enableCodeRepository) {
+    // 选择切换仓库时，解锁仓库地址输入框
+    isRepositoryUrlLocked.value = false
+    message.info('已解锁仓库地址，请重新输入')
+    
+    // 自动切换回代码仓库选项
+    nextTick(() => {
+      formData.value.repositoryType = '代码仓库'
+    })
+  }
+})
+
+// 仓库地址输入框失焦处理
+const handleRepositoryUrlBlur = () => {
+  if (formData.value.enableCodeRepository && !isRepositoryUrlLocked.value) {
+    const url = formData.value.gitUrl?.trim()
+    if (url) {
+      // 重新锁定并请求文件
+      isRepositoryUrlLocked.value = true
+      fetchRepositoryFiles()
+    }
+  }
 }
 
 // 处理菜单点击
@@ -1133,7 +1188,13 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
               class="repository-type-select" />
             <div class="repository-url-group">
               <span class="url-label">仓库地址：</span>
-              <a-input v-model:value="formData.gitUrl" placeholder="请输入仓库地址" class="url-input" />
+              <a-input 
+                v-model:value="formData.gitUrl" 
+                placeholder="请输入仓库地址" 
+                class="url-input"
+                :disabled="isRepositoryUrlLocked"
+                @blur="handleRepositoryUrlBlur"
+              />
             </div>
           </div>
 
@@ -1144,7 +1205,11 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
               <div class="repository-switch-box flex items-center justify-between">
                 <div class="flex items-center gap-12px">
                   <span class="switch-label">代码仓库</span>
-                  <a-switch :checked="formData.enableCodeRepository" @change="handleRepositorySwitchChange" />
+                  <a-switch 
+                    :checked="formData.enableCodeRepository" 
+                    :disabled="formData.enableCodeRepository"
+                    @change="handleRepositorySwitchChange" 
+                  />
                 </div>
                 <a-dropdown v-if="formData.enableCodeRepository">
                   <template #overlay>

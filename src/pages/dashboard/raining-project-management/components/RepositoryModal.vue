@@ -26,7 +26,7 @@ const handleCancel = () => {
 <template>
   <a-modal 
     :open="open" 
-    title="开启版本库" 
+    title="开启代码库" 
     :footer="null" 
     width="480px" 
     centered

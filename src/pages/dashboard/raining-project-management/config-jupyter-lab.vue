@@ -211,13 +211,13 @@ const handleRepositorySwitchChange = (checked: boolean | string | number) => {
   }
 }
 
-// 确认开启版本库
+// 确认开启代码库
 const handleConfirmRepository = () => {
   formData.value.enableCodeRepository = true
   showRepositoryModal.value = false
 }
 
-// 取消开启版本库
+// 取消开启代码库
 const handleCancelRepository = () => {
   formData.value.enableCodeRepository = false
   showRepositoryModal.value = false
