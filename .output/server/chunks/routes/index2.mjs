@@ -467,7 +467,7 @@ const accessMenuData = [
   }
 ];
 const index = eventHandler((event) => {
-  const token = getHeader(event, "Authorization");
+  const token = getHeader(event, "train_token");
   const username = Buffer.from(token, "base64").toString("utf-8");
   return {
     code: 200,

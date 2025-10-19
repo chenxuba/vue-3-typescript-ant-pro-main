@@ -9,14 +9,14 @@ import 'node:crypto';
 import 'node:url';
 
 const info = eventHandler((event) => {
-  const token = getHeader(event, "Authorization");
-  const username = Buffer.from(token, "base64").toString("utf-8");
+  const token = getHeader(event, "train_token");
   if (!token) {
     return {
       code: 401,
       msg: "\u767B\u5F55\u5931\u6548"
     };
   }
+  const username = Buffer.from(token, "base64").toString("utf-8");
   return {
     code: 200,
     msg: "\u83B7\u53D6\u6210\u529F",
