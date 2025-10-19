@@ -3,6 +3,81 @@
  */
 
 /**
+ * 获取项目列表的请求参数
+ */
+export interface GetProjectListParams {
+  limit: number // 每页条数
+  page: number // 当前页
+  startNum?: number // 起始数
+  name?: string // 项目名称
+  orgName?: string // 主办单位
+  orderbyFiled?: string // 排序字段，如 "name:desc,github:asc"
+}
+
+/**
+ * 项目列表项数据结构
+ */
+export interface ProjectListItem {
+  id: number
+  name: string
+  tag: string
+  fieldType?: number
+  difficulty: number
+  classHour?: string
+  topCover: string
+  cover: string
+  description: string
+  authType: number
+  status?: number
+  createTime: number
+  updateTime: number
+  connectUnit?: string // 主办单位
+  [key: string]: any // 允许其他字段
+}
+
+/**
+ * 获取项目列表的响应数据
+ */
+export interface GetProjectListResponse {
+  result: number
+  msg: string
+  data: {
+    list: ProjectListItem[]
+    count: number // 数据总条数
+    total: number
+    page: number
+    limit: number
+    hasMore: number
+    totalPage: number
+  }
+}
+
+/**
+ * 获取项目列表（分页）
+ * @param params 查询参数
+ * @returns 返回项目列表数据
+ */
+export async function getProjectListPagerApi(params: GetProjectListParams): Promise<GetProjectListResponse['data']> {
+  const response = await usePost<GetProjectListResponse['data']>('/admin/api/project/getListPager', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  return {
+    list: [],
+    count: 0,
+    total: 0,
+    page: 1,
+    limit: 10,
+    hasMore: 0,
+    totalPage: 0,
+  }
+}
+
+/**
  * 创建项目的请求参数
  */
 export interface CreateProjectParams {
@@ -101,6 +176,7 @@ export interface UpdateProjectEnvironmentParams {
  */
 export interface UpdateProjectParams extends CreateProjectParams {
   id: number // 项目ID
+  status?: number // 项目状态：1-已发布, 0-未发布
 }
 
 /**

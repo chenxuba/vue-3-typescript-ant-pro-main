@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
+import { getProjectListPagerApi, type ProjectListItem } from '@/api/project'
 
 defineOptions({
   name: 'RainingProjectManagement',
@@ -27,6 +29,13 @@ const environmentOptions = [
 const organizerOptions = [
   { label: '中国科学院计算机网络信息中心', value: '中国科学院计算机网络信息中心' },
 ]
+
+// 分页配置
+const pagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
 
 // 表格列配置
 const columns = [
@@ -63,61 +72,43 @@ const columns = [
 ]
 
 // 表格数据
-const dataSource = ref([
-  {
-    key: '1',
-    projectName: '2025年新媒体战略规划会',
-    environment: '全栈环境',
-    skillTag: '实践培训',
-    organizer: '中国科学院计算机网络信息中心',
-    publicScope: '已发布\n全院公开',
-    publishStatus: '已发布',
-    scopeStatus: '全院公开',
-  },
-  {
-    key: '2',
-    projectName: '2025年新媒体战略规划会',
-    environment: 'JupyterNotebook环境',
-    skillTag: '实践培训',
-    organizer: '中国科学院计算机网络信息中心',
-    publicScope: '已发布\n完全公开',
-    publishStatus: '已发布',
-    scopeStatus: '完全公开',
-  },
-  {
-    key: '3',
-    projectName: '2025年新媒体战略规划会',
-    environment: '其他',
-    skillTag: '实践培训',
-    organizer: '中国科学院计算机网络信息中心',
-    publicScope: '未发布\n本单位公开',
-    publishStatus: '未发布',
-    scopeStatus: '本单位公开',
-  },
-  {
-    key: '4',
-    projectName: '2025年新媒体战略规划会',
-    environment: 'JupyterLab环境',
-    skillTag: '实践培训',
-    organizer: '中国科学院计算机网络信息中心',
-    publicScope: '已发布\n完全公开',
-    publishStatus: '已发布',
-    scopeStatus: '完全公开',
-  },
-  {
-    key: '5',
-    projectName: '2025年新媒体战略规划会',
-    environment: 'JupyterLab环境',
-    skillTag: '实践培训',
-    organizer: '中国科学院计算机网络信息中心',
-    publicScope: '已发布\n完全公开',
-    publishStatus: '已发布',
-    scopeStatus: '完全公开',
-  },
-])
+const dataSource = ref<ProjectListItem[]>([])
 
-// 总数据条数
-const total = ref(123)
+// 加载状态
+const loading = ref(false)
+
+// 获取项目列表
+const fetchProjectList = async () => {
+  loading.value = true
+  try {
+    const params = {
+      page: pagination.value.current,
+      limit: pagination.value.pageSize,
+      startNum: (pagination.value.current - 1) * pagination.value.pageSize,
+      name: searchForm.value.projectName || undefined,
+      orgName: searchForm.value.organizer || undefined,
+      orderbyFiled: 'createTime:desc', // 按创建时间正序
+    }
+    
+    const result = await getProjectListPagerApi(params)
+    
+    dataSource.value = result.list
+    pagination.value.total = result.count // 使用 count 字段作为总条数
+  } catch (error: any) {
+    message.error(error.message || '获取项目列表失败')
+    dataSource.value = []
+    pagination.value.total = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+// 分页改变时的回调
+const handleTableChange = (pag: any) => {
+  pagination.value.current = pag.current
+  pagination.value.pageSize = pag.pageSize
+  fetchProjectList()
+}
 
 // 重置表单
 const handleReset = () => {
@@ -126,12 +117,20 @@ const handleReset = () => {
     environment: undefined,
     organizer: undefined,
   }
+  pagination.value.current = 1
+  fetchProjectList()
 }
 
 // 查询
 const handleSearch = () => {
-  console.log('查询条件：', searchForm.value)
+  pagination.value.current = 1 // 重置到第一页
+  fetchProjectList()
 }
+
+// 组件挂载时获取列表
+onMounted(() => {
+  fetchProjectList()
+})
 
 // 新建项目 - 跳转到新建页面
 const handleCreate = () => {
@@ -219,7 +218,7 @@ const handleDelete = (record: any) => {
         <div class="table-tabs">
           <div class="tabs-left">
             <span class="tab-item active">数据列表</span>
-            <span class="data-count">数据共 {{ total }} 条</span>
+            <span class="data-count">数据共 {{ pagination.total }} 条</span>
           </div>
           <div class="tabs-right">
             <a-button type="primary" @click="handleCreate">新建项目</a-button>
@@ -230,42 +229,61 @@ const handleDelete = (record: any) => {
       <a-table
         :columns="columns"
         :data-source="dataSource"
+        :loading="loading"
         :pagination="{
-          total: total,
-          pageSize: 10,
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
           showSizeChanger: true,
           showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
         }"
+        @change="handleTableChange"
         bordered
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'publicScope'">
+          <template v-if="column.key === 'projectName'">
+            {{ record.name }}
+          </template>
+          <template v-else-if="column.key === 'skillTag'">
+            {{ record.tag }}
+          </template>
+          <template v-else-if="column.key === 'organizer'">
+            {{ record.connectUnit || '-' }}
+          </template>
+          <template v-else-if="column.key === 'publicScope'">
             <div class="public-scope-cell">
               <div 
                 class="status-badge" 
                 :class="{
-                  'status-published': record.publishStatus === '已发布',
-                  'status-unpublished': record.publishStatus === '未发布'
+                  'status-published': record.status === 1,
+                  'status-unpublished': record.status !== 1
                 }"
               >
-                {{ record.publishStatus }}
+                {{ record.status === 1 ? '已发布' : '未发布' }}
               </div>
               <div 
                 class="scope-badge"
                 :class="{
-                  'scope-full': record.scopeStatus === '完全公开',
-                  'scope-academy': record.scopeStatus === '全院公开',
-                  'scope-unit': record.scopeStatus === '本单位公开'
+                  'scope-full': record.authType === 1,
+                  'scope-academy': record.authType === 2,
+                  'scope-unit': record.authType === 3,
+                  'scope-private': record.authType === 4
                 }"
               >
-                {{ record.scopeStatus }}
+                {{ 
+                  record.authType === 1 ? '完全公开' : 
+                  record.authType === 2 ? '全院公开' : 
+                  record.authType === 3 ? '本单位公开' : 
+                  record.authType === 4 ? '不公开' : '-'
+                }}
               </div>
             </div>
           </template>
           <template v-else-if="column.key === 'action'">
             <div class="action-links">
               <a @click="handleStatistics(record)">统计</a>
-              <template v-if="record.publishStatus === '已发布'">
+              <template v-if="record.status === 1">
                 <a-divider type="vertical" />
                 <a @click="handlePublish(record)">取消发布</a>
                 <a-divider type="vertical" />
@@ -418,6 +436,11 @@ const handleDelete = (record: any) => {
         &.scope-unit {
           color: #1890ff;
           background: #e6f7ff;
+        }
+
+        &.scope-private {
+          color: rgba(0, 0, 0, 0.65);
+          background: #f5f5f5;
         }
       }
     }

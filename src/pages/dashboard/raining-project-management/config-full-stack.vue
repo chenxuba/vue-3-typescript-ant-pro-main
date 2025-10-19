@@ -765,7 +765,7 @@ const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0)
 }
 
 // 完成项目创建
-const completeProject = () => {
+const completeProject = async () => {
   // 校验每个实验环境是否都已保存
   const unsavedEnvironments = experimentEnvironments.value.filter(env => !env.isSaved)
 
@@ -774,12 +774,29 @@ const completeProject = () => {
     return
   }
 
-  message.success('项目创建成功！')
+  // 校验是否有项目ID
+  if (!projectId.value) {
+    message.error('项目ID不存在，请先创建项目')
+    return
+  }
 
-  // 延迟返回列表页，让用户看到成功提示
-  setTimeout(() => {
-    router.push('/dashboard/analysis')
-  }, 500)
+  try {
+    // 调用更新接口，将状态设置为1（已发布）
+    await updateProjectApi({
+      id: projectId.value,
+      status: 1, // 设置状态为1（已发布）
+    } as any)
+    
+    message.success('项目创建成功！')
+
+    // 延迟返回列表页，让用户看到成功提示
+    setTimeout(() => {
+      router.push('/dashboard/analysis')
+    }, 500)
+  } catch (error: any) {
+    console.error('项目发布失败：', error)
+    message.error(error.message || '项目发布失败')
+  }
 }
 
 // 任务要求内容变化处理
