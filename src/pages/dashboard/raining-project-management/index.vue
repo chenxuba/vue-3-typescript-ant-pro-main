@@ -89,9 +89,9 @@ const fetchProjectList = async () => {
       orgName: searchForm.value.organizer || undefined,
       orderbyFiled: 'createTime:desc', // 按创建时间正序
     }
-    
+
     const result = await getProjectListPagerApi(params)
-    
+
     dataSource.value = result.list
     pagination.value.total = result.count // 使用 count 字段作为总条数
   } catch (error: any) {
@@ -153,7 +153,7 @@ const handlePublish = (record: any) => {
   const isPublished = record.status === 1
   const actionText = isPublished ? '取消发布' : '发布'
   const newStatus = isPublished ? 0 : 1
-  
+
   Modal.confirm({
     title: `确认${actionText}`,
     content: `确定要${actionText}项目"${record.name}"吗？`,
@@ -165,9 +165,9 @@ const handlePublish = (record: any) => {
           id: record.id,
           status: newStatus,
         } as any)
-        
+
         message.success(`${actionText}成功`)
-        
+
         // 刷新列表
         fetchProjectList()
       } catch (error: any) {
@@ -196,14 +196,14 @@ const handleDelete = (record: any) => {
         await deleteProjectApi({
           id: record.id,
         })
-        
+
         message.success('删除成功')
-        
+
         // 如果删除的是当前页最后一条数据，且不是第一页，则返回上一页
         if (dataSource.value.length === 1 && pagination.value.current > 1) {
           pagination.value.current -= 1
         }
-        
+
         // 刷新列表
         fetchProjectList()
       } catch (error: any) {
@@ -220,38 +220,23 @@ const handleDelete = (record: any) => {
     <!-- 筛选查询区域 -->
     <div class="search-section">
       <h3 class="section-title">筛选查询</h3>
-      <a-form
-        :model="searchForm"
-        layout="horizontal"
-        class="search-form"
-      >
+      <a-form :model="searchForm" layout="horizontal" class="search-form">
         <a-row :gutter="24">
           <a-col :span="6">
             <a-form-item label="项目名称：" name="projectName">
-              <a-input
-                v-model:value="searchForm.projectName"
-                placeholder="请输入项目名称"
-              />
+              <a-input v-model:value="searchForm.projectName" placeholder="请输入项目名称" />
             </a-form-item>
           </a-col>
           <a-col :span="6">
             <a-form-item label="实验环境：" name="environment">
-              <a-select
-                v-model:value="searchForm.environment"
-                placeholder="请选择实验环境"
-                :options="environmentOptions"
-                allow-clear
-              />
+              <a-select v-model:value="searchForm.environment" placeholder="请选择实验环境" :options="environmentOptions"
+                allow-clear />
             </a-form-item>
           </a-col>
           <a-col :span="6">
             <a-form-item label="主办单位：" name="organizer">
-              <a-select
-                v-model:value="searchForm.organizer"
-                placeholder="请选择主办单位"
-                :options="organizerOptions"
-                allow-clear
-              />
+              <a-select v-model:value="searchForm.organizer" placeholder="请选择主办单位" :options="organizerOptions"
+                allow-clear />
             </a-form-item>
           </a-col>
           <a-col :span="6" class="form-actions">
@@ -259,7 +244,7 @@ const handleDelete = (record: any) => {
             <a-button @click="handleReset">重置</a-button>
           </a-col>
         </a-row>
-       
+
       </a-form>
     </div>
 
@@ -276,25 +261,25 @@ const handleDelete = (record: any) => {
           </div>
         </div>
       </div>
-      
-      <a-table
-        :columns="columns"
-        :data-source="dataSource"
-        :loading="loading"
-        :pagination="{
-          current: pagination.current,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
-        }"
-        @change="handleTableChange"
-        bordered
-      >
+
+      <a-table :columns="columns" :data-source="dataSource" :loading="loading" :pagination="{
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        total: pagination.total,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        showTotal: (total) => `共 ${total} 条`,
+      }" @change="handleTableChange" bordered>
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'projectName'">
             {{ record.name }}
+          </template>
+          <!-- 实验环境 -->
+          <template v-else-if="column.key === 'environment'">
+            {{ record.environment == 1 ? '全栈环境' :
+              record.environment == 2 ? 'Python3.6' :
+                record.environment == 3 ? 'Python3.13' :
+                  record.environment == 4 ? 'Python3.12/VNC' : '-' }}
           </template>
           <template v-else-if="column.key === 'skillTag'">
             {{ record.tag }}
@@ -304,29 +289,23 @@ const handleDelete = (record: any) => {
           </template>
           <template v-else-if="column.key === 'publicScope'">
             <div class="public-scope-cell">
-              <div 
-                class="status-badge" 
-                :class="{
-                  'status-published': record.status === 1,
-                  'status-unpublished': record.status !== 1
-                }"
-              >
+              <div class="status-badge" :class="{
+                'status-published': record.status === 1,
+                'status-unpublished': record.status !== 1
+              }">
                 {{ record.status === 1 ? '已发布' : '未发布' }}
               </div>
-              <div 
-                class="scope-badge"
-                :class="{
-                  'scope-full': record.authType === 1,
-                  'scope-academy': record.authType === 2,
-                  'scope-unit': record.authType === 3,
-                  'scope-private': record.authType === 4
-                }"
-              >
-                {{ 
-                  record.authType === 1 ? '完全公开' : 
-                  record.authType === 2 ? '全院公开' : 
-                  record.authType === 3 ? '本单位公开' : 
-                  record.authType === 4 ? '不公开' : '-'
+              <div class="scope-badge" :class="{
+                'scope-full': record.authType === 1,
+                'scope-academy': record.authType === 2,
+                'scope-unit': record.authType === 3,
+                'scope-private': record.authType === 4
+              }">
+                {{
+                  record.authType === 1 ? '完全公开' :
+                    record.authType === 2 ? '全院公开' :
+                      record.authType === 3 ? '本单位公开' :
+                        record.authType === 4 ? '不公开' : '-'
                 }}
               </div>
             </div>

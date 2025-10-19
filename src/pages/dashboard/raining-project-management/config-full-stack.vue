@@ -635,7 +635,7 @@ const handleCreateProject = async () => {
     // 准备提交的数据
     const submitData: any = {
       projectType: 1,//全栈环境实训项目
-      environment:formData.value.environment,
+      environment: selectedEnvironment.value,
       name: formData.value.name,
       tag: formData.value.tag,
       fieldType: formData.value.fieldType,
