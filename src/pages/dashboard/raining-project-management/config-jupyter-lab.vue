@@ -463,7 +463,7 @@ const evaluationActiveTab = ref('settings')
 interface EvaluationData {
   openTestValidate: number // 1开 2不开
   testValidateFiles: string // 评测文件URL
-  timeLimitM: string // 评测时长限制（分钟）
+  timeLimitM: string | number // 评测时长限制（分钟）
   scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
   evaluationSetting: string
   testSets: TestSet[]
@@ -657,6 +657,7 @@ const handleCreateProject = async () => {
   } catch (error) {
     console.error('操作失败：', error)
     message.error(projectId.value ? '项目更新失败，请稍后重试' : '项目创建失败，请稍后重试')
+    scrollToTop()
   }
 }
 
@@ -681,6 +682,7 @@ const handleNext = async () => {
       // 如果开启了代码仓库，验证仓库地址
       if (!formData.value.gitUrl || formData.value.gitUrl.trim() === '') {
         message.error('请输入仓库地址')
+        scrollToTop()
         return
       }
     }
@@ -691,11 +693,13 @@ const handleNext = async () => {
     // 校验评测设置和参考答案是否都已保存
     if (!evaluationSaved.value) {
       message.error('请先保存评测设置后再进行下一步')
+      scrollToTop()
       return
     }
     
     if (!referenceAnswerSaved.value) {
       message.error('请先保存参考答案后再进行下一步')
+      scrollToTop()
       return
     }
     
@@ -755,7 +759,7 @@ const handleSaveEvaluation = async () => {
       }
       
       // 校验评测时长限制
-      if (!evaluationData.value.timeLimitM || evaluationData.value.timeLimitM.trim() === '') {
+      if (!evaluationData.value.timeLimitM) {
         message.error('请输入评测时长限制')
         return
       }
@@ -863,9 +867,14 @@ const handleSaveReferenceAnswer = async () => {
 // 完成项目创建
 const handleSave = async () => {
   try {
-    // 验证是否有项目ID
+    // 验证是否有项目ID和任务ID
     if (!projectId.value) {
       message.error('项目ID不存在，请重新创建项目')
+      return
+    }
+    
+    if (!taskId.value) {
+      message.error('任务ID不存在，请重新创建任务')
       return
     }
     
@@ -880,7 +889,27 @@ const handleSave = async () => {
       return
     }
     
-    // 更新项目状态为已发布
+    // 校验实验环境配置
+    if (!environmentConfig.value.dockerImage) {
+      message.error('请选择实验环境')
+      return
+    }
+    
+    if (!environmentConfig.value.timeLimitM) {
+      message.error('请输入实验环境使用时长')
+      return
+    }
+    
+    // 第一步：先更新任务，传入实验环境配置
+    await updateProjectTaskApi({
+      taskId: taskId.value,
+      projectId: projectId.value,
+      dockerImage: environmentConfig.value.dockerImage,
+      environment: environmentConfig.value.environment,
+      timeLimitM: environmentConfig.value.timeLimitM,
+    } as any)
+    
+    // 第二步：任务更新成功后，再更新项目状态为已发布
     await updateProjectApi({
       id: projectId.value,
       status: 1, // 设置状态为1（已发布）
@@ -928,24 +957,50 @@ const filteredEnvironmentList = computed(() => {
 
 // 实验环境配置
 interface EnvironmentConfig {
-  attachedEnvironment: string
-  usageDuration: string
+  dockerImage: string // 实验环境ID
+  environment: string // 附带环境
+  timeLimitM: string | number // 实验环境使用时长
 }
 
 const environmentConfig = ref<EnvironmentConfig>({
-  attachedEnvironment: 'Css',
-  usageDuration: '',
+  dockerImage: '1', // 默认选中第一个环境的id
+  environment: 'Css',
+  timeLimitM: '',
 })
 
 // 选择实验环境
 const handleSelectEnvironment = (envValue: string) => {
   selectedEnvironment.value = envValue
+  // 找到对应的环境ID并保存
+  const selectedEnv = environmentList.find(env => env.value === envValue)
+  if (selectedEnv) {
+    environmentConfig.value.dockerImage = selectedEnv.id
+  }
 }
 
 // 滚动到顶部
 const scrollToTop = () => {
   nextTick(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+
+    const pageContent = document.querySelector('.page-content')
+    if (pageContent) {
+      pageContent.scrollTop = 0
+    }
+
+    const layoutContent = document.querySelector('.ant-layout-content')
+    if (layoutContent) {
+      layoutContent.scrollTop = 0
+    }
+
+    const scrollableElements = document.querySelectorAll('*')
+    scrollableElements.forEach((el) => {
+      if (el.scrollTop > 0) {
+        el.scrollTop = 0
+      }
+    })
   })
 }
 </script>
@@ -1240,11 +1295,15 @@ const scrollToTop = () => {
                       </a-form-item>
 
                       <a-form-item label="评测时长限制" required>
-                        <a-input 
-                          v-model:value="evaluationData.timeLimitM" 
-                          placeholder="请输入评测时长（分钟）" 
-                          style="width: 600px"
-                        />
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <a-input-number 
+                            v-model:value="evaluationData.timeLimitM" 
+                            :min="1"
+                            placeholder="请输入评测时长（分钟）" 
+                            style="width: 580px"
+                          />
+                          <span>分钟</span>
+                        </div>
                       </a-form-item>
 
                       <a-form-item label="系统评分规则">
@@ -1406,7 +1465,7 @@ const scrollToTop = () => {
               >
                 <a-form-item label="附带环境">
                   <a-select 
-                    v-model:value="environmentConfig.attachedEnvironment"
+                    v-model:value="environmentConfig.environment"
                     placeholder="请选择附带环境"
                   >
                     <a-select-option value="Bwapp">Bwapp</a-select-option>
@@ -1416,11 +1475,15 @@ const scrollToTop = () => {
                 </a-form-item>
 
                 <a-form-item label="实验环境使用时长">
-                  <a-input 
-                    v-model:value="environmentConfig.usageDuration"
-                    placeholder="请输入实验环境使用时长"
-                    suffix="分"
-                  />
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <a-input-number 
+                      v-model:value="environmentConfig.timeLimitM"
+                      :min="1"
+                      placeholder="请输入实验环境使用时长"
+                      style="flex: 1;"
+                    />
+                    <span>分</span>
+                  </div>
                 </a-form-item>
               </a-form>
             </div>
@@ -1432,7 +1495,7 @@ const scrollToTop = () => {
       <div class="page-footer">
         <a-button v-if="currentStep === 0" @click="handleBack">返回</a-button>
         <a-button v-else @click="handleBack">上一步</a-button>
-        <a-button v-if="currentStep === 3" type="primary" @click="handleSave">保存</a-button>
+        <a-button v-if="currentStep === 3" type="primary" @click="handleSave">完成创建</a-button>
         <a-button v-else type="primary" @click="handleNext">下一步</a-button>
       </div>
     </div>
