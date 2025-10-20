@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, nextTick, computed, onMounted } from 'vue'
+import { ref, nextTick, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { uploadFileApi } from '@/api/common/file'
+import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi } from '@/api/project'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -50,73 +52,96 @@ const router = useRouter()
 // 当前步骤
 const currentStep = ref(0)
 
+// 项目ID
+const projectId = ref<number | null>(null)
+
+// 任务ID
+const taskId = ref<number | null>(null)
+
 // 表单引用
 const formRef = ref<FormInstance>()
 const trainingScopeFormRef = ref<FormInstance>()
 
+// 图片上传相关
+const topCoverUrl = ref<string>('')
+const coverUrl = ref<string>('')
+const uploadingTopCover = ref(false)
+const uploadingCover = ref(false)
+const imageUrlPrefix = 'http://101.200.13.193'
+
 // 表单数据
 interface FormData {
   name: string
-  skillTag: string
-  domainCategory?: string
-  difficulty: string
-  studyHours: string
-  backgroundImage: File | null
-  coverImage: File | null
+  tag: string
+  fieldType?: number
+  difficulty: number
+  environment?: number
+  secondType?: number
+  classHour: string
+  topCover: string
+  cover: string
   description: string
-  showTaskRequirement: boolean
-  trainingScope: string
+  showTaskRequire: boolean
+  authType: number
   enableCodeRepository: boolean
   repositoryType: string
-  repositoryUrl: string
+  gitUrl: string
 }
 
 const formData = ref<FormData>({
   name: '',
-  skillTag: '',
-  domainCategory: undefined,
-  difficulty: '简单',
-  studyHours: '',
-  backgroundImage: null,
-  coverImage: null,
+  tag: '',
+  fieldType: undefined,
+  difficulty: 1,
+  environment: undefined,
+  secondType: undefined,
+  classHour: '',
+  topCover: '',
+  cover: '',
   description: '',
-  showTaskRequirement: false,
-  trainingScope: '完全公开',
+  showTaskRequire: false,
+  authType: 1,
   enableCodeRepository: false,
   repositoryType: '代码仓库',
-  repositoryUrl: 'https://git.educoder.net/pmper166s9/test9',
+  gitUrl: '',
 })
 
 // 从路由接收数据并填充表单
 onMounted(() => {
   const routeData = history.state as any
   console.log('接收到的路由数据:', routeData)
-  
+
   if (routeData && routeData.name) {
-    // 难度映射：数字转字符串
-    const difficultyMap: Record<number, string> = {
-      1: '简单',
-      2: '适中',
-      3: '困难',
-    }
-    
     // 填充基础信息
     formData.value.name = routeData.name || ''
     formData.value.description = routeData.description || ''
-    formData.value.difficulty = difficultyMap[routeData.difficulty] || '简单'
-    formData.value.studyHours = routeData.classHour || ''
-    formData.value.showTaskRequirement = routeData.showTaskRequire || false
-    
+    formData.value.difficulty = routeData.difficulty || 1
+    formData.value.environment = routeData.environment
+    formData.value.secondType = routeData.secondType
+    formData.value.classHour = routeData.classHour || ''
+    formData.value.showTaskRequire = routeData.showTaskRequire || false
+
     console.log('已自动填充表单数据:', {
       name: formData.value.name,
       description: formData.value.description,
       descriptionLength: formData.value.description?.length || 0,
       difficulty: formData.value.difficulty,
-      studyHours: formData.value.studyHours,
-      showTaskRequirement: formData.value.showTaskRequirement
+      environment: formData.value.environment,
+      secondType: formData.value.secondType,
+      classHour: formData.value.classHour,
+      showTaskRequire: formData.value.showTaskRequire,
     })
   } else {
     console.log('未接收到路由数据')
+  }
+})
+
+// 监听步骤变化，自动创建任务
+watch(currentStep, async (newStep, oldStep) => {
+  // 当从第二步进入第三步，且还没有创建任务时，自动创建任务
+  if (newStep === 2 && oldStep === 1 && !taskId.value && projectId.value) {
+    console.log('进入第三步，自动创建任务...')
+    await handleCreateTaskAutomatic()
   }
 })
 
@@ -125,32 +150,55 @@ const formRules: Record<string, Rule[]> = {
   name: [
     { required: true, message: '请输入名称', trigger: 'blur' },
   ],
-  skillTag: [
+  tag: [
     { required: true, message: '请输入技能标签', trigger: 'blur' },
   ],
-  domainCategory: [
+  fieldType: [
     { required: true, message: '请选择领域类别', trigger: 'change' },
   ],
   difficulty: [
     { required: true, message: '请选择难度', trigger: 'change' },
   ],
-  backgroundImage: [
+  environment: [
+    { required: true, message: '请选择实验环境', trigger: 'change' },
+  ],
+  secondType: [
+    { required: true, message: '请选择小类别', trigger: 'change' },
+  ],
+  classHour: [
+    { required: true, message: '请输入学时', trigger: 'blur' },
+  ],
+  topCover: [
     { required: true, message: '请上传顶部背景图', trigger: 'change' },
   ],
-  coverImage: [
+  cover: [
     { required: true, message: '请上传封面图', trigger: 'change' },
   ],
-  trainingScope: [
+  authType: [
     { required: true, message: '请选择培训公开范围', trigger: 'change' },
   ],
 }
 
 // 领域类别选项
 const domainCategoryOptions = [
-  { label: '人工智能', value: '人工智能' },
-  { label: '大数据', value: '大数据' },
-  { label: '云计算', value: '云计算' },
-  { label: 'Web开发', value: 'Web开发' },
+  { label: '人工智能', value: 1 },
+  { label: '大数据', value: 2 },
+  { label: '云计算', value: 3 },
+  { label: 'Web开发', value: 4 },
+]
+
+// 实验环境选项（JupyterLab环境）
+const environmentOptions = [
+  { label: 'Python3/JupyterLab', value: 1 },
+  { label: 'R4.2/Jupyterlab', value: 2 },
+  { label: 'Python3-tensorflow2.6/JupyterLab', value: 3 },
+]
+
+// 小类别选项
+const secondTypeOptions = [
+  { label: 'Bwapp', value: 1 },
+  { label: 'CSS', value: 2 },
+  { label: 'DataTurks', value: 3 },
 ]
 
 // 仓库类型选项
@@ -159,6 +207,9 @@ const repositoryTypeOptions = [
   { label: '代码仓库', value: '代码仓库' },
   { label: '私密代码仓库', value: '私密代码仓库' },
 ]
+
+// 仓库地址是否锁定
+const isRepositoryUrlLocked = ref(false)
 
 // 步骤标题
 const steps = [
@@ -191,13 +242,65 @@ const currentParentPath = ref('/')
 const currentFolderParentPath = ref('/')
 
 // 文件上传处理
-const handleBackgroundUpload = (file: File) => {
-  formData.value.backgroundImage = file
+const handleBackgroundUpload = async (file: File) => {
+  // 验证文件大小
+  const isLt12M = file.size / 1024 / 1024 < 12
+  if (!isLt12M) {
+    message.error('图片大小不能超过 12MB!')
+    return false
+  }
+
+  // 验证文件类型
+  const isImage = file.type === 'image/jpeg' || file.type === 'image/png'
+  if (!isImage) {
+    message.error('只能上传 JPG/PNG 格式的图片!')
+    return false
+  }
+
+  try {
+    uploadingTopCover.value = true
+    const fileUrl = await uploadFileApi(file)
+    topCoverUrl.value = imageUrlPrefix + fileUrl // 用于显示，加前缀
+    formData.value.topCover = fileUrl // 保存原始路径，不加前缀
+    formRef.value?.validateFields(['topCover'])
+    message.success('顶部背景图上传成功')
+  } catch (error) {
+    message.error('顶部背景图上传失败')
+  } finally {
+    uploadingTopCover.value = false
+  }
+
   return false
 }
 
-const handleCoverUpload = (file: File) => {
-  formData.value.coverImage = file
+const handleCoverUpload = async (file: File) => {
+  // 验证文件大小
+  const isLt12M = file.size / 1024 / 1024 < 12
+  if (!isLt12M) {
+    message.error('图片大小不能超过 12MB!')
+    return false
+  }
+
+  // 验证文件类型
+  const isImage = file.type === 'image/jpeg' || file.type === 'image/png'
+  if (!isImage) {
+    message.error('只能上传 JPG/PNG 格式的图片!')
+    return false
+  }
+
+  try {
+    uploadingCover.value = true
+    const fileUrl = await uploadFileApi(file)
+    coverUrl.value = imageUrlPrefix + fileUrl // 用于显示，加前缀
+    formData.value.cover = fileUrl // 保存原始路径，不加前缀
+    formRef.value?.validateFields(['cover'])
+    message.success('封面图上传成功')
+  } catch (error) {
+    message.error('封面图上传失败')
+  } finally {
+    uploadingCover.value = false
+  }
+
   return false
 }
 
@@ -211,16 +314,68 @@ const handleRepositorySwitchChange = (checked: boolean | string | number) => {
   }
 }
 
+// 模拟请求仓库文件
+const fetchRepositoryFiles = async () => {
+  try {
+    message.loading('正在查询仓库文件...', 1)
+    // 模拟请求延迟
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    message.success('仓库文件查询成功')
+    console.log('模拟请求仓库地址：', formData.value.gitUrl)
+  } catch (error) {
+    message.error('仓库文件查询失败')
+  }
+}
+
 // 确认开启代码库
-const handleConfirmRepository = () => {
+const handleConfirmRepository = async () => {
+  // 校验是否有仓库地址
+  if (!formData.value.gitUrl || !formData.value.gitUrl.trim()) {
+    message.error('请先配置仓库地址')
+    handleCancelRepository()
+    return
+  }
+  
   formData.value.enableCodeRepository = true
   showRepositoryModal.value = false
+  
+  // 锁定仓库地址输入框
+  isRepositoryUrlLocked.value = true
+  
+  // 请求接口查询仓库文件（目前模拟）
+  await fetchRepositoryFiles()
 }
 
 // 取消开启代码库
 const handleCancelRepository = () => {
   formData.value.enableCodeRepository = false
   showRepositoryModal.value = false
+}
+
+// 监听仓库类型变化
+watch(() => formData.value.repositoryType, (newType) => {
+  if (newType === '切换仓库' && formData.value.enableCodeRepository) {
+    // 选择切换仓库时，解锁仓库地址输入框
+    isRepositoryUrlLocked.value = false
+    message.info('已解锁仓库地址，请重新输入')
+    
+    // 自动切换回代码仓库选项
+    nextTick(() => {
+      formData.value.repositoryType = '代码仓库'
+    })
+  }
+})
+
+// 仓库地址输入框失焦处理
+const handleRepositoryUrlBlur = () => {
+  if (formData.value.enableCodeRepository && !isRepositoryUrlLocked.value) {
+    const url = formData.value.gitUrl?.trim()
+    if (url) {
+      // 重新锁定并请求文件
+      isRepositoryUrlLocked.value = true
+      fetchRepositoryFiles()
+    }
+  }
 }
 
 // 处理菜单点击
@@ -306,46 +461,49 @@ const evaluationActiveTab = ref('settings')
 
 // 评测设置数据
 interface EvaluationData {
-  enableEvaluation: boolean
-  defaultFile: File | null
-  defaultFileName: string
-  timeLimit: string
-  scoringRule: string
+  openTestValidate: number // 1开 2不开
+  testValidateFiles: string // 评测文件URL
+  timeLimitM: string // 评测时长限制（分钟）
+  scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
   evaluationSetting: string
   testSets: TestSet[]
 }
 
 interface TestSet {
   id: number
-  checked: boolean
-  content: string
+  args: string
+  answer: string
+  select: number
 }
 
 const evaluationData = ref<EvaluationData>({
-  enableEvaluation: true,
-  defaultFile: null,
-  defaultFileName: '',
-  timeLimit: '',
-  scoringRule: '通过全部测试集',
+  openTestValidate: 1, // 默认开启
+  testValidateFiles: '', // 评测文件
+  timeLimitM: '', // 评测时长限制
+  scoreRule: 1, // 默认通过全部测试集
   evaluationSetting: '通过所有代码块评测',
   testSets: [
-    { id: 1, checked: false, content: '' },
-    { id: 2, checked: false, content: '' },
+    { id: 1, args: '', answer: '', select: 1 },
+    { id: 2, args: '', answer: '', select: 1 },
   ],
 })
 
 // 参考答案数据
 interface ReferenceAnswerData {
-  hideReference: boolean
-  disableCopy: boolean
-  content: string
+  showAnswer: number // 1是显示、2否隐藏
+  prohibitCopyAnswer: number // 1是禁止、2否不禁止
+  referenceAnswer: string
 }
 
 const referenceAnswerData = ref<ReferenceAnswerData>({
-  hideReference: true,
-  disableCopy: true,
-  content: '',
+  showAnswer: 1, // 默认显示
+  prohibitCopyAnswer: 1, // 默认禁止复制
+  referenceAnswer: '',
 })
+
+// 保存状态标记
+const evaluationSaved = ref(false) // 评测设置是否已保存
+const referenceAnswerSaved = ref(false) // 参考答案是否已保存
 
 // 测试集计数器
 let testSetIdCounter = 3
@@ -354,37 +512,82 @@ let testSetIdCounter = 3
 const addTestSet = () => {
   evaluationData.value.testSets.push({
     id: testSetIdCounter++,
-    checked: false,
-    content: '',
+    args: '',
+    answer: '',
+    select: 1,
   })
 }
 
-// 删除测试集
-const deleteTestSet = () => {
-  // 检查是否有选中的测试集
-  const hasChecked = evaluationData.value.testSets.some(item => item.checked)
-  if (!hasChecked) {
-    message.warning('请勾选要删除的测试集')
+// 删除单个测试集
+const removeTestSet = (id: number) => {
+  if (evaluationData.value.testSets.length === 1) {
+    message.warning('至少保留一个测试集')
     return
   }
-  
-  evaluationData.value.testSets = evaluationData.value.testSets.filter(item => !item.checked)
-  if (evaluationData.value.testSets.length === 0) {
-    message.warning('至少保留一个测试集')
-    evaluationData.value.testSets.push({
-      id: testSetIdCounter++,
-      checked: false,
-      content: '',
-    })
-  }
+  evaluationData.value.testSets = evaluationData.value.testSets.filter(item => item.id !== id)
+  message.success('删除成功')
 }
 
-// 选择代码文件
-const handleCodeFileUpload = (file: File) => {
-  evaluationData.value.defaultFile = file
-  evaluationData.value.defaultFileName = file.name
-  message.success(`已选择文件: ${file.name}`)
-  return false
+// 处理测试集选中状态变化
+const handleTestSetSelectChange = (testSet: TestSet, checked: boolean) => {
+  testSet.select = checked ? 1 : 2
+}
+
+// 评测文件列表
+const testValidateFileList = ref<any[]>([])
+
+// 自定义上传请求（用于多文件上传）
+const handleLearningResourceCustomRequest = (options: any) => {
+  const { onSuccess } = options
+  // 直接调用成功回调，实际上传在 change 事件中处理
+  setTimeout(() => {
+    onSuccess('ok')
+  }, 0)
+}
+
+// 处理评测文件上传
+const handleTestValidateFilesUpload = async (info: any) => {
+  const { fileList } = info
+  
+  // 过滤掉正在上传和失败的文件
+  const validFiles = fileList.filter((file: any) => {
+    if (file.status === 'uploading') return true
+    if (file.status === 'done' || !file.status) return true
+    return false
+  })
+  
+  testValidateFileList.value = validFiles
+  
+  // 上传所有文件
+  const uploadPromises = validFiles
+    .filter((file: any) => file.originFileObj && !file.url)
+    .map(async (file: any) => {
+      try {
+        const url = await uploadFileApi(file.originFileObj)
+        file.url = url
+        return url
+      } catch (error) {
+        console.error('文件上传失败:', error)
+        message.error(`文件 ${file.name} 上传失败`)
+        return null
+      }
+    })
+  
+  if (uploadPromises.length > 0) {
+    const urls = await Promise.all(uploadPromises)
+    const successUrls = urls.filter(url => url !== null)
+    
+    if (successUrls.length > 0) {
+      // 获取所有已上传文件的URL，用逗号拼接
+      const allUrls = validFiles
+        .filter((file: any) => file.url)
+        .map((file: any) => file.url)
+        .join(',')
+      
+      evaluationData.value.testValidateFiles = allUrls
+      message.success(`成功上传 ${successUrls.length} 个文件`)
+    }
+  }
 }
 
 // 返回
@@ -394,6 +597,66 @@ const handleBack = () => {
   } else {
     currentStep.value--
     scrollToTop()
+  }
+}
+
+// 创建或更新项目
+const handleCreateProject = async () => {
+  try {
+    // 准备提交的数据
+    const submitData: any = {
+      projectType: 2, // JupyterLab环境实训项目
+      environment: formData.value.environment,
+      name: formData.value.name,
+      tag: formData.value.tag,
+      fieldType: formData.value.fieldType,
+      difficulty: formData.value.difficulty,
+      classHour: formData.value.classHour,
+      topCover: formData.value.topCover,
+      cover: formData.value.cover,
+      description: formData.value.description,
+      showTaskRequire: formData.value.showTaskRequire ? 1 : 2, // 转换为 1 或 2
+      authType: formData.value.authType,
+      enableCodeRepository: formData.value.enableCodeRepository,
+      secondType: formData.value.secondType,
+    }
+
+    // 如果开启了代码仓库，才传递仓库相关信息
+    if (formData.value.enableCodeRepository) {
+      submitData.repositoryType = formData.value.repositoryType
+      submitData.gitUrl = formData.value.gitUrl
+    }
+
+    console.log('提交项目数据：', submitData)
+
+    let response
+    // 判断是创建还是更新
+    if (projectId.value) {
+      // 如果已有 projectId，调用更新接口
+      submitData.id = projectId.value
+      response = await updateProjectApi(submitData)
+      message.success('项目更新成功！')
+      console.log('更新成功：', response)
+    } else {
+      // 如果没有 projectId，调用创建接口
+      response = await createProjectApi(submitData)
+
+      // 保存项目ID
+      if (response && response.id) {
+        projectId.value = response.id
+        console.log('项目ID已保存：', projectId.value)
+      }
+
+      message.success('项目创建成功！')
+      console.log('创建成功：', response)
+    }
+
+    // 跳转到下一步
+    currentStep.value = 2
+    scrollToTop()
+  } catch (error) {
+    console.error('操作失败：', error)
+    message.error(projectId.value ? '项目更新失败，请稍后重试' : '项目创建失败，请稍后重试')
   }
 }
 
@@ -410,40 +673,218 @@ const handleNext = async () => {
       scrollToTop()
     } catch (error) {
       message.error('请完善必填信息')
-      currentStep.value = 1
       scrollToTop()
     }
   } else if (currentStep.value === 1) {
-    currentStep.value = 2
-    scrollToTop()
+    // 第二步：代码仓库验证并创建项目
+    if (formData.value.enableCodeRepository) {
+      // 如果开启了代码仓库，验证仓库地址
+      if (!formData.value.gitUrl || formData.value.gitUrl.trim() === '') {
+        message.error('请输入仓库地址')
+        return
+      }
+    }
+    // 提交创建项目
+    await handleCreateProject()
   } else if (currentStep.value === 2) {
+    // 第三步：评测设置验证
+    // 校验评测设置和参考答案是否都已保存
+    if (!evaluationSaved.value) {
+      message.error('请先保存评测设置后再进行下一步')
+      return
+    }
+    
+    if (!referenceAnswerSaved.value) {
+      message.error('请先保存参考答案后再进行下一步')
+      return
+    }
+    
     currentStep.value = 3
     scrollToTop()
   }
 }
 
-// 保存项目
-const handleSave = async () => {
+// 自动创建项目任务（进入第三步时）
+const handleCreateTaskAutomatic = async () => {
   try {
-    // 收集所有数据
-    const projectData = {
-      type: 'JupyterLab',
-      basicInfo: formData.value,
-      repository: {
-        enabled: formData.value.enableCodeRepository,
-        type: formData.value.repositoryType,
-        url: formData.value.repositoryUrl,
-        fileTree: fileTreeData.value,
-      },
-      evaluation: evaluationData.value,
-      referenceAnswer: referenceAnswerData.value,
-      environment: {
-        selectedEnvironment: selectedEnvironment.value,
-        config: environmentConfig.value,
-      },
+    // 检查是否有项目ID
+    if (!projectId.value) {
+      console.error('项目ID不存在，无法创建任务')
+      return
+    }
+
+    // 准备提交的任务数据
+    const taskData: any = {
+      type: 4, // JupyterLab任务类型
+      projectId: projectId.value,
+      name: 'JupyterLab环境实训任务', // 固定名称
+    }
+
+    console.log('自动提交任务数据：', taskData)
+
+    // 调用创建接口
+    const response = await createProjectTaskApi(taskData)
+
+    // 保存任务ID
+    if (response && response.taskId) {
+      taskId.value = response.taskId
+      console.log('任务ID已保存：', taskId.value)
+      message.success('任务创建成功！')
+    }
+  } catch (error) {
+    console.error('任务创建失败：', error)
+    message.error('任务创建失败，请稍后重试')
+  }
+}
+
+// 保存评测设置
+const handleSaveEvaluation = async () => {
+  try {
+    // 验证是否有任务ID
+    if (!taskId.value) {
+      message.error('任务ID不存在，请重新创建任务')
+      return
     }
     
-    console.log('保存项目数据：', projectData)
+    // 如果启用了评测功能，进行非空校验
+    if (evaluationData.value.openTestValidate === 1) {
+      // 校验评测文件
+      if (!evaluationData.value.testValidateFiles || evaluationData.value.testValidateFiles.trim() === '') {
+        message.error('请上传评测文件')
+        return
+      }
+      
+      // 校验评测时长限制
+      if (!evaluationData.value.timeLimitM || evaluationData.value.timeLimitM.trim() === '') {
+        message.error('请输入评测时长限制')
+        return
+      }
+      
+      // 校验测试集
+      if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
+        message.error('请至少添加一个测试集')
+        return
+      }
+      
+      // 校验是否至少有一个测试集被选中
+      const selectedTestSets = evaluationData.value.testSets.filter(item => item.select === 1)
+      if (selectedTestSets.length === 0) {
+        message.error('请至少选中一个测试集')
+        return
+      }
+      
+      // 校验选中的测试集是否填写了输入内容和期望输出
+      for (let i = 0; i < selectedTestSets.length; i++) {
+        const testSet = selectedTestSets[i]
+        if (!testSet.args || testSet.args.trim() === '') {
+          message.error(`测试集${i + 1}的输入内容不能为空`)
+          return
+        }
+        if (!testSet.answer || testSet.answer.trim() === '') {
+          message.error(`测试集${i + 1}的期望输出不能为空`)
+          return
+        }
+      }
+    }
+    
+    // 准备测试集数据
+    const testContentArray = evaluationData.value.testSets.map(item => ({
+      args: item.args,
+      answer: item.answer,
+      select: item.select,
+    }))
+    
+    // 更新任务数据
+    const taskUpdateData: any = {
+      taskId: taskId.value,
+      projectId: projectId.value,
+      openTestValidate: evaluationData.value.openTestValidate,
+      testValidateFiles: evaluationData.value.testValidateFiles,
+      timeLimitM: evaluationData.value.timeLimitM,
+      scoreRule: evaluationData.value.scoreRule,
+      testContent: JSON.stringify(testContentArray),
+    }
+    
+    console.log('保存评测设置数据：', taskUpdateData)
+    
+    // 调用更新任务接口
+    await updateProjectTaskApi(taskUpdateData as any)
+    evaluationSaved.value = true
+    message.success('评测设置保存成功！')
+  } catch (error) {
+    console.error('评测设置保存失败：', error)
+    message.error('评测设置保存失败，请重试')
+  }
+}
+
+// 保存参考答案
+const handleSaveReferenceAnswer = async () => {
+  try {
+    // 验证是否有任务ID
+    if (!taskId.value) {
+      message.error('任务ID不存在，请重新创建任务')
+      return
+    }
+    
+    // 校验参考答案内容是否为空
+    if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
+      message.error('请输入参考答案内容')
+      return
+    }
+    
+    // 去除HTML标签后检查是否有实际内容
+    const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
+    if (!textContent) {
+      message.error('请输入参考答案内容')
+      return
+    }
+    
+    // 更新任务数据
+    const taskUpdateData: any = {
+      taskId: taskId.value,
+      projectId: projectId.value,
+      showAnswer: referenceAnswerData.value.showAnswer,
+      prohibitCopyAnswer: referenceAnswerData.value.prohibitCopyAnswer,
+      referenceAnswer: referenceAnswerData.value.referenceAnswer,
+    }
+    
+    console.log('保存参考答案数据：', taskUpdateData)
+    
+    // 调用更新任务接口
+    await updateProjectTaskApi(taskUpdateData as any)
+    referenceAnswerSaved.value = true
+    message.success('参考答案保存成功！')
+  } catch (error) {
+    console.error('参考答案保存失败：', error)
+    message.error('参考答案保存失败，请重试')
+  }
+}
+
+// 完成项目创建
+const handleSave = async () => {
+  try {
+    // 验证是否有项目ID
+    if (!projectId.value) {
+      message.error('项目ID不存在，请重新创建项目')
+      return
+    }
+    
+    // 校验评测设置和参考答案是否都已保存
+    if (!evaluationSaved.value) {
+      message.error('请先保存评测设置后再完成创建')
+      return
+    }
+    
+    if (!referenceAnswerSaved.value) {
+      message.error('请先保存参考答案后再完成创建')
+      return
+    }
+    
+    // 更新项目状态为已发布
+    await updateProjectApi({
+      id: projectId.value,
+      status: 1, // 设置状态为1（已发布）
+    } as any)
     
     message.success('项目创建成功！')
     
@@ -451,8 +892,8 @@ const handleSave = async () => {
       router.push('/dashboard/analysis')
     }, 500)
   } catch (error) {
-    console.error('保存失败：', error)
-    message.error('保存失败，请重试')
+    console.error('完成创建失败：', error)
+    message.error('完成创建失败，请重试')
   }
 }
 
@@ -546,14 +987,14 @@ const scrollToTop = () => {
 
             <a-row>
               <a-col :span="12">
-                <a-form-item label="技能标签" name="skillTag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
-                  <a-input v-model:value="formData.skillTag" placeholder="请输入技能标签" />
+                <a-form-item label="技能标签" name="tag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
+                  <a-input v-model:value="formData.tag" placeholder="请输入技能标签" />
                 </a-form-item>
               </a-col>
               <a-col :span="12">
-                <a-form-item label="领域类别" name="domainCategory" required :label-col="{ span: 4 }" :wrapper-col="{ span: 12 }">
+                <a-form-item label="领域类别" name="fieldType" required :label-col="{ span: 4 }" :wrapper-col="{ span: 12 }">
                   <a-select 
-                    v-model:value="formData.domainCategory" 
+                    v-model:value="formData.fieldType" 
                     placeholder="请选择领域类别"
                     :options="domainCategoryOptions" 
                   />
@@ -563,42 +1004,80 @@ const scrollToTop = () => {
 
             <a-form-item label="难度" name="difficulty" required>
               <a-radio-group v-model:value="formData.difficulty" class="custom-radio">
-                <a-radio value="简单">简单</a-radio>
-                <a-radio value="适中">适中</a-radio>
-                <a-radio value="困难">困难</a-radio>
+                <a-radio :value="1">简单</a-radio>
+                <a-radio :value="2">适中</a-radio>
+                <a-radio :value="3">困难</a-radio>
               </a-radio-group>
             </a-form-item>
 
-            <a-form-item label="学时" name="studyHours">
-              <a-input v-model:value="formData.studyHours" placeholder="请输入学时" />
+            <a-row>
+              <a-col :span="12">
+                <a-form-item label="实验环境" name="environment" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
+                  <a-select 
+                    v-model:value="formData.environment" 
+                    placeholder="请选择实验环境"
+                    :options="environmentOptions"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="小类别" name="secondType" required :label-col="{ span: 4 }" :wrapper-col="{ span: 12 }">
+                  <a-select 
+                    v-model:value="formData.secondType" 
+                    placeholder="请选择小类别"
+                    :options="secondTypeOptions"
+                  />
+                </a-form-item>
+              </a-col>
+            </a-row>
+
+            <a-form-item label="学时" name="classHour" required>
+              <a-input-number :min="0" class="w-full" v-model:value="formData.classHour" placeholder="请输入学时" />
             </a-form-item>
 
-            <a-form-item label="顶部背景图" name="backgroundImage" required>
+            <a-form-item label="顶部背景图" name="topCover" required>
               <div class="flex items-top gap-16px">
-                <a-upload 
-                  :before-upload="handleBackgroundUpload" 
-                  :show-upload-list="false"
-                  accept="image/png,image/jpeg"
-                >
-                  <a-button>选择文件</a-button>
-                </a-upload>
+                <div class="flex flex-col gap-12px">
+                  <a-upload 
+                    :before-upload="handleBackgroundUpload" 
+                    :show-upload-list="false"
+                    accept="image/png,image/jpeg"
+                  >
+                    <a-button :loading="uploadingTopCover">
+                      <template v-if="!uploadingTopCover">选择文件</template>
+                      <template v-else>上传中...</template>
+                    </a-button>
+                  </a-upload>
+                  <div v-if="topCoverUrl" class="image-preview">
+                    <img :src="topCoverUrl" alt="顶部背景图预览"
+                      style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
+                  </div>
+                </div>
                 <div class="upload-hint">
-                  说明：支持上传png/jpeg等格式文件，文件大小不能超过12M,建议使用290*218像素；如不上传，默认使用系统图片。
+                  说明：支持上传png/jpeg等格式文件，文件大小不能超过12M,建议使用290*218像素。
                 </div>
               </div>
             </a-form-item>
 
-            <a-form-item label="封面图" name="coverImage" required>
+            <a-form-item label="封面图" name="cover" required>
               <div class="flex items-top gap-16px">
-                <a-upload 
-                  :before-upload="handleCoverUpload" 
-                  :show-upload-list="false" 
-                  accept="image/png,image/jpeg"
-                >
-                  <a-button>选择文件</a-button>
-                </a-upload>
+                <div class="flex flex-col gap-12px">
+                  <a-upload 
+                    :before-upload="handleCoverUpload" 
+                    :show-upload-list="false" 
+                    accept="image/png,image/jpeg"
+                  >
+                    <a-button :loading="uploadingCover">
+                      <template v-if="!uploadingCover">选择文件</template>
+                      <template v-else>上传中...</template>
+                    </a-button>
+                  </a-upload>
+                  <div v-if="coverUrl" class="image-preview">
+                    <img :src="coverUrl" alt="封面图预览" style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
+                  </div>
+                </div>
                 <div class="upload-hint">
-                  说明：支持上传png/jpeg等格式文件，文件大小不能超过12M,建议使用290*218像素；如不上传，默认使用系统图片。
+                  说明：支持上传png/jpeg等格式文件，文件大小不能超过12M,建议使用290*218像素。
                 </div>
               </div>
             </a-form-item>
@@ -607,9 +1086,9 @@ const scrollToTop = () => {
               <RichTextEditor v-model="formData.description" />
             </a-form-item>
 
-            <a-form-item label="任务要求" name="showTaskRequirement">
-              <a-checkbox v-model:checked="formData.showTaskRequirement">
-                显示任务要求（勾选后，将简介作为任务要求显示在实践项目挑战页面）
+            <a-form-item label="任务要求" name="showTaskRequire">
+              <a-checkbox v-model:checked="formData.showTaskRequire">
+                显示任务要求（勾选后，将帮作为任务要求显示在任务项目政策面）
               </a-checkbox>
             </a-form-item>
           </a-form>
@@ -630,12 +1109,12 @@ const scrollToTop = () => {
             :label-col="{ span: 2 }" 
             :wrapper-col="{ span: 18 }"
           >
-            <a-form-item label="培训公开范围" name="trainingScope" required>
-              <a-radio-group v-model:value="formData.trainingScope" class="custom-radio">
-                <a-radio value="完全公开">完全公开</a-radio>
-                <a-radio value="全院公开">全院公开</a-radio>
-                <a-radio value="本单位公开">本单位公开</a-radio>
-                <a-radio value="不公开">不公开</a-radio>
+            <a-form-item label="培训公开范围" name="authType" required>
+              <a-radio-group v-model:value="formData.authType" class="custom-radio">
+                <a-radio :value="1">完全公开</a-radio>
+                <a-radio :value="2">全院公开</a-radio>
+                <a-radio :value="3">本单位公开</a-radio>
+                <a-radio :value="4">不公开</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-form>
@@ -651,7 +1130,13 @@ const scrollToTop = () => {
               class="repository-type-select" />
             <div class="repository-url-group">
               <span class="url-label">仓库地址：</span>
-              <a-input v-model:value="formData.repositoryUrl" placeholder="请输入仓库地址" class="url-input" />
+              <a-input 
+                v-model:value="formData.gitUrl" 
+                placeholder="请输入仓库地址" 
+                class="url-input"
+                :disabled="isRepositoryUrlLocked"
+                @blur="handleRepositoryUrlBlur"
+              />
             </div>
           </div>
 
@@ -662,7 +1147,11 @@ const scrollToTop = () => {
               <div class="repository-switch-box flex items-center justify-between">
                 <div class="flex items-center gap-12px">
                   <span class="switch-label">代码仓库</span>
-                  <a-switch :checked="formData.enableCodeRepository" @change="handleRepositorySwitchChange" />
+                  <a-switch 
+                    :checked="formData.enableCodeRepository" 
+                    :disabled="formData.enableCodeRepository"
+                    @change="handleRepositorySwitchChange" 
+                  />
                 </div>
                 <a-dropdown v-if="formData.enableCodeRepository">
                   <template #overlay>
@@ -729,42 +1218,41 @@ const scrollToTop = () => {
                 <div class="block-content">
                   <a-form layout="horizontal" :label-col="{ span: 3 }" :wrapper-col="{ span: 20 }">
                     <a-form-item label="是否启用评测功能" required>
-                      <a-radio-group v-model:value="evaluationData.enableEvaluation" class="custom-radio">
-                        <a-radio :value="true">是</a-radio>
-                        <a-radio :value="false">否</a-radio>
+                      <a-radio-group v-model:value="evaluationData.openTestValidate" class="custom-radio">
+                        <a-radio :value="1">是</a-radio>
+                        <a-radio :value="2">否</a-radio>
                       </a-radio-group>
                     </a-form-item>
 
-                    <template v-if="evaluationData.enableEvaluation">
-                      <a-form-item label="默认打开文件" required>
-                        <div class="flex items-center gap-16px">
-                          <a-upload 
-                            :before-upload="handleCodeFileUpload"
-                            :show-upload-list="false"
-                            accept=".py,.ipynb"
-                          >
-                            <a-button type="primary">点击选择代码文件</a-button>
-                          </a-upload>
-                          <span v-if="evaluationData.defaultFileName" class="file-name">
-                            {{ evaluationData.defaultFileName }}
-                          </span>
+                    <template v-if="evaluationData.openTestValidate === 1">
+                      <a-form-item label="评测文件" required>
+                        <a-upload 
+                          v-model:file-list="testValidateFileList"
+                          :custom-request="handleLearningResourceCustomRequest"
+                          @change="handleTestValidateFilesUpload"
+                          :max-count="10"
+                        >
+                          <a-button type="primary">点击上传</a-button>
+                        </a-upload>
+                        <div class="upload-hint">
+                          说明：支持上传多个文件，每个文件大小不能超过500M。
                         </div>
                       </a-form-item>
 
                       <a-form-item label="评测时长限制" required>
                         <a-input 
-                          v-model:value="evaluationData.timeLimit" 
-                          placeholder="请输入评测时长（秒）" 
+                          v-model:value="evaluationData.timeLimitM" 
+                          placeholder="请输入评测时长（分钟）" 
                           style="width: 600px"
                         />
                       </a-form-item>
 
                       <a-form-item label="系统评分规则">
-                        <a-radio-group v-model:value="evaluationData.scoringRule" class="custom-radio">
-                          <a-radio value="通过全部测试集">
+                        <a-radio-group v-model:value="evaluationData.scoreRule" class="custom-radio">
+                          <a-radio :value="1">
                             通过全部测试集（仅当所有测试集都正确时，获得项目学时）
                           </a-radio>
-                          <a-radio value="通过部分测试集">
+                          <a-radio :value="2">
                             通过部分测试集（任意一个测试集正确时，获得项目学时）
                           </a-radio>
                         </a-radio-group>
@@ -786,12 +1274,11 @@ const scrollToTop = () => {
               </div>
 
               <!-- 测试集 -->
-              <div v-if="evaluationData.enableEvaluation" class="section-block">
+              <div v-if="evaluationData.openTestValidate === 1" class="section-block">
                 <div class="block-header">
                   <span>测试集</span>
                   <div class="header-actions">
                     <a-button @click="addTestSet">新增测试集</a-button>
-                    <a-button @click="deleteTestSet">删除测试集</a-button>
                   </div>
                 </div>
                 <div class="block-content">
@@ -800,15 +1287,35 @@ const scrollToTop = () => {
                     :key="testSet.id"
                     class="test-set-item"
                   >
-                    <a-checkbox v-model:checked="testSet.checked" />
+                    <a-checkbox 
+                      :checked="testSet.select === 1"
+                      @change="(e) => handleTestSetSelectChange(testSet, e.target.checked)"
+                      class="test-set-checkbox" 
+                    />
                     <span class="test-set-label">测试集{{ index + 1 }}</span>
                     <a-input 
-                      v-model:value="testSet.content" 
-                      placeholder="请输入预期输出内容"
+                      v-model:value="testSet.args" 
+                      placeholder="请输入输入内容"
                       class="test-set-input"
+                    />
+                    <a-input 
+                      v-model:value="testSet.answer" 
+                      placeholder="请输入期望输出"
+                      class="test-set-input"
+                    />
+                    <DeleteOutlined 
+                      class="delete-test-set-icon" 
+                      @click="removeTestSet(testSet.id)" 
                     />
                   </div>
                 </div>
+              </div>
+              
+              <!-- 保存按钮 -->
+              <div class="tab-footer-buttons">
+                <a-button type="primary" @click="handleSaveEvaluation">
+                  {{ evaluationSaved ? '更新' : '保存' }}
+                </a-button>
               </div>
             </div>
           </a-tab-pane>
@@ -820,25 +1327,32 @@ const scrollToTop = () => {
                 <div class="block-header">参考答案</div>
                 <div class="block-content">
                   <a-form layout="horizontal" :label-col="{ span: 3 }" :wrapper-col="{ span: 20 }">
-                    <a-form-item label="是否隐藏参考答案模块" required>
-                      <a-radio-group v-model:value="referenceAnswerData.hideReference" class="custom-radio">
-                        <a-radio :value="true">是</a-radio>
-                        <a-radio :value="false">否</a-radio>
+                    <a-form-item label="是否显示参考答案模块" required>
+                      <a-radio-group v-model:value="referenceAnswerData.showAnswer" class="custom-radio">
+                        <a-radio :value="1">是</a-radio>
+                        <a-radio :value="2">否</a-radio>
                       </a-radio-group>
                     </a-form-item>
 
                     <a-form-item label="是否禁止复制参考答案" required>
-                      <a-radio-group v-model:value="referenceAnswerData.disableCopy" class="custom-radio">
-                        <a-radio :value="true">是</a-radio>
-                        <a-radio :value="false">否</a-radio>
+                      <a-radio-group v-model:value="referenceAnswerData.prohibitCopyAnswer" class="custom-radio">
+                        <a-radio :value="1">是</a-radio>
+                        <a-radio :value="2">否</a-radio>
                       </a-radio-group>
                     </a-form-item>
 
                     <a-form-item label="参考答案" required>
-                      <RichTextEditor v-model="referenceAnswerData.content" />
+                      <RichTextEditor v-model="referenceAnswerData.referenceAnswer" />
                     </a-form-item>
                   </a-form>
                 </div>
+              </div>
+              
+              <!-- 保存按钮 -->
+              <div class="tab-footer-buttons">
+                <a-button type="primary" @click="handleSaveReferenceAnswer">
+                  {{ referenceAnswerSaved ? '更新' : '保存' }}
+                </a-button>
               </div>
             </div>
           </a-tab-pane>
@@ -995,6 +1509,28 @@ const scrollToTop = () => {
     .form-section {
       margin-bottom: 24px;
 
+      .ant-form-item {
+        margin-bottom: 24px;
+
+        :deep(.ant-form-item-label) {
+          font-weight: 500;
+
+          label {
+            &::before {
+              color: #ff4d4f !important;
+              margin-right: 4px;
+            }
+          }
+        }
+
+        .upload-hint {
+          margin-top: 8px;
+          color: rgba(0, 0, 0, 0.45);
+          font-size: 12px;
+          line-height: 1.6;
+        }
+      }
+
       // 代码仓库样式
       &.repository-section {
         .repository-top-bar {
@@ -1134,8 +1670,20 @@ const scrollToTop = () => {
   line-height: 1.5;
 }
 
+/* 图片预览样式 */
+.image-preview {
+  img {
+    border: 1px solid #d9d9d9;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
 .flex {
   display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
 }
 
 .items-top {
@@ -1207,6 +1755,19 @@ const scrollToTop = () => {
     padding: 20px 0;
   }
 
+  .tab-footer-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #f0f0f0;
+
+    .ant-btn {
+      min-width: 100px;
+    }
+  }
+
   .section-block {
     background: #fff;
     margin-bottom: 16px;
@@ -1266,14 +1827,32 @@ const scrollToTop = () => {
       margin-bottom: 0;
     }
 
+    .test-set-checkbox {
+      flex-shrink: 0;
+    }
+
     .test-set-label {
       min-width: 70px;
       color: rgba(0, 0, 0, 0.85);
       font-size: 14px;
+      flex-shrink: 0;
     }
 
     .test-set-input {
       flex: 1;
+    }
+
+    .delete-test-set-icon {
+      flex-shrink: 0;
+      color: #ff4d4f;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+
+      &:hover {
+        color: #ff7875;
+        transform: scale(1.1);
+      }
     }
   }
 }

@@ -81,8 +81,8 @@ const getEnvironmentOptions = () => {
 
 // 小类别选项（固定选项，不做联动）
 const getSecondTypeOptions = () => {
-  // 如果不是JupyterNotebook环境，返回空数组
-  if (projectType.value !== 2) return []
+  // 如果不是JupyterNotebook环境或JupyterLab环境，返回空数组
+  if (projectType.value !== 2 && projectType.value !== 3) return []
   
   return [
     { label: 'Bwapp', value: 1 },
@@ -126,8 +126,8 @@ const handleNext = async () => {
     return
   }
   
-  // 如果是 JupyterNotebook 环境，小类别也是必填
-  if (projectType.value === 2 && !createForm.value.secondType) {
+  // 如果是 JupyterNotebook 或 JupyterLab 环境，小类别也是必填
+  if ((projectType.value === 2 || projectType.value === 3) && !createForm.value.secondType) {
     message.error('请选择小类别')
     return
   }
@@ -277,7 +277,7 @@ const getEnvironmentName = computed(() => {
           </a-form-item>
 
           <a-form-item 
-            v-if="projectType === 2"
+            v-if="projectType === 2 || projectType === 3"
             label="小类别" 
             name="secondType" 
             required
