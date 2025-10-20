@@ -161,7 +161,7 @@ export interface UpdateProjectEnvironmentParams {
   title: string // 环境名称
   dockerImage: number // 实验镜像
   viewTypes: string // 实验界面（逗号隔开的字符串，如："1,2,3"）
-  environment?: string // 附带环境
+  secondType?: string // 附带环境
   taskId?: number // 任务关卡
   codeType?: string // 编程语言
   shellBegin?: string // 开启时触发命令
@@ -482,5 +482,102 @@ export async function deleteTaskQuestionApi(params: DeleteTaskQuestionParams): P
   }
   
   throw new Error('题目删除失败')
+}
+
+/**
+ * 获取Pod配置的请求参数
+ */
+export interface GetPodParams {
+  taskId: number // 任务ID
+}
+
+/**
+ * Pod配置数据结构
+ */
+export interface PodConfig {
+  podId: string
+  url: string
+}
+
+/**
+ * Pod数据结构
+ */
+export interface PodData {
+  podId: number
+  name: string
+  userId: number
+  podImage: string
+  limitM: number
+  createTime: number
+  updateTime: number
+  taskId: number
+  beginTime: number
+  endTime: number
+  input: string | null
+  output: string | null
+  status: number
+  podPort: string | null
+  podConfig: string
+  podType: string | null
+  config: PodConfig
+}
+
+/**
+ * 获取Pod配置的响应数据
+ */
+export interface GetPodResponse {
+  result: number
+  msg: string
+  data: PodData
+}
+
+/**
+ * 获取Pod配置
+ * @param params 包含taskId的参数
+ * @returns 返回Pod配置数据
+ */
+export async function getPodApi(params: GetPodParams): Promise<PodData> {
+  const response = await usePost<PodData>('/admin/api/runningPod/getPod', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  throw new Error('获取Pod配置失败')
+}
+
+/**
+ * 停止Pod的请求参数
+ */
+export interface StopPodParams {
+  taskId: number // 任务ID
+}
+
+/**
+ * 停止Pod的响应数据
+ */
+export interface StopPodResponse {
+  result: number
+  msg: string
+  data?: any
+}
+
+/**
+ * 停止Pod
+ * @param params 包含taskId的参数
+ * @returns 返回停止结果
+ */
+export async function stopPodApi(params: StopPodParams): Promise<StopPodResponse> {
+  const response = await usePost<StopPodResponse>('/admin/api/runningPod/stop', params, {
+    customDev: true,
+  })
+  
+  if (response) {
+    return response as any
+  }
+  
+  throw new Error('停止Pod失败')
 }
 

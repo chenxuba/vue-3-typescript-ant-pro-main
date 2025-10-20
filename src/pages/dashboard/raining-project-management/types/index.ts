@@ -140,7 +140,7 @@ export interface Question {
 export interface ExperimentEnvironmentForm {
   dockerImage: number // 实验镜像（从 create 页面传递的 environment 值）
   viewTypes: number[] // 实验界面（多选：1-代码编辑器 2-命令行终端 3-容器内服务）
-  environment?: string // 附带环境
+  secondType?: string // 附带环境
   taskId?: string // 任务关卡
   codeType?: string // 编程语言
   shellBegin?: string // 开启时触发命令

@@ -6,6 +6,7 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi } from '@/api/project'
+import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -107,7 +108,10 @@ const formData = ref<FormData>({
 })
 
 // 从路由接收数据并填充表单
-onMounted(() => {
+onMounted(async () => {
+  // 先加载环境选项
+  await loadEnvironmentOptions()
+  
   const routeData = history.state as any
   console.log('接收到的路由数据:', routeData)
 
@@ -187,12 +191,32 @@ const domainCategoryOptions = [
   { label: 'Web开发', value: 4 },
 ]
 
-// 实验环境选项（JupyterLab环境）
-const environmentOptions = [
-  { label: 'Python3/JupyterLab', value: 1 },
-  { label: 'R4.2/Jupyterlab', value: 2 },
-  { label: 'Python3-tensorflow2.6/JupyterLab', value: 3 },
-]
+// 实验环境选项（从字典API加载）
+const environmentOptions = ref<Array<{ label: string; value: string }>>([])
+
+// 加载状态
+const loadingEnvironment = ref(false)
+
+// 加载实验环境选项
+const loadEnvironmentOptions = async () => {
+  try {
+    loadingEnvironment.value = true
+    // JupyterLab环境使用 project#environment_3
+    const code = getEnvironmentDicCode(3)
+    const data = await getDicGroupApi({ code })
+    if (data && data.list) {
+      environmentOptions.value = data.list.map(item => ({
+        label: item.name,
+        value: item.value,
+      }))
+    }
+  } catch (error) {
+    console.error('加载实验环境选项失败：', error)
+    message.error('加载实验环境选项失败')
+  } finally {
+    loadingEnvironment.value = false
+  }
+}
 
 // 小类别选项
 const secondTypeOptions = [
@@ -905,7 +929,7 @@ const handleSave = async () => {
       taskId: taskId.value,
       projectId: projectId.value,
       dockerImage: environmentConfig.value.dockerImage,
-      environment: environmentConfig.value.environment,
+      secondType: environmentConfig.value.secondType,
       timeLimitM: environmentConfig.value.timeLimitM,
     } as any)
     
@@ -958,13 +982,13 @@ const filteredEnvironmentList = computed(() => {
 // 实验环境配置
 interface EnvironmentConfig {
   dockerImage: string // 实验环境ID
-  environment: string // 附带环境
+  secondType: string // 附带环境
   timeLimitM: string | number // 实验环境使用时长
 }
 
 const environmentConfig = ref<EnvironmentConfig>({
   dockerImage: '1', // 默认选中第一个环境的id
-  environment: 'Css',
+  secondType: 'Css',
   timeLimitM: '',
 })
 
@@ -1072,6 +1096,7 @@ const scrollToTop = () => {
                     v-model:value="formData.environment" 
                     placeholder="请选择实验环境"
                     :options="environmentOptions"
+                    :loading="loadingEnvironment"
                   />
                 </a-form-item>
               </a-col>
@@ -1465,7 +1490,7 @@ const scrollToTop = () => {
               >
                 <a-form-item label="附带环境">
                   <a-select 
-                    v-model:value="environmentConfig.environment"
+                    v-model:value="environmentConfig.secondType"
                     placeholder="请选择附带环境"
                   >
                     <a-select-option value="Bwapp">Bwapp</a-select-option>

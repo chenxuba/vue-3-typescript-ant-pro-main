@@ -202,7 +202,7 @@ const initializeExperimentEnvironments = () => {
       config: {
         dockerImage: selectedEnvironment.value || 1,
         viewTypes: [],
-        environment: undefined,
+        secondType: undefined,
         taskId: undefined,
         codeType: undefined,
         shellBegin: undefined,
@@ -224,7 +224,7 @@ const experimentFormRules: Record<string, Rule[]> = {
   viewTypes: [
     { required: true, type: 'array', min: 1, message: '请至少选择一个实验界面', trigger: 'change' },
   ],
-  environment: [
+  secondType: [
     { required: true, message: '请选择附带环境', trigger: 'change' },
   ],
   taskId: [
@@ -694,7 +694,7 @@ const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0)
     // 如果是删除操作，跳过表单验证
     if (envisDel !== 1) {
       // 根据选中的 viewTypes 清除隐藏字段的校验
-      const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'environment', 'taskId']
+      const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'secondType', 'taskId']
       const fieldsToClear: string[] = []
 
       // 判断哪些字段需要校验，哪些需要清除
@@ -738,7 +738,7 @@ const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0)
       title: env.name,
       dockerImage: env.config.dockerImage,
       viewTypes: env.config.viewTypes.join(','), // 数组转为逗号隔开的字符串
-      environment: env.config.environment,
+      secondType: env.config.secondType,
       taskId: env.config.taskId ? Number(env.config.taskId) : undefined,
       codeType: env.config.codeType,
       shellBegin: env.config.shellBegin,
@@ -964,7 +964,7 @@ const handleAddEnvironment = () => {
     config: {
       dockerImage: selectedEnvironment.value || 1,
       viewTypes: [],
-      environment: undefined,
+      secondType: undefined,
       taskId: undefined,
       codeType: undefined,
       shellBegin: undefined,
@@ -1609,8 +1609,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                   </div>
                 </a-form-item>
 
-                <a-form-item label="附带环境" name="environment" required>
-                  <a-select v-model:value="env.config.environment" placeholder="请选择附带环境" allowClear>
+                <a-form-item label="附带环境" name="secondType" required>
+                  <a-select v-model:value="env.config.secondType" placeholder="请选择附带环境" allowClear>
                     <a-select-option value="env1">环境1</a-select-option>
                     <a-select-option value="env2">环境2</a-select-option>
                   </a-select>

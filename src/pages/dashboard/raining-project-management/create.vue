@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import RichTextEditor from './components/RichTextEditor.vue'
+import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
+import type { DictionaryItem } from '@/api/common/dictionary'
 
 defineOptions({
   name: 'CreateRainingProject',
@@ -56,28 +58,53 @@ const difficultyOptions = [
   { label: '困难', value: 3 },
 ]
 
-// 实验环境选项（根据项目类型不同而不同）
+// 实验环境选项数据
+const environmentOptionsMap = ref<Record<number, DictionaryItem[]>>({
+  1: [], // 全栈环境
+  2: [], // JupyterNotebook环境
+  3: [], // JupyterLab环境
+})
+
+// 加载状态
+const loadingEnvironment = ref(false)
+
+// 获取实验环境选项（根据项目类型不同而不同）
 const getEnvironmentOptions = () => {
-  if (projectType.value === 1) {
-    return [
-      { label: 'Python3.6', value: 1 },
-      { label: 'Python3.13', value: 2 },
-      { label: 'Python3.12/VNC', value: 3 },
-    ]
-  } else if (projectType.value === 2) {
-    return [
-      { label: 'Python3/Jupyter', value: 1 },
-      { label: 'Python-GPU/upyter', value: 2 },
-      { label: 'Paddle/Jupyter', value: 3 },
-    ]
-  } else if (projectType.value === 3) {
-    return [
-      { label: 'Python3.6', value: 1 },
-      { label: 'Python3.13', value: 2 },
-    ]
-  }
-  return []
+  const options = environmentOptionsMap.value[projectType.value] || []
+  return options.map(item => ({
+    label: item.name,
+    value: item.value,
+  }))
 }
+
+// 加载实验环境字典数据
+const loadEnvironmentOptions = async (type: number) => {
+  if (environmentOptionsMap.value[type].length > 0) {
+    // 如果已经加载过，直接返回
+    return
+  }
+  
+  try {
+    loadingEnvironment.value = true
+    const code = getEnvironmentDicCode(type)
+    if (!code) return
+    
+    const data = await getDicGroupApi({ code })
+    if (data && data.list) {
+      environmentOptionsMap.value[type] = data.list
+    }
+  } catch (error) {
+    console.error('加载实验环境选项失败：', error)
+    message.error('加载实验环境选项失败')
+  } finally {
+    loadingEnvironment.value = false
+  }
+}
+
+// 页面加载时，加载当前项目类型的环境选项
+onMounted(() => {
+  loadEnvironmentOptions(projectType.value)
+})
 
 // 小类别选项（固定选项，不做联动）
 const getSecondTypeOptions = () => {
@@ -168,11 +195,13 @@ const handleNext = async () => {
   }
 }
 
-// 监听项目类型变化，清空实验环境和小类别选择
-watch(projectType, () => {
+// 监听项目类型变化，清空实验环境和小类别选择，并加载对应的环境选项
+watch(projectType, (newType) => {
   createForm.value.environment = undefined
   createForm.value.secondType = undefined
   createForm.value.showTaskRequire = false
+  // 加载新类型的环境选项
+  loadEnvironmentOptions(newType)
 })
 
 // 获取项目类型名称
@@ -188,9 +217,9 @@ const getProjectTypeName = computed(() => {
 // 获取实验环境名称
 const getEnvironmentName = computed(() => {
   if (!createForm.value.environment) return ''
-  const options = getEnvironmentOptions()
-  const option = options.find(opt => opt.value === createForm.value.environment)
-  return option?.label || ''
+  const items = environmentOptionsMap.value[projectType.value] || []
+  const item = items.find(opt => opt.value === createForm.value.environment)
+  return item?.name || ''
 })
 
 </script>
@@ -273,6 +302,7 @@ const getEnvironmentName = computed(() => {
               v-model:value="createForm.environment"
               placeholder="请选择实验环境"
               :options="getEnvironmentOptions()"
+              :loading="loadingEnvironment"
             />
           </a-form-item>
 

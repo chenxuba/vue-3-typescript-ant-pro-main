@@ -5,7 +5,8 @@ import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
-import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi } from '@/api/project'
+import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
+import { getDicGroupApi } from '@/api/common/dictionary'
 import RichTextEditor from './components/RichTextEditor.vue'
 
 defineOptions({
@@ -28,8 +29,9 @@ const formRef = ref<FormInstance>()
 const trainingScopeFormRef = ref<FormInstance>()
 
 // Jupyter编辑器
-const jupyterUrl = 'http://101.200.13.193/jupyter3a88a3/lab'
+const jupyterUrl = ref<string>('')
 const isFullscreen = ref(false)
+const loadingPodUrl = ref(false) // 加载Pod URL状态
 
 // 全屏切换
 const toggleFullscreen = () => {
@@ -209,7 +211,10 @@ const uploadingCover = ref(false)
 const imageUrlPrefix = 'http://101.200.13.193'
 
 // 从路由接收数据并填充表单
-onMounted(() => {
+onMounted(async () => {
+  // 加载实验环境选项
+  await loadEnvironmentOptions()
+  
   const routeData = history.state as any
   console.log('接收到的路由数据:', routeData)
 
@@ -244,6 +249,11 @@ watch(currentStep, async (newStep, oldStep) => {
   if (newStep === 1 && oldStep === 0 && !taskId.value && projectId.value) {
     console.log('进入第二步，自动创建任务...')
     await handleCreateTaskAutomatic()
+  }
+  
+  // 当进入第二步，且已有任务ID时，获取Pod配置
+  if (newStep === 1 && taskId.value) {
+    await fetchPodConfig()
   }
 })
 
@@ -289,12 +299,29 @@ const domainCategoryOptions = [
   { label: 'Web开发', value: 4 },
 ]
 
-// 实验环境选项（JupyterNotebook环境）
-const environmentOptions = [
-  { label: 'Python3/Jupyter', value: 1 },
-  { label: 'Python-GPU/jupyter', value: 2 },
-  { label: 'Paddle/Jupyter', value: 3 },
-]
+// 实验环境选项（JupyterNotebook环境）- 从字典加载
+const environmentOptions = ref<Array<{ label: string; value: string }>>([])
+const loadingEnvironment = ref(false)
+
+// 加载实验环境字典数据
+const loadEnvironmentOptions = async () => {
+  try {
+    loadingEnvironment.value = true
+    // JupyterNotebook环境使用 project#environment_2
+    const data = await getDicGroupApi({ code: 'project#environment_2' })
+    if (data && data.list) {
+      environmentOptions.value = data.list.map(item => ({
+        label: item.name,
+        value: item.value,
+      }))
+    }
+  } catch (error) {
+    console.error('加载实验环境选项失败：', error)
+    message.error('加载实验环境选项失败')
+  } finally {
+    loadingEnvironment.value = false
+  }
+}
 
 // 小类别选项
 const secondTypeOptions = [
@@ -420,10 +447,45 @@ const handleCreateTaskAutomatic = async () => {
       taskId.value = response.taskId
       console.log('任务ID已保存：', taskId.value)
       message.success('任务创建成功！')
+      
+      // 创建任务成功后，立即获取Pod配置
+      await fetchPodConfig()
     }
   } catch (error) {
     console.error('任务创建失败：', error)
     message.error('任务创建失败，请稍后重试')
+  }
+}
+
+// 获取Pod配置
+const fetchPodConfig = async () => {
+  if (!taskId.value) {
+    console.log('taskId不存在，无法获取Pod配置')
+    return
+  }
+  
+  try {
+    loadingPodUrl.value = true
+    console.log('正在获取Pod配置，taskId:', taskId.value)
+    
+    const podData = await getPodApi({ taskId: taskId.value })
+    console.log('获取到Pod数据：', podData)
+    
+    if (podData && podData.config && podData.config.url) {
+      // 拼接完整的URL - 基础URL + config中的url
+      const baseUrl = 'http://101.200.13.193'
+      jupyterUrl.value = baseUrl + podData.config.url
+      console.log('更新Jupyter URL为：', jupyterUrl.value)
+      message.success('实验环境加载成功！')
+    } else {
+      console.error('Pod配置中没有url字段')
+      message.warning('未获取到实验环境URL')
+    }
+  } catch (error) {
+    console.error('获取Pod配置失败：', error)
+    message.error('获取实验环境失败，请稍后重试')
+  } finally {
+    loadingPodUrl.value = false
   }
 }
 
@@ -436,8 +498,12 @@ const handleCreateTask = async () => {
       return
     }
 
-    // 如果已经有任务ID，说明任务已创建，直接跳转到下一步
+    // 如果已经有任务ID，说明任务已创建，需要停止Pod后跳转到下一步
     if (taskId.value) {
+      // 停止Pod
+      await handleStopPod()
+      
+      // 跳转到下一步
       currentStep.value = 2
       scrollToTop()
       return
@@ -452,6 +518,26 @@ const handleCreateTask = async () => {
   } catch (error) {
     console.error('任务操作失败：', error)
     message.error('任务操作失败，请稍后重试')
+  }
+}
+
+// 停止Pod
+const handleStopPod = async () => {
+  if (!taskId.value) {
+    console.log('taskId不存在，无法停止Pod')
+    return
+  }
+  
+  try {
+    console.log('正在停止Pod，taskId:', taskId.value)
+    
+    await stopPodApi({ taskId: taskId.value })
+    console.log('Pod停止成功')
+    message.success('实验环境已停止')
+  } catch (error) {
+    console.error('停止Pod失败：', error)
+    message.error('停止实验环境失败，请稍后重试')
+    // 即使停止失败，也允许继续流程
   }
 }
 
@@ -773,7 +859,7 @@ const handleCoverUpload = async (file: File) => {
                     v-model:value="formData.environment" 
                     placeholder="请选择实验环境"
                     :options="environmentOptions"
-                    
+                    :loading="loadingEnvironment"
                   />
                 </a-form-item>
               </a-col>
@@ -897,7 +983,11 @@ const handleCoverUpload = async (file: File) => {
             </div>
           </div>
           <div class="jupyter-iframe-wrapper">
+            <div v-if="loadingPodUrl" class="loading-container">
+              <a-spin size="large" tip="正在加载实验环境..." />
+            </div>
             <iframe 
+              v-else
               :src="jupyterUrl" 
               class="jupyter-iframe"
               frameborder="0"
@@ -1280,6 +1370,15 @@ const handleCoverUpload = async (file: File) => {
     width: 100%;
     height: 700px;
     position: relative;
+    
+    .loading-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+    }
     
     .jupyter-iframe {
       width: 100%;
