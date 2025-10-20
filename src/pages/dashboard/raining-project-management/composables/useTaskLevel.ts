@@ -23,7 +23,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     tag: '',
     classHour: '',
     jumpUrl: '',
-    type: 3, // 默认为编程任务
+    type: 1, // 默认为编程任务
     projectId: projectId?.value || undefined,
   })
 
@@ -265,11 +265,11 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         learningResourceFileList.value = []
       }
       
-      // 将 type 字符串转换为数字：kernel -> 1, choice -> 2, programming -> 3
+      // 将 type 字符串转换为数字：programming -> 1, choice -> 2, kernel -> 4
       const typeMap: Record<string, number> = {
-        kernel: 1,
+        programming: 1,
         choice: 2,
-        programming: 3,
+        kernel: 4,
       }
       
       taskLevelFormData.value = {
@@ -498,16 +498,16 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       cancelText: '取消',
       onOk: () => {
         // 获取当前任务关卡的 type
-        let currentType = 3 // 默认为编程任务
+        let currentType = 1 // 默认为编程任务
         if (selectedTaskLevelId.value) {
           const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
           if (level) {
             const typeMap: Record<string, number> = {
-              kernel: 1,
+              programming: 1,
               choice: 2,
-              programming: 3,
+              kernel: 4,
             }
-            currentType = typeMap[level.type] || 3
+            currentType = typeMap[level.type] || 1
           }
         }
         

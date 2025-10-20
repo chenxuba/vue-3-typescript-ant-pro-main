@@ -90,7 +90,7 @@ export interface TaskLevelForm {
   tag: string
   classHour: string
   jumpUrl?: string // 内嵌链接
-  type: number // 1: 内核链接任务, 2: 选择题任务, 3: 编程任务
+  type: number // 1: 编程, 2: 选择题, 4: 内嵌链接
   projectId?: number // 项目ID
   taskId?: number // 任务关卡ID，存在表示已保存过
 }

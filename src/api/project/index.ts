@@ -258,7 +258,7 @@ export interface CreateProjectTaskParams {
   tag: string
   classHour: string
   jumpUrl?: string
-  type: number // 1: 内核链接任务, 2: 选择题任务, 3: 编程任务
+  type: number // 1: 编程, 2: 选择题, 4: 内嵌链接
   projectId?: number
   // 评测设置相关字段（编程任务使用）
   timeLimitM?: number // 评测时长限制（单位：分钟）
