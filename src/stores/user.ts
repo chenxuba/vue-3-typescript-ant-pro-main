@@ -13,8 +13,8 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = shallowRef<UserInfo>()
   const token = useAuthorization()
   const avatar = computed(() => userInfo.value?.avatar)
-  const nickname = computed(() => userInfo.value?.nickname ?? userInfo.value?.username)
-  const roles = computed(() => userInfo.value?.roles)
+  const nickname = computed(() => userInfo.value?.operatorName ?? userInfo.value?.nickname ?? userInfo.value?.username)
+  const roles = computed(() => userInfo.value?.roles ?? userInfo.value?.shixun?.roles)
 
   const getMenuRoutes = async () => {
     const { data } = await getRouteMenusApi()
