@@ -355,6 +355,62 @@ export async function updateProjectTaskApi(params: UpdateProjectTaskParams): Pro
 }
 
 /**
+ * 获取任务关卡列表的请求参数
+ */
+export interface GetProjectTaskListParams {
+  projectId: number // 项目ID
+}
+
+/**
+ * 项目任务关卡数据结构
+ */
+export interface ProjectTaskItem {
+  taskId: number
+  name: string
+  source: string
+  require: string
+  referenceAnswer: string
+  difficulty: number
+  tag: string
+  classHour: string
+  jumpUrl?: string
+  type: number
+  projectId: number
+  // 评测设置相关字段
+  timeLimitM?: number
+  userFiles?: string
+  testValidateFiles?: string
+  passType?: number
+  blankCode?: number
+  scoreRule?: number
+  testValidateSh?: string
+  testValidateType?: number
+  testContent?: string
+  // 题目列表
+  questions?: any[]
+  // 实验环境
+  environment?: any
+  [key: string]: any
+}
+
+/**
+ * 获取任务关卡列表
+ * @param params 查询参数
+ * @returns 返回任务关卡列表
+ */
+export async function getProjectTaskListApi(params: GetProjectTaskListParams): Promise<ProjectTaskItem[] | any> {
+  const response = await usePost<any>('/admin/api/projectTask/getList', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  return []
+}
+
+/**
  * 创建题目的请求参数
  */
 export interface CreateTaskQuestionParams {

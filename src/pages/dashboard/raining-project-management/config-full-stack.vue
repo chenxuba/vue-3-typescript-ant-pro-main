@@ -1611,8 +1611,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
                 <a-form-item label="附带环境" name="secondType" required>
                   <a-select v-model:value="env.config.secondType" placeholder="请选择附带环境" allowClear>
-                    <a-select-option value="env1">环境1</a-select-option>
-                    <a-select-option value="env2">环境2</a-select-option>
+                    <a-select-option :value="1">环境1</a-select-option>
+                    <a-select-option :value="2">环境2</a-select-option>
                   </a-select>
                 </a-form-item>
 

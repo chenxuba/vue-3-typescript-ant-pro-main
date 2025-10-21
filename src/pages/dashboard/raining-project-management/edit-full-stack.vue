@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
-import { getProjectDetailApi, updateProjectApi } from '@/api/project'
+import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectEnvironmentApi, type ProjectTaskItem } from '@/api/project'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -29,12 +29,14 @@ import RichTextEditor from './components/RichTextEditor.vue'
 import NewFileModal from './components/NewFileModal.vue'
 import NewFolderModal from './components/NewFolderModal.vue'
 import RepositoryModal from './components/RepositoryModal.vue'
+import QuestionModal from './components/QuestionModal.vue'
 
 // Composables
 import { useFileTree } from './composables/useFileTree'
+import { useTaskLevel } from './composables/useTaskLevel'
 
 // Types
-import type { FormData, NewFileForm, NewFolderForm } from './types'
+import type { FormData, NewFileForm, NewFolderForm, ExperimentEnvironmentForm, Question } from './types'
 
 // 注册语言
 hljs.registerLanguage('javascript', javascript)
@@ -65,6 +67,7 @@ const loading = ref(false)
 // 表单引用
 const formRef = ref<FormInstance>()
 const trainingScopeFormRef = ref<FormInstance>()
+const experimentFormRef = ref<FormInstance>()
 
 // 表单数据
 const formData = ref<FormData>({
@@ -93,6 +96,50 @@ const imageUrlPrefix = 'http://101.200.13.193'
 
 // 实验环境相关
 const selectedEnvironment = ref<number | undefined>(undefined)
+
+// 实验环境列表
+interface ExperimentEnvironment {
+  id: string
+  name: string
+  isEditing: boolean
+  isSaved: boolean
+  config: ExperimentEnvironmentForm
+}
+
+const experimentEnvironments = ref<ExperimentEnvironment[]>([])
+const activeEnvironmentKey = ref('1')
+const editingEnvironmentName = ref('')
+
+// 实验环境验证规则
+const experimentFormRules: Record<string, Rule[]> = {
+  dockerImage: [
+    { required: true, message: '请选择实验镜像', trigger: 'change' },
+  ],
+  viewTypes: [
+    { required: true, type: 'array', min: 1, message: '请至少选择一个实验界面', trigger: 'change' },
+  ],
+  secondType: [
+    { required: true, message: '请选择附带环境', trigger: 'change' },
+  ],
+  taskId: [
+    { required: true, message: '请选择任务关卡', trigger: 'change' },
+  ],
+  codeType: [
+    { required: true, message: '请选择编程语言', trigger: 'change' },
+  ],
+  shellBegin: [
+    { required: true, message: '请输入开启时触发命令', trigger: 'blur' },
+  ],
+  containerPort: [
+    { required: true, message: '请输入容器端口', trigger: 'blur' },
+  ],
+}
+
+// 获取当前激活的环境配置
+const currentEnvironmentConfig = computed(() => {
+  const env = experimentEnvironments.value.find(e => e.id === activeEnvironmentKey.value)
+  return env?.config || experimentEnvironments.value[0]?.config
+})
 
 // 表单验证规则
 const formRules: Record<string, Rule[]> = {
@@ -152,10 +199,52 @@ const {
   handleDeleteNode,
 } = useFileTree()
 
+// 使用任务关卡composable
+const {
+  taskLevels,
+  selectedTaskLevelId,
+  currentTab,
+  taskLevelFormRef,
+  evaluationFormRef,
+  taskLevelFormData,
+  evaluationFormData,
+  learningResourceFileList,
+  taskLevelFormRules,
+  evaluationFormRules,
+  isKernelTask,
+  isChoiceTask,
+  isProgrammingTask,
+  addTaskLevel,
+  deleteTaskLevel,
+  selectTaskLevel,
+  saveTaskLevel,
+  resetTaskLevel,
+  handleLearningResourceCustomRequest,
+  handleLearningResourceUpload,
+  handleUserFilesUpload,
+  handleTestValidateFilesUpload,
+  userFileList,
+  testValidateFileList,
+  addTestCase,
+  removeTestCase,
+  clearAllTestCases,
+  downloadTemplate,
+  batchUploadTestCases,
+  getCurrentQuestions,
+  addQuestion,
+  deleteQuestion,
+  updateQuestion,
+  updateQuestionsOrder,
+  loadQuestions,
+  saveQuestionsOrder,
+} = useTaskLevel(projectId)
+
 // 弹窗状态
 const showRepositoryModal = ref(false)
 const showNewFileModal = ref(false)
 const showNewFolderModal = ref(false)
+const showQuestionModal = ref(false)
+const currentEditingQuestion = ref<any>(null)
 const currentParentPath = ref('/')
 const currentFolderParentPath = ref('/')
 
@@ -167,6 +256,227 @@ const getEnvironmentName = () => {
     3: 'Python3.12/VNC',
   }
   return environmentMap[selectedEnvironment.value || 1] || 'Python3.6'
+}
+
+// 初始化实验环境
+const initializeExperimentEnvironments = () => {
+  if (experimentEnvironments.value.length === 0) {
+    experimentEnvironments.value = [{
+      id: '1',
+      name: '实验环境1',
+      isEditing: false,
+      isSaved: false,
+      config: {
+        dockerImage: selectedEnvironment.value || 1,
+        viewTypes: [],
+        secondType: undefined,
+        taskId: undefined,
+        codeType: undefined,
+        shellBegin: undefined,
+        containerPort: undefined,
+        containerPath: undefined,
+      }
+    }]
+  }
+}
+
+// 获取任务关卡列表并初始化任务关卡数据
+const fetchProjectTaskList = async () => {
+  if (!projectId.value) return
+  
+  try {
+    const response = await getProjectTaskListApi({ projectId: projectId.value })
+    console.log('=== /admin/api/projectTask/getList 接口返回数据 ===')
+    console.log('完整响应:', response)
+    
+    // 兼容不同的返回格式
+    let list: any[] = []
+    let environments: any[] = []
+    
+    if (Array.isArray(response)) {
+      list = response
+    } else if (response && typeof response === 'object') {
+      list = (response as any).list || (response as any).data || []
+      environments = (response as any).environments || (response as any).environment || []
+    }
+    
+    console.log('解析后的任务关卡列表:', list)
+    console.log('解析后的实验环境列表:', environments)
+    
+    // 将获取的任务关卡数据转换为 taskLevels 格式
+    if (list && list.length > 0) {
+      taskLevels.value = list.map((task: ProjectTaskItem) => {
+        // 将 type 转换为对应的类型字符串
+        let taskType: 'kernel' | 'choice' | 'programming' = 'programming'
+        if (task.type === 4) taskType = 'kernel'
+        else if (task.type === 2) taskType = 'choice'
+        else if (task.type === 1) taskType = 'programming'
+        
+        // 解析学习资源文件列表
+        const sourceFiles = task.source ? task.source.split(',').map((url: string, index: number) => ({
+          uid: `${index}`,
+          name: url.split('/').pop() || `文件${index + 1}`,
+          status: 'done',
+          url: url,
+          response: url,
+        })) : []
+        
+        // 解析测试集内容
+        let testContent: any[] = []
+        if (task.testContent) {
+          try {
+            testContent = JSON.parse(task.testContent)
+          } catch (e) {
+            console.error('解析测试集内容失败:', e)
+          }
+        }
+        
+        return {
+          id: String(task.taskId),
+          name: task.name,
+          type: taskType,
+          source: task.source,
+          require: task.require,
+          referenceAnswer: task.referenceAnswer,
+          difficulty: task.difficulty,
+          tag: task.tag,
+          classHour: task.classHour,
+          jumpUrl: task.jumpUrl,
+          taskId: task.taskId,
+          formData: {
+            name: task.name,
+            source: sourceFiles,
+            require: task.require,
+            referenceAnswer: task.referenceAnswer,
+            difficulty: task.difficulty,
+            tag: task.tag,
+            classHour: task.classHour,
+            jumpUrl: task.jumpUrl,
+            taskId: task.taskId,
+          },
+          evaluationSettings: task.type === 1 ? {
+            timeLimitM: task.timeLimitM,
+            userFiles: task.userFiles ? task.userFiles.split(',').map((url: string, index: number) => ({
+              uid: `${index}`,
+              name: url.split('/').pop() || `文件${index + 1}`,
+              status: 'done',
+              url: url,
+              response: url,
+            })) : [],
+            testValidateFiles: task.testValidateFiles ? task.testValidateFiles.split(',').map((url: string, index: number) => ({
+              uid: `${index}`,
+              name: url.split('/').pop() || `文件${index + 1}`,
+              status: 'done',
+              url: url,
+              response: url,
+            })) : [],
+            testValidateSh: task.testValidateSh,
+            passType: task.passType || 1,
+            blankCode: task.blankCode || 1,
+            scoreRule: task.scoreRule || 1,
+            testValidateType: task.testValidateType || 1,
+            testContent: testContent,
+          } : undefined,
+          questions: task.questions || [],
+        }
+      }) as any
+      
+      // 如果有任务关卡，默认选中第一个
+      if (taskLevels.value.length > 0) {
+        selectTaskLevel(taskLevels.value[0].id)
+      }
+    }
+    
+    // 初始化实验环境数据
+    let envData: any[] = []
+    
+    if (environments && environments.length > 0) {
+      envData = environments
+      console.log('从响应根级别获取到实验环境数据')
+    } else if (list && list.length > 0) {
+      console.log('尝试从任务关卡中收集实验环境数据')
+      const allEnvs: any[] = []
+      const envMap = new Map()
+      
+      list.forEach((task: any) => {
+        if (task.environment) {
+          if (Array.isArray(task.environment)) {
+            task.environment.forEach((env: any) => {
+              const envKey = env.id || env.title || JSON.stringify(env)
+              if (!envMap.has(envKey)) {
+                envMap.set(envKey, env)
+                allEnvs.push(env)
+              }
+            })
+          } else if (typeof task.environment === 'object') {
+            const envKey = task.environment.id || task.environment.title || JSON.stringify(task.environment)
+            if (!envMap.has(envKey)) {
+              envMap.set(envKey, task.environment)
+              allEnvs.push(task.environment)
+            }
+          }
+        }
+      })
+      
+      if (allEnvs.length > 0) {
+        envData = allEnvs
+        console.log('从任务关卡收集到实验环境数据，共', allEnvs.length, '个')
+      }
+    }
+    
+    console.log('最终准备解析的实验环境数据:', envData)
+    
+    // 解析实验环境数据
+    if (envData.length > 0) {
+      experimentEnvironments.value = envData.map((env: any, index: number) => {
+        console.log(`解析实验环境 ${index + 1}:`, env)
+        
+        // 解析 viewTypes (可能是字符串或数组)
+        let viewTypesArray: number[] = []
+        if (env.viewTypes) {
+          if (typeof env.viewTypes === 'string') {
+            viewTypesArray = env.viewTypes.split(',')
+              .map((v: string) => Number(v.trim()))
+              .filter((v: number) => !isNaN(v))
+          } else if (Array.isArray(env.viewTypes)) {
+            viewTypesArray = env.viewTypes.map((v: any) => Number(v))
+          }
+        }
+        
+        const parsedEnv = {
+          id: String(env.id || Date.now() + index),
+          name: env.title || env.name || `实验环境${index + 1}`,
+          isEditing: false,
+          isSaved: true,
+          config: {
+            dockerImage: Number(env.dockerImage) || selectedEnvironment.value || 1,
+            viewTypes: viewTypesArray,
+            secondType: env.secondType ? String(env.secondType) : undefined,
+            taskId: env.taskId ? String(env.taskId) : undefined,
+            codeType: env.codeType ? String(env.codeType) : undefined,
+            shellBegin: env.shellBegin ? String(env.shellBegin) : undefined,
+            containerPort: env.containerPort ? String(env.containerPort) : undefined,
+            containerPath: env.containerPath ? String(env.containerPath) : undefined,
+          }
+        }
+        
+        console.log(`实验环境 ${index + 1} 解析结果:`, parsedEnv)
+        return parsedEnv
+      })
+      
+      if (experimentEnvironments.value.length > 0) {
+        activeEnvironmentKey.value = experimentEnvironments.value[0].id
+      }
+      console.log('实验环境初始化完成，共', experimentEnvironments.value.length, '个')
+    } else {
+      console.log('未找到实验环境数据，初始化默认环境')
+      initializeExperimentEnvironments()
+    }
+  } catch (error: any) {
+    console.error('获取任务关卡列表失败：', error)
+    message.warning(error.message || '获取任务关卡列表失败')
+    initializeExperimentEnvironments()
+  }
 }
 
 // 获取项目详情
@@ -216,6 +526,9 @@ const fetchProjectDetail = async () => {
     if (detail.gitUrl) {
       isRepositoryUrlLocked.value = true
     }
+    
+    // 获取任务关卡列表和实验环境
+    await fetchProjectTaskList()
     
   } catch (error: any) {
     console.error('获取项目详情失败：', error)
@@ -484,7 +797,7 @@ const handleNext = async () => {
       scrollToTop()
     }
   } else if (currentStep.value === 1) {
-    // 第二步：代码仓库验证并更新项目
+    // 第二步：代码仓库验证
     if (formData.value.enableCodeRepository) {
       // 如果开启了代码仓库，验证仓库地址
       if (!formData.value.gitUrl || formData.value.gitUrl.trim() === '') {
@@ -492,13 +805,65 @@ const handleNext = async () => {
         return
       }
     }
-    // 保存项目
-    await handleUpdateProject()
+    // 更新项目基本信息
+    await handleUpdateProject(false)
+    currentStep.value = 2
+    scrollToTop()
+  } else if (currentStep.value === 2) {
+    // 第三步：任务关卡验证
+    // 检查是否有关卡
+    if (taskLevels.value.length === 0) {
+      message.error('请至少添加一个任务关卡')
+      return
+    }
+    // 检查是否所有关卡都已保存
+    const hasUnsavedLevel = taskLevels.value.some(level => !level.taskId)
+    if (hasUnsavedLevel) {
+      message.error('请先保存所有任务关卡后再进行下一步')
+      return
+    }
+    
+    // 编辑页面：可选验证（只提示，不阻止）
+    // 检查选择题任务是否有题目
+    const choiceLevelWithoutQuestions = taskLevels.value.filter(level =>
+      level.type === 'choice' &&
+      level.taskId &&
+      (!level.questions || level.questions.length === 0)
+    )
+    if (choiceLevelWithoutQuestions.length > 0) {
+      console.warn('存在未添加题目的选择题任务:', choiceLevelWithoutQuestions.map(l => l.name))
+    }
+    
+    // 检查编程任务是否配置了评测设置
+    const programmingLevelWithoutEvaluation = taskLevels.value.filter(level => {
+      if (level.type !== 'programming' || !level.taskId || !level.evaluationSettings) {
+        return false
+      }
+      if (level.evaluationSettings.testValidateType === 1) {
+        return !level.evaluationSettings.testContent || level.evaluationSettings.testContent.length === 0
+      }
+      return false
+    })
+    if (programmingLevelWithoutEvaluation.length > 0) {
+      console.warn('存在未配置完整评测设置的编程任务:', programmingLevelWithoutEvaluation.map(l => l.name))
+    }
+    
+    currentStep.value = 3
+    scrollToTop()
+  } else if (currentStep.value === 3) {
+    // 第四步：实验环境验证并完成更新
+    const unsavedEnvironments = experimentEnvironments.value.filter(env => !env.isSaved)
+    if (unsavedEnvironments.length > 0) {
+      message.error('请先保存所有实验环境配置')
+      return
+    }
+    // 完成更新
+    await handleUpdateProject(true)
   }
 }
 
 // 更新项目
-const handleUpdateProject = async () => {
+const handleUpdateProject = async (isComplete: boolean = false) => {
   try {
     loading.value = true
     
@@ -529,18 +894,331 @@ const handleUpdateProject = async () => {
     console.log('更新项目数据：', submitData)
 
     await updateProjectApi(submitData)
-    message.success('项目更新成功！')
     
-    // 返回列表页
-    setTimeout(() => {
-      router.push('/dashboard/analysis')
-    }, 500)
+    if (isComplete) {
+      message.success('项目更新成功！')
+      // 返回列表页
+      setTimeout(() => {
+        router.push('/dashboard/analysis')
+      }, 500)
+    } else {
+      message.success('保存成功！')
+    }
   } catch (error: any) {
     console.error('更新失败：', error)
     message.error(error.message || '项目更新失败，请稍后重试')
+    throw error
   } finally {
     loading.value = false
   }
+}
+
+// 保存单个实验环境
+const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0) => {
+  try {
+    if (envisDel !== 1) {
+      const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'secondType', 'taskId']
+      const fieldsToClear: string[] = []
+
+      if (env.config.viewTypes.includes(1)) {
+        fieldsToValidate.push('codeType')
+      } else {
+        fieldsToClear.push('codeType')
+      }
+
+      if (env.config.viewTypes.includes(2)) {
+        fieldsToValidate.push('shellBegin')
+      } else {
+        fieldsToClear.push('shellBegin')
+      }
+
+      if (env.config.viewTypes.includes(3)) {
+        fieldsToValidate.push('containerPort')
+      } else {
+        fieldsToClear.push('containerPort')
+      }
+
+      if (fieldsToClear.length > 0) {
+        experimentFormRef.value?.clearValidate(fieldsToClear)
+      }
+
+      await experimentFormRef.value?.validate(fieldsToValidate)
+    }
+
+    if (!projectId.value) {
+      message.error('项目ID不存在，无法保存')
+      return
+    }
+
+    const updateData = {
+      title: env.name,
+      dockerImage: env.config.dockerImage,
+      viewTypes: env.config.viewTypes.join(','),
+      secondType: env.config.secondType,
+      taskId: env.config.taskId ? Number(env.config.taskId) : undefined,
+      codeType: env.config.codeType,
+      shellBegin: env.config.shellBegin,
+      containerPort: env.config.containerPort,
+      containerPath: env.config.containerPath,
+      projectId: projectId.value,
+      envisDel: envisDel,
+    }
+
+    console.log('保存实验环境数据：', updateData)
+
+    await updateProjectEnvironmentApi(updateData)
+
+    if (envisDel !== 1) {
+      env.isSaved = true
+      message.success('实验环境保存成功！')
+    } else {
+      message.success('删除成功！')
+    }
+  } catch (error) {
+    console.error('保存失败：', error)
+    message.error(envisDel === 1 ? '删除失败' : '请完善必填信息')
+  }
+}
+
+// 实验界面切换
+const toggleInterface = (type: number) => {
+  const config = currentEnvironmentConfig.value
+  if (!config) return
+
+  const index = config.viewTypes.indexOf(type)
+  if (index > -1) {
+    config.viewTypes.splice(index, 1)
+    if (type === 1) {
+      config.codeType = undefined
+    } else if (type === 2) {
+      config.shellBegin = undefined
+    } else if (type === 3) {
+      config.containerPort = undefined
+      config.containerPath = undefined
+    }
+  } else {
+    config.viewTypes.push(type)
+  }
+
+  nextTick(() => {
+    experimentFormRef.value?.clearValidate(['viewTypes'])
+  })
+}
+
+// 判断任务关卡是否已被其他环境选择
+const isTaskLevelSelectedByOther = (currentEnvId: string, taskId: number | string | undefined) => {
+  if (!taskId) return false
+  
+  const taskIdNum = typeof taskId === 'string' ? Number(taskId) : taskId
+  
+  return experimentEnvironments.value.some(env => {
+    if (!env.config.taskId) return false
+    const envTaskIdNum = typeof env.config.taskId === 'string' ? Number(env.config.taskId) : env.config.taskId
+    return env.id !== currentEnvId && envTaskIdNum === taskIdNum
+  })
+}
+
+// 添加实验环境
+const handleAddEnvironment = () => {
+  const newId = String(Date.now())
+  const newEnv: ExperimentEnvironment = {
+    id: newId,
+    name: `实验环境${experimentEnvironments.value.length + 1}`,
+    isEditing: false,
+    isSaved: false,
+    config: {
+      dockerImage: selectedEnvironment.value || 1,
+      viewTypes: [],
+      secondType: undefined,
+      taskId: undefined,
+      codeType: undefined,
+      shellBegin: undefined,
+      containerPort: undefined,
+      containerPath: undefined,
+    }
+  }
+  experimentEnvironments.value.push(newEnv)
+  activeEnvironmentKey.value = newId
+  message.success('添加实验环境成功')
+}
+
+// 删除实验环境
+const handleDeleteEnvironment = async (id: string) => {
+  if (experimentEnvironments.value.length === 1) {
+    message.warning('至少保留一个实验环境')
+    return
+  }
+  
+  const index = experimentEnvironments.value.findIndex(e => e.id === id)
+  if (index > -1) {
+    const env = experimentEnvironments.value[index]
+    
+    if (env.isSaved) {
+      await saveEnvironment(env, 1)
+    }
+    
+    experimentEnvironments.value.splice(index, 1)
+    
+    if (activeEnvironmentKey.value === id) {
+      activeEnvironmentKey.value = experimentEnvironments.value[0].id
+    }
+    
+    if (!env.isSaved) {
+      message.success('删除实验环境成功')
+    }
+  }
+}
+
+// 编辑环境名称
+const handleEditEnvironmentName = (env: ExperimentEnvironment) => {
+  env.isEditing = true
+  editingEnvironmentName.value = env.name
+}
+
+// 保存环境名称
+const handleSaveEnvironmentName = (env: ExperimentEnvironment) => {
+  if (editingEnvironmentName.value.trim()) {
+    env.name = editingEnvironmentName.value.trim()
+    env.isEditing = false
+    if (env.isSaved) {
+      message.success('重命名成功')
+      saveEnvironment(env)
+    }
+  } else {
+    message.warning('名称不能为空')
+  }
+}
+
+// 任务要求内容变化处理
+const handleTaskRequirementChange = (value: string) => {
+  const textContent = value.replace(/<[^>]*>/g, '').trim()
+  if (textContent) {
+    taskLevelFormRef.value?.clearValidate(['require'])
+  }
+}
+
+// 参考答案内容变化处理
+const handleReferenceAnswerChange = (value: string) => {
+  const textContent = value.replace(/<[^>]*>/g, '').trim()
+  if (textContent) {
+    taskLevelFormRef.value?.clearValidate(['referenceAnswer'])
+  }
+}
+
+// 新增题目
+const handleAddQuestion = () => {
+  currentEditingQuestion.value = null
+  showQuestionModal.value = true
+}
+
+// 编辑题目
+const handleEditQuestion = (question: any) => {
+  currentEditingQuestion.value = question
+  showQuestionModal.value = true
+}
+
+// 确认添加/编辑题目
+const handleConfirmQuestion = async (question: any) => {
+  if (currentEditingQuestion.value) {
+    updateQuestion(question)
+  } else {
+    addQuestion(question)
+  }
+  currentEditingQuestion.value = null
+
+  if (taskLevelFormData.value.taskId) {
+    await loadQuestions(taskLevelFormData.value.taskId)
+  }
+}
+
+// 解析题目选项
+const parseQuestionSelects = (question: Question) => {
+  try {
+    const selectsArray = JSON.parse(question.selects || '[]')
+    return selectsArray.map((item: any) => {
+      const key = Object.keys(item)[0]
+      return {
+        label: key,
+        content: item[key]
+      }
+    })
+  } catch (e) {
+    return []
+  }
+}
+
+// 判断是否为正确答案
+const isCorrectAnswer = (question: Question, label: string) => {
+  return question.answer.includes(label)
+}
+
+// 拖拽相关
+const draggedIndex = ref<number | null>(null)
+
+const handleDragStart = (index: number) => {
+  draggedIndex.value = index
+}
+
+const handleDragOver = (e: DragEvent) => {
+  e.preventDefault()
+}
+
+const handleDrop = async (e: DragEvent, dropIndex: number) => {
+  e.preventDefault()
+  if (draggedIndex.value !== null && draggedIndex.value !== dropIndex) {
+    const questions = [...getCurrentQuestions.value]
+    const [draggedItem] = questions.splice(draggedIndex.value, 1)
+    questions.splice(dropIndex, 0, draggedItem)
+
+    questions.forEach((question, index) => {
+      question.weight = index + 1
+    })
+
+    updateQuestionsOrder(questions)
+
+    try {
+      console.log('开始保存题目排序...')
+      await saveQuestionsOrder(questions)
+      message.success('题目顺序已更新')
+    } catch (error: any) {
+      console.error('保存题目排序失败:', error)
+      message.error(error.message || '保存题目排序失败，请重试')
+    }
+  }
+  draggedIndex.value = null
+}
+
+const handleDragEnd = () => {
+  draggedIndex.value = null
+}
+
+// 处理标签页切换
+const handleTabChange = async (activeKey: string | number) => {
+  const key = String(activeKey)
+
+  if (isChoiceTask.value && key === 'questions') {
+    if (!taskLevelFormData.value.taskId) {
+      message.warning('请先保存创建任务后再添加题目')
+      return
+    }
+    if (taskLevelFormData.value.taskId) {
+      await loadQuestions(taskLevelFormData.value.taskId)
+    }
+  }
+
+  if (isProgrammingTask.value && key === 'evaluation') {
+    if (!taskLevelFormData.value.taskId) {
+      message.warning('请先保存创建任务后再配置评测设置')
+      return
+    }
+  }
+
+  currentTab.value = key
+}
+
+// 处理测试集选中状态变化
+const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
+  testCase.select = checked ? 1 : 2
 }
 
 // 页面加载时获取项目详情
@@ -570,6 +1248,8 @@ onMounted(() => {
           <a-steps :current="currentStep" class="custom-steps">
             <a-step title="基本信息" />
             <a-step title="代码仓库" />
+            <a-step title="任务关卡" />
+            <a-step title="实验环境" />
           </a-steps>
         </div>
 
@@ -764,11 +1444,398 @@ onMounted(() => {
           </div>
         </div>
 
+        <!-- 第三步：任务关卡 -->
+        <div v-if="currentStep === 2">
+          <div class="task-level-section">
+            <!-- 顶部按钮组 -->
+            <div class="task-level-header">
+              <div class="header-buttons">
+                <a-button type="primary" @click="addTaskLevel('kernel')">添加内核链接任务</a-button>
+                <a-button type="primary" @click="addTaskLevel('choice')">添加选择题任务</a-button>
+                <a-button type="primary" @click="addTaskLevel('programming')">添加编程任务</a-button>
+              </div>
+            </div>
+
+            <!-- 主要内容区域 -->
+            <div class="task-level-main">
+              <!-- 左侧：任务关卡列表 -->
+              <div class="task-level-list">
+                <div class="list-title">任务关卡 ({{ taskLevels.length }})</div>
+                <div class="list-items">
+                  <div v-for="level in taskLevels" :key="level.id"
+                    :class="['list-item', { active: selectedTaskLevelId === level.id }]"
+                    @click="selectTaskLevel(level.id)">
+                    <span class="item-name">{{ level.name }}</span>
+                    <DeleteOutlined class="delete-icon" @click.stop="deleteTaskLevel(level.id)" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- 右侧：任务详情 -->
+              <div class="task-level-detail">
+                <div v-if="selectedTaskLevelId" class="detail-content">
+                  <a-tabs :activeKey="currentTab" @change="handleTabChange">
+                    <!-- 标签栏右侧额外内容 -->
+                    <template #tabBarExtraContent v-if="isChoiceTask && currentTab === 'questions'">
+                      <a-button type="primary" @click="handleAddQuestion">
+                        <PlusOutlined />
+                        新增题目
+                      </a-button>
+                    </template>
+
+                    <!-- 关联任务标签页 -->
+                    <a-tab-pane key="task" tab="关联任务">
+                      <a-form ref="taskLevelFormRef" :model="taskLevelFormData" :rules="taskLevelFormRules"
+                        layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
+                        <a-form-item label="任务名称" name="name" required>
+                          <a-input v-model:value="taskLevelFormData.name" placeholder="请输入任务名称" />
+                        </a-form-item>
+                        <a-form-item label="学习资源" name="source" required>
+                          <a-upload v-model:file-list="learningResourceFileList"
+                            :custom-request="handleLearningResourceCustomRequest" @change="handleLearningResourceUpload"
+                            accept=".doc,.docx,.pdf,.ppt,.pptx,.mp4" :max-count="10">
+                            <a-button type="primary">点击上传</a-button>
+                          </a-upload>
+                          <div class="upload-hint">
+                            说明：支持上传word、pdf、ppt、mp4等格式文件，每个文件大小不能超过500M。
+                          </div>
+                        </a-form-item>
+
+                        <a-form-item label="任务要求" name="require" required>
+                          <RichTextEditor v-model="taskLevelFormData.require" placeholder="请输入任务要求"
+                            @change="handleTaskRequirementChange" />
+                        </a-form-item>
+
+                        <a-form-item label="参考答案" name="referenceAnswer" required>
+                          <RichTextEditor v-model="taskLevelFormData.referenceAnswer" placeholder="请输入参考答案"
+                            @change="handleReferenceAnswerChange" />
+                        </a-form-item>
+
+                        <a-form-item label="难度系数" name="difficulty" required>
+                          <a-radio-group v-model:value="taskLevelFormData.difficulty" class="custom-radio">
+                            <a-radio :value="1">简单</a-radio>
+                            <a-radio :value="2">适中</a-radio>
+                            <a-radio :value="3">困难</a-radio>
+                          </a-radio-group>
+                        </a-form-item>
+
+                        <a-form-item label="技能标签" name="tag" required>
+                          <a-input v-model:value="taskLevelFormData.tag" placeholder="请输入技能标签" />
+                        </a-form-item>
+                        <a-form-item v-if="isKernelTask" label="内嵌链接" name="jumpUrl" required>
+                          <a-input v-model:value="taskLevelFormData.jumpUrl" placeholder="请输入内嵌链接" />
+                        </a-form-item>
+
+                        <a-form-item label="任务学时" name="classHour" required>
+                          <a-input-number style="width:100%;" :min="0" v-model:value="taskLevelFormData.classHour"
+                            placeholder="请输入任务学时" />
+                        </a-form-item>
+                      </a-form>
+                    </a-tab-pane>
+
+                    <!-- 题目标签页（选择题任务） -->
+                    <a-tab-pane key="questions" tab="题目" v-if="isChoiceTask">
+                      <div v-if="getCurrentQuestions.length === 0" class="questions-content">
+                        <a-empty description="暂无题目，请点击右上方按钮新增题目" />
+                      </div>
+                      <div v-else class="questions-list">
+                        <div v-for="(question, index) in getCurrentQuestions" :key="question.id" class="question-item"
+                          draggable="true" :class="{ 'dragging': draggedIndex === index }"
+                          @dragstart="handleDragStart(index)" @dragover="handleDragOver" @drop="handleDrop($event, index)"
+                          @dragend="handleDragEnd">
+                          <div class="question-header">
+                            <div class="question-number-with-drag">
+                              <HolderOutlined class="drag-handle" />
+                              <span class="question-number">题目{{ index + 1 }}</span>
+                            </div>
+                            <div class="action-icons">
+                              <EditOutlined class="edit-icon" @click="handleEditQuestion(question)" />
+                              <DeleteOutlined class="delete-icon" @click="deleteQuestion(question.id)" />
+                            </div>
+                          </div>
+                          <div class="question-title">
+                            <div v-if="question.name" class="flex">
+                              {{ index + 1 }}、
+                              <div v-html="question.name"></div>
+                            </div>
+                            <div v-else style="color: #bfbfbf;">暂无题干</div>
+                          </div>
+                          <div class="question-options">
+                            <div v-for="(option, optIndex) in parseQuestionSelects(question)" :key="optIndex"
+                              class="option-row" :class="{ 'is-correct': isCorrectAnswer(question, option.label) }">
+                              <span class="option-label">{{ option.label }}.</span>
+                              <span class="option-content">{{ option.content }}</span>
+                              <span v-if="isCorrectAnswer(question, option.label)" class="correct-tag">正确答案</span>
+                            </div>
+                          </div>
+                          <div class="question-explanation">
+                            <div class="explanation-label">答案解析：</div>
+                            <div class="explanation-content">
+                              <span v-if="question.answerKey">{{ question.answerKey }}</span>
+                              <span v-else style="color: #bfbfbf;">暂无答案解析</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </a-tab-pane>
+
+                    <!-- 评测设置标签页（编程任务） -->
+                    <a-tab-pane key="evaluation" tab="评测设置" v-if="isProgrammingTask">
+                      <div class="evaluation-content">
+                        <!-- 评测文件 -->
+                        <div class="evaluation-section">
+                          <div class="section-header">评测文件</div>
+                          <a-form ref="evaluationFormRef" :model="evaluationFormData" :rules="evaluationFormRules"
+                            layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
+                            <a-form-item label="评测时长限制" name="timeLimitM" required>
+                              <a-input-number v-model:value="evaluationFormData.timeLimitM" :min="0"
+                                placeholder="请输入评测时长限制" style="width: 200px;" />
+                              <span style="margin-left: 8px;">分钟</span>
+                            </a-form-item>
+
+                            <a-form-item label="学员任务文件" name="userFiles" required>
+                              <a-upload v-model:file-list="userFileList"
+                                :custom-request="handleLearningResourceCustomRequest" @change="handleUserFilesUpload"
+                                accept=".js,.ts,.py,.java,.cpp,.c" :max-count="10">
+                                <a-button type="primary">点击上传</a-button>
+                              </a-upload>
+                              <div class="upload-hint">
+                                说明：支持上传多个代码文件，每个文件大小不能超过500M。（学员评测基本任务时名称，查看效果页上需要编辑的文件类型）
+                              </div>
+                            </a-form-item>
+
+                            <a-form-item label="评测执行文件" name="testValidateFiles" required>
+                              <a-upload v-model:file-list="testValidateFileList"
+                                :custom-request="handleLearningResourceCustomRequest"
+                                @change="handleTestValidateFilesUpload" accept=".js,.ts,.py,.java,.cpp,.c"
+                                :max-count="10">
+                                <a-button type="primary">点击上传</a-button>
+                              </a-upload>
+                              <div class="upload-hint">
+                                说明：支持上传多个代码文件，每个文件大小不能超过500M。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确，可与"学员任务文件"一致）
+                              </div>
+                            </a-form-item>
+
+                            <a-form-item label="评测执行命令" name="testValidateSh" required>
+                              <a-input v-model:value="evaluationFormData.testValidateSh"
+                                placeholder="请输入评测执行命令，例如：python main.py" />
+                              <div class="upload-hint">
+                                （执行评测文件的命令，如：python main.py、node index.js、java Main 等）
+                              </div>
+                            </a-form-item>
+                          </a-form>
+                        </div>
+
+                        <!-- 评测规则 -->
+                        <div class="evaluation-section">
+                          <div class="section-header">评测规则</div>
+                          <a-form layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
+                            <a-form-item label="通关判定">
+                              <a-radio-group v-model:value="evaluationFormData.passType" class="custom-radio">
+                                <a-radio :value="1">实际输出与期望输出对比</a-radio>
+                                <a-radio :value="2">实际输出满足规则</a-radio>
+                              </a-radio-group>
+                            </a-form-item>
+
+                            <a-form-item label="空格处理">
+                              <a-radio-group v-model:value="evaluationFormData.blankCode" class="custom-radio">
+                                <a-radio :value="1">不忽略空格</a-radio>
+                                <a-radio :value="2">忽略首尾空格</a-radio>
+                                <a-radio :value="3">忽略所有空格(仅通过空格中自动添加所有空格进行对比)</a-radio>
+                              </a-radio-group>
+                            </a-form-item>
+                          </a-form>
+                        </div>
+
+                        <!-- 测试集 -->
+                        <div class="evaluation-section">
+                          <div class="section-header">测试集</div>
+                          <a-form layout="horizontal" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
+                            <a-form-item label="得分规则">
+                              <a-radio-group v-model:value="evaluationFormData.scoreRule" class="custom-radio">
+                                <a-radio :value="1">通过全部测试集（所有测试集都正确，才获取对应积分；否则得0学分）</a-radio>
+                                <a-radio :value="2">通过部分测试集（选中的测试集全部正确，获取任务学分；否则得0学分）</a-radio>
+                              </a-radio-group>
+                            </a-form-item>
+
+                            <a-form-item label="用例类型">
+                              <div class="case-type-row">
+                                <a-radio-group v-model:value="evaluationFormData.testValidateType" class="custom-radio">
+                                  <a-radio :value="1">文本</a-radio>
+                                  <a-radio :value="2">文件</a-radio>
+                                </a-radio-group>
+                                <!-- 只在文本类型时显示操作按钮 -->
+                                <div v-if="evaluationFormData.testValidateType === 1" class="test-case-buttons">
+                                  <a-button type="primary" @click="addTestCase">新增测试集</a-button>
+                                  <a-button @click="clearAllTestCases">一键删除测试用例</a-button>
+                                  <a-button @click="downloadTemplate">下载测试用例模板</a-button>
+                                  <a-button @click="batchUploadTestCases">批量上传测试用例</a-button>
+                                </div>
+                              </div>
+                            </a-form-item>
+
+                            <!-- 测试集列表（只在文本类型时显示） -->
+                            <div
+                              v-if="evaluationFormData.testValidateType === 1 && evaluationFormData.testContent.length > 0"
+                              class="test-cases-list">
+                              <div v-for="(testCase, index) in evaluationFormData.testContent" :key="testCase.id"
+                                class="test-case-item">
+                                <a-checkbox :checked="testCase.select === 1"
+                                  @change="(e) => handleTestCaseSelectChange(testCase, e.target.checked)"
+                                  class="test-case-checkbox" />
+                                <span class="test-case-label">测试集{{ index + 1 }}</span>
+                                <a-input v-model:value="testCase.args" placeholder="请输入输入内容" class="test-case-input" />
+                                <a-input v-model:value="testCase.answer" placeholder="请输入期望输出" class="test-case-output" />
+                                <DeleteOutlined class="delete-test-case" @click="removeTestCase(testCase.id)" />
+                              </div>
+                            </div>
+                          </a-form>
+                        </div>
+                      </div>
+                    </a-tab-pane>
+                  </a-tabs>
+
+                  <!-- 底部按钮（题目标签页内隐藏） -->
+                  <div v-if="currentTab !== 'questions'" class="form-footer-buttons">
+                    <a-button v-if="!taskLevelFormData.taskId" @click="resetTaskLevel">重置</a-button>
+                    <a-button type="primary" @click="saveTaskLevel">
+                      {{ taskLevelFormData.taskId ? '更新' : '保存' }}
+                    </a-button>
+                  </div>
+                </div>
+                <div v-else class="empty-detail">
+                  <a-empty description="请先添加任务关卡" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 第四步：实验环境 -->
+        <div v-if="currentStep === 3" class="step-content">
+          <div class="content-card">
+            <div class="environment-header">
+              <h3 class="environment-title">实验环境</h3>
+              <div class="environment-actions">
+                <a-button type="primary" @click="handleAddEnvironment">添加实验环境</a-button>
+                <a-button>设置</a-button>
+              </div>
+            </div>
+            <a-form ref="experimentFormRef" :model="currentEnvironmentConfig" :rules="experimentFormRules"
+              :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
+              <a-tabs v-model:activeKey="activeEnvironmentKey">
+                <a-tab-pane v-for="env in experimentEnvironments" :key="env.id">
+                  <template #tab>
+                    <div class="tab-label">
+                      <template v-if="env.isEditing">
+                        <a-input v-model:value="editingEnvironmentName" size="small" style="width: 120px;"
+                          @pressEnter="handleSaveEnvironmentName(env)" @blur="handleSaveEnvironmentName(env)" />
+                      </template>
+                      <template v-else>
+                        <span @dblclick="handleEditEnvironmentName(env)">{{ env.name }}</span>
+                        <a-dropdown :trigger="['click']">
+                          <MoreOutlined class="tab-more-icon" @click.stop />
+                          <template #overlay>
+                            <a-menu>
+                              <a-menu-item @click="handleEditEnvironmentName(env)">
+                                <EditOutlined /> 重命名
+                              </a-menu-item>
+                              <a-menu-item @click="handleDeleteEnvironment(env.id)">
+                                <DeleteOutlined /> 删除
+                              </a-menu-item>
+                            </a-menu>
+                          </template>
+                        </a-dropdown>
+                      </template>
+                    </div>
+                  </template>
+                  <a-form-item label="实验镜像" name="dockerImage" required>
+                    <div class="experiment-image-info">
+                      系统实验镜像默认为{{ getEnvironmentName() }}。
+                    </div>
+                  </a-form-item>
+
+                  <a-form-item label="实验界面" name="viewTypes" required>
+                    <div class="experiment-interfaces">
+                      <div class="interface-card" :class="{ active: env.config.viewTypes.includes(1) }"
+                        @click="toggleInterface(1)">
+                        <div class="card-title">代码编辑器</div>
+                        <div class="card-desc">提供代码编辑器，编辑器，调试器等工具</div>
+                      </div>
+                      <div class="interface-card" :class="{ active: env.config.viewTypes.includes(2) }"
+                        @click="toggleInterface(2)">
+                        <div class="card-title">命令行终端</div>
+                        <div class="card-desc">提供命令行窗口</div>
+                      </div>
+                      <div class="interface-card" :class="{ active: env.config.viewTypes.includes(3) }"
+                        @click="toggleInterface(3)">
+                        <div class="card-title">容器内服务</div>
+                        <div class="card-desc">直接预览容器内部Web服务</div>
+                      </div>
+                    </div>
+                  </a-form-item>
+
+                  <a-form-item label="附带环境" name="secondType" required>
+                    <a-select v-model:value="env.config.secondType" placeholder="请选择附带环境" allowClear>
+                      <a-select-option :value="1">环境1</a-select-option>
+                      <a-select-option :value="2">环境2</a-select-option>
+                    </a-select>
+                  </a-form-item>
+
+                  <a-form-item label="任务关卡" name="taskId" required>
+                    <a-select v-model:value="env.config.taskId" placeholder="请选择任务关卡" allowClear>
+                      <a-select-option v-for="level in taskLevels" :key="level.taskId || level.id" 
+                        :value="level.taskId ? String(level.taskId) : undefined"
+                        :disabled="!level.taskId || isTaskLevelSelectedByOther(env.id, level.taskId)">
+                        {{ level.name }}
+                        <span v-if="!level.taskId" style="color: #999;"> (未保存)</span>
+                        <span v-else-if="isTaskLevelSelectedByOther(env.id, level.taskId)" style="color: #999;"> (已被使用)</span>
+                      </a-select-option>
+                    </a-select>
+                  </a-form-item>
+
+                  <!-- 选择代码编辑器时显示编程语言 -->
+                  <a-form-item v-if="env.config.viewTypes.includes(1)" label="编程语言" name="codeType" required>
+                    <a-select v-model:value="env.config.codeType" placeholder="请选择编程语言" allowClear>
+                      <a-select-option value="1">Python</a-select-option>
+                      <a-select-option value="2">JavaScript</a-select-option>
+                      <a-select-option value="3">Java</a-select-option>
+                      <a-select-option value="4">C++</a-select-option>
+                    </a-select>
+                  </a-form-item>
+
+                  <!-- 选择命令行终端时显示开启时触发命令 -->
+                  <a-form-item v-if="env.config.viewTypes.includes(2)" label="开启时触发命令" name="shellBegin" required>
+                    <a-input v-model:value="env.config.shellBegin" placeholder="请输入命令" />
+                  </a-form-item>
+
+                  <!-- 选择容器内服务时显示容器端口和路由 -->
+                  <a-form-item v-if="env.config.viewTypes.includes(3)" label="容器端口" name="containerPort" required>
+                    <a-input v-model:value="env.config.containerPort" placeholder="请输入容器端口" />
+                  </a-form-item>
+
+                  <!-- 选择容器内服务时显示路由（选填） -->
+                  <a-form-item v-if="env.config.viewTypes.includes(3)" label="路由">
+                    <a-input v-model:value="env.config.containerPath" placeholder="请输入路由（选填）" />
+                  </a-form-item>
+
+                  <!-- 保存/更新按钮 -->
+                  <a-form-item :wrapper-col="{ offset: 4, span: 18 }">
+                    <a-button class="w-full" type="primary" @click="saveEnvironment(env)">
+                      {{ env.isSaved ? '更新' : '保存' }}
+                    </a-button>
+                  </a-form-item>
+                </a-tab-pane>
+              </a-tabs>
+            </a-form>
+          </div>
+        </div>
+
         <!-- 底部按钮 -->
         <div class="page-footer">
           <a-button @click="handleBack">{{ currentStep === 0 ? '返回' : '上一步' }}</a-button>
           <a-button type="primary" :loading="loading" @click="handleNext">
-            {{ currentStep === 1 ? '完成' : '下一步' }}
+            {{ currentStep === 3 ? '完成' : '下一步' }}
           </a-button>
         </div>
       </div>
@@ -783,6 +1850,11 @@ onMounted(() => {
     <!-- 新建文件夹弹窗 -->
     <NewFolderModal v-model:open="showNewFolderModal" :parent-path="currentFolderParentPath"
       @confirm="handleConfirmNewFolder" />
+    
+    <!-- 添加题目弹窗 -->
+    <QuestionModal v-model:open="showQuestionModal" :question="currentEditingQuestion"
+      :project-id="projectId ?? undefined" :task-id="taskLevelFormData.taskId" :existing-questions="getCurrentQuestions"
+      @confirm="handleConfirmQuestion" />
   </div>
 </template>
 
@@ -1015,6 +2087,470 @@ onMounted(() => {
 .custom-radio ::v-deep(.ant-radio-inner::after) {
   background-color: var(--pro-ant-color-primary);
   transform: scale(0.5);
+}
+
+.edit-full-stack-page {
+  // 任务关卡样式
+  .task-level-section {
+    .task-level-header {
+      margin-bottom: 24px;
+
+      .header-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+    }
+
+    .task-level-main {
+      display: flex;
+      gap: 24px;
+      min-height: 500px;
+
+      .task-level-list {
+        width: 280px;
+        background: #fafafa;
+        border: 1px solid #e8e8e8;
+        border-radius: 4px;
+
+        .list-title {
+          padding: 12px 16px;
+          background: #f0f0f0;
+          border-bottom: 1px solid #e8e8e8;
+          font-weight: 500;
+          font-size: 14px;
+          color: rgba(0, 0, 0, 0.85);
+        }
+
+        .list-items {
+          padding: 8px 0;
+
+          .list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            margin: 4px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+
+            &:hover {
+              background: #e6f7ff;
+
+              .delete-icon {
+                opacity: 1;
+              }
+            }
+
+            &.active {
+              background: #1890ff;
+              color: #fff;
+
+              .delete-icon {
+                color: #fff;
+                opacity: 1;
+              }
+            }
+
+            .item-name {
+              flex: 1;
+              font-size: 14px;
+            }
+
+            .delete-icon {
+              color: #ff4d4f;
+              font-size: 16px;
+              opacity: 0;
+              transition: opacity 0.3s;
+
+              &:hover {
+                color: #ff7875;
+              }
+            }
+          }
+        }
+      }
+
+      .task-level-detail {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 4px;
+        padding: 24px;
+
+        .detail-content {
+          .ant-tabs {
+            :deep(.ant-tabs-nav) {
+              margin-bottom: 24px;
+            }
+          }
+
+          .upload-hint {
+            margin-top: 8px;
+            color: rgba(0, 0, 0, 0.45);
+            font-size: 12px;
+          }
+
+          .form-footer-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #f0f0f0;
+
+            .ant-btn {
+              min-width: 100px;
+            }
+          }
+        }
+
+        .empty-detail {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 400px;
+        }
+
+        .questions-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 300px;
+        }
+
+        .questions-list {
+          .question-item {
+            background: #fafafa;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 16px;
+            cursor: move;
+            transition: all 0.3s;
+            user-select: none;
+
+            &:hover {
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+              transform: translateY(-2px);
+            }
+
+            &.dragging {
+              opacity: 0.5;
+              background: #e6f7ff;
+              border-color: #1890ff;
+            }
+
+            .question-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 12px;
+
+              .question-number-with-drag {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+
+                .drag-handle {
+                  color: rgba(0, 0, 0, 0.25);
+                  font-size: 16px;
+                  cursor: move;
+                  transition: color 0.3s;
+
+                  &:hover {
+                    color: rgba(0, 0, 0, 0.45);
+                  }
+                }
+
+                .question-number {
+                  font-weight: 500;
+                  font-size: 14px;
+                  color: rgba(0, 0, 0, 0.85);
+                }
+              }
+
+              .action-icons {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+
+                .edit-icon {
+                  color: #1890ff;
+                  cursor: pointer;
+                  font-size: 16px;
+                  transition: all 0.3s;
+
+                  &:hover {
+                    color: #40a9ff;
+                  }
+                }
+
+                .delete-icon {
+                  color: #ff4d4f;
+                  cursor: pointer;
+                  font-size: 16px;
+                  transition: all 0.3s;
+
+                  &:hover {
+                    color: #ff7875;
+                  }
+                }
+              }
+            }
+
+            .question-title {
+              font-size: 14px;
+              color: rgba(0, 0, 0, 0.85);
+              margin-bottom: 16px;
+              line-height: 1.6;
+              min-height: 20px;
+              word-break: break-word;
+
+              :deep(p) {
+                margin: 0 !important;
+                padding: 0 !important;
+                line-height: 1.6;
+                display: block;
+              }
+
+              :deep(br) {
+                display: none;
+              }
+
+              :deep(*) {
+                max-width: 100%;
+              }
+            }
+
+            .question-options {
+              margin-bottom: 16px;
+
+              .option-row {
+                display: flex;
+                align-items: center;
+                padding: 8px 12px;
+                margin-bottom: 8px;
+                background: #fff;
+                border: 1px solid #e8e8e8;
+                border-radius: 4px;
+                transition: all 0.3s;
+
+                &.is-correct {
+                  background: #f6ffed;
+                  border-color: #52c41a;
+                }
+
+                .option-label {
+                  font-weight: 500;
+                  margin-right: 12px;
+                  color: rgba(0, 0, 0, 0.85);
+                  flex-shrink: 0;
+                }
+
+                .option-content {
+                  flex: 1;
+                  color: rgba(0, 0, 0, 0.65);
+                }
+
+                .correct-tag {
+                  flex-shrink: 0;
+                  background: #52c41a;
+                  color: #fff;
+                  padding: 2px 8px;
+                  border-radius: 2px;
+                  font-size: 12px;
+                  margin-left: 12px;
+                }
+              }
+            }
+
+            .question-explanation {
+              background: #fff7e6;
+              border: 1px solid #ffd591;
+              border-radius: 4px;
+              padding: 12px;
+
+              .explanation-label {
+                font-weight: 500;
+                color: rgba(0, 0, 0, 0.85);
+                margin-bottom: 8px;
+                font-size: 14px;
+              }
+
+              .explanation-content {
+                color: rgba(0, 0, 0, 0.65);
+                line-height: 1.6;
+                font-size: 14px;
+              }
+            }
+          }
+        }
+
+        .evaluation-content {
+          .evaluation-section {
+            margin-bottom: 32px;
+
+            .section-header {
+              background: #5b8fff;
+              color: #fff;
+              padding: 8px 16px;
+              font-size: 14px;
+              font-weight: 500;
+              margin-bottom: 24px;
+              border-radius: 4px;
+            }
+
+            .upload-hint {
+              margin-top: 8px;
+              color: rgba(0, 0, 0, 0.45);
+              font-size: 12px;
+            }
+
+            .case-type-row {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+
+              .test-case-buttons {
+                display: flex;
+                gap: 12px;
+              }
+            }
+
+            .test-cases-list {
+              margin-top: 24px;
+              margin-left: calc(10.8% + 12px);
+
+              .test-case-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 16px;
+
+                .test-case-checkbox {
+                  flex-shrink: 0;
+                }
+
+                .test-case-label {
+                  flex-shrink: 0;
+                  width: 80px;
+                  font-size: 14px;
+                  color: rgba(0, 0, 0, 0.85);
+                }
+
+                .test-case-input,
+                .test-case-output {
+                  flex: 1;
+                }
+
+                .delete-test-case {
+                  flex-shrink: 0;
+                  color: #ff4d4f;
+                  cursor: pointer;
+                  font-size: 16px;
+
+                  &:hover {
+                    color: #ff7875;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /* 实验环境样式 */
+  .environment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e8e8e8;
+
+    .environment-title {
+      font-size: 18px;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.85);
+      margin: 0;
+    }
+
+    .environment-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  .tab-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .tab-more-icon {
+      color: rgba(0, 0, 0, 0.45);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 2px;
+      transition: color 0.3s;
+
+      &:hover {
+        color: rgba(0, 0, 0, 0.85);
+      }
+    }
+  }
+
+  .experiment-image-info {
+    color: rgba(0, 0, 0, 0.65);
+    font-size: 14px;
+  }
+
+  .experiment-interfaces {
+    display: flex;
+    gap: 16px;
+
+    .interface-card {
+      flex: 1;
+      background: #e8e8e8;
+      color: rgba(0, 0, 0, 0.65);
+      border-radius: 4px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      &.active {
+        background: #5b8fff;
+        color: #fff;
+        border-color: #fff;
+        box-shadow: 0 0 0 2px #5b8fff;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(91, 143, 255, 0.3), 0 0 0 2px #5b8fff;
+        }
+      }
+
+      .card-title {
+        font-size: 16px;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+
+      .card-desc {
+        font-size: 14px;
+        opacity: 0.9;
+        line-height: 1.5;
+      }
+    }
+  }
 }
 </style>
 
