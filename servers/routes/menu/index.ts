@@ -461,7 +461,7 @@ export const accessMenuData = [
 ]
 
 export default eventHandler((event) => {
-  const token = getHeader(event, 'train_token')
+  const token = getHeader(event, 'token')
   // eslint-disable-next-line node/prefer-global/buffer
   const username = Buffer.from(token as any, 'base64').toString('utf-8')
   return {

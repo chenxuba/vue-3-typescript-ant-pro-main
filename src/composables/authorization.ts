@@ -1,7 +1,7 @@
 // Cookie key for storing token
-export const STORAGE_AUTHORIZE_KEY = 'train_token'
+export const STORAGE_AUTHORIZE_KEY = 'token'
 // HTTP request header name
-export const AUTH_HEADER_KEY = 'train_token'
+export const AUTH_HEADER_KEY = 'token'
 
 // Cookie 操作工具函数
 function getCookie(name: string): string | null {

@@ -9,7 +9,7 @@ import 'node:crypto';
 import 'node:url';
 
 const info = eventHandler((event) => {
-  const token = getHeader(event, "train_token");
+  const token = getHeader(event, "token");
   if (!token) {
     return {
       code: 401,

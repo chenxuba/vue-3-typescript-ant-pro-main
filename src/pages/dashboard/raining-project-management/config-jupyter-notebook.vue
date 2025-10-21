@@ -350,7 +350,7 @@ const handleBack = () => {
 // 下一步
 const handleNext = async () => {
   if (currentStep.value === 0) {
-    try {
+    try { 
       await Promise.all([
         formRef.value?.validate(),
         trainingScopeFormRef.value?.validate()

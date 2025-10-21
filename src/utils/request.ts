@@ -1,12 +1,13 @@
 import type { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
+import { Modal } from 'ant-design-vue'
 import { AxiosLoading } from './loading'
 import { AUTH_HEADER_KEY, useAuthorization } from '~/composables/authorization'
 import { ContentTypeEnum, RequestEnum } from '~#/http-enum'
-import router from '~/router'
 
 export interface ResponseBody<T = any> {
-  code: number
+  code?: number
+  result?: number
   data?: T
   msg: string
 }
@@ -47,7 +48,28 @@ async function requestHandler(config: InternalAxiosRequestConfig & RequestConfig
 }
 
 function responseHandler(response: any): ResponseBody<any> | AxiosResponse<any> | Promise<any> | any {
-  return response.data
+  const responseData = response.data
+  const token = useAuthorization()
+  
+  // 检查响应体中的 result 或 code 字段是否为 401
+  if (responseData && (responseData.result === 401 || responseData.code === 401)) {
+    // 清空token
+    token.value = null
+    // 显示确认对话框
+    Modal.confirm({
+      title: '登录失效',
+      content: responseData.msg || '无token，请重新登录',
+      okText: '确认',
+      okCancel: false,
+      onOk() {
+        // 跳转到外部登录页
+        window.location.href = 'http://101.200.13.193/web/#/'
+      },
+    })
+    return Promise.reject(new Error(responseData.msg || '登录失效'))
+  }
+  
+  return responseData
 }
 
 function errorHandler(error: AxiosError): Promise<any> {
@@ -57,23 +79,21 @@ function errorHandler(error: AxiosError): Promise<any> {
   if (error.response) {
     const { data, status, statusText } = error.response as AxiosResponse<ResponseBody>
     if (status === 401) {
-      notification?.error({
-        message: '401',
-        description: data?.msg || statusText,
-        duration: 3,
-      })
       /**
        * 这里处理清空用户信息和token的逻辑，后续扩展
        */
       token.value = null
-      router
-        .push({
-          path: '/login',
-          query: {
-            redirect: router.currentRoute.value.fullPath,
-          },
-        })
-        .then(() => {})
+      // 显示确认对话框
+      Modal.confirm({
+        title: '登录失效',
+        content: data?.msg || '无token，请重新登录',
+        okText: '确认',
+        okCancel: false,
+        onOk() {
+          // 跳转到外部登录页
+          window.location.href = 'http://101.200.13.193/web/#/'
+        },
+      })
     }
     else if (status === 403) {
       notification?.error({
