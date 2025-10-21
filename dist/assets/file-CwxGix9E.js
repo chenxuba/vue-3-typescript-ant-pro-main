@@ -1,0 +1,1 @@
+import{s as o}from"./index-DMa2UkPf.js";async function n(e){const t=new FormData;t.append("file",e);const a=await o("/admin/api/file/upload",t,{customDev:!0,headers:{"Content-Type":"multipart/form-data"}});if(a&&a.data)return a.data.fileUrl;throw new Error("文件上传失败")}export{n as u};

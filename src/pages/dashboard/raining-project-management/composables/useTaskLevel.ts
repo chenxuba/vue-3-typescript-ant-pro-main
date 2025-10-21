@@ -289,6 +289,21 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       // 加载评测设置数据
       if (level.evaluationSettings) {
         evaluationFormData.value = { ...level.evaluationSettings }
+        
+        // 同步文件列表到上传组件
+        // 学员任务文件
+        if (level.evaluationSettings.userFiles && Array.isArray(level.evaluationSettings.userFiles)) {
+          userFileList.value = level.evaluationSettings.userFiles
+        } else {
+          userFileList.value = []
+        }
+        
+        // 评测执行文件
+        if (level.evaluationSettings.testValidateFiles && Array.isArray(level.evaluationSettings.testValidateFiles)) {
+          testValidateFileList.value = level.evaluationSettings.testValidateFiles
+        } else {
+          testValidateFileList.value = []
+        }
       } else {
         // 重置为默认值
         evaluationFormData.value = {
