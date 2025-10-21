@@ -286,22 +286,15 @@ const fetchProjectTaskList = async () => {
   
   try {
     const response = await getProjectTaskListApi({ projectId: projectId.value })
-    console.log('=== /admin/api/projectTask/getList 接口返回数据 ===')
-    console.log('完整响应:', response)
     
     // 兼容不同的返回格式
     let list: any[] = []
-    let environments: any[] = []
     
     if (Array.isArray(response)) {
       list = response
     } else if (response && typeof response === 'object') {
-      list = (response as any).list || (response as any).data || []
-      environments = (response as any).environments || (response as any).environment || []
+      list = (response as any).list || (response as any).data || (response as any).tasks || []
     }
-    
-    console.log('解析后的任务关卡列表:', list)
-    console.log('解析后的实验环境列表:', environments)
     
     // 将获取的任务关卡数据转换为 taskLevels 格式
     if (list && list.length > 0) {
@@ -387,50 +380,36 @@ const fetchProjectTaskList = async () => {
       }
     }
     
-    // 初始化实验环境数据
+    // 初始化实验环境数据 - 从任务关卡中提取（通过 envIsDel 字段判断）
     let envData: any[] = []
     
-    if (environments && environments.length > 0) {
-      envData = environments
-      console.log('从响应根级别获取到实验环境数据')
-    } else if (list && list.length > 0) {
-      console.log('尝试从任务关卡中收集实验环境数据')
-      const allEnvs: any[] = []
-      const envMap = new Map()
-      
-      list.forEach((task: any) => {
-        if (task.environment) {
-          if (Array.isArray(task.environment)) {
-            task.environment.forEach((env: any) => {
-              const envKey = env.id || env.title || JSON.stringify(env)
-              if (!envMap.has(envKey)) {
-                envMap.set(envKey, env)
-                allEnvs.push(env)
-              }
-            })
-          } else if (typeof task.environment === 'object') {
-            const envKey = task.environment.id || task.environment.title || JSON.stringify(task.environment)
-            if (!envMap.has(envKey)) {
-              envMap.set(envKey, task.environment)
-              allEnvs.push(task.environment)
-            }
+    if (list && list.length > 0) {
+      list.forEach((task: any, index: number) => {
+        // envIsDel 为 0 或者不存在该字段，表示实验环境未删除
+        if (task.envIsDel === 0 || task.envIsDel === undefined || task.envIsDel === null) {
+          // 从任务中提取实验环境配置
+          const envConfig = {
+            id: task.id || task.taskId,
+            title: task.title || task.name || `实验环境${index + 1}`,
+            dockerImage: task.dockerImage,
+            viewTypes: task.viewTypes,
+            secondType: task.secondType,
+            taskId: task.taskId,
+            codeType: task.codeType,
+            shellBegin: task.shellBegin,
+            containerPort: task.containerPort,
+            containerPath: task.containerPath,
+            envIsDel: task.envIsDel,
           }
+          
+          envData.push(envConfig)
         }
       })
-      
-      if (allEnvs.length > 0) {
-        envData = allEnvs
-        console.log('从任务关卡收集到实验环境数据，共', allEnvs.length, '个')
-      }
     }
-    
-    console.log('最终准备解析的实验环境数据:', envData)
     
     // 解析实验环境数据
     if (envData.length > 0) {
       experimentEnvironments.value = envData.map((env: any, index: number) => {
-        console.log(`解析实验环境 ${index + 1}:`, env)
-        
         // 解析 viewTypes (可能是字符串或数组)
         let viewTypesArray: number[] = []
         if (env.viewTypes) {
@@ -443,7 +422,7 @@ const fetchProjectTaskList = async () => {
           }
         }
         
-        const parsedEnv = {
+        return {
           id: String(env.id || Date.now() + index),
           name: env.title || env.name || `实验环境${index + 1}`,
           isEditing: false,
@@ -451,7 +430,7 @@ const fetchProjectTaskList = async () => {
           config: {
             dockerImage: Number(env.dockerImage) || selectedEnvironment.value || 1,
             viewTypes: viewTypesArray,
-            secondType: env.secondType ? String(env.secondType) : undefined,
+            secondType: env.secondType ? (env.secondType) : undefined,
             taskId: env.taskId ? String(env.taskId) : undefined,
             codeType: env.codeType ? String(env.codeType) : undefined,
             shellBegin: env.shellBegin ? String(env.shellBegin) : undefined,
@@ -459,21 +438,15 @@ const fetchProjectTaskList = async () => {
             containerPath: env.containerPath ? String(env.containerPath) : undefined,
           }
         }
-        
-        console.log(`实验环境 ${index + 1} 解析结果:`, parsedEnv)
-        return parsedEnv
       })
       
       if (experimentEnvironments.value.length > 0) {
         activeEnvironmentKey.value = experimentEnvironments.value[0].id
       }
-      console.log('实验环境初始化完成，共', experimentEnvironments.value.length, '个')
     } else {
-      console.log('未找到实验环境数据，初始化默认环境')
       initializeExperimentEnvironments()
     }
   } catch (error: any) {
-    console.error('获取任务关卡列表失败：', error)
     message.warning(error.message || '获取任务关卡列表失败')
     initializeExperimentEnvironments()
   }
@@ -490,8 +463,6 @@ const fetchProjectDetail = async () => {
   try {
     loading.value = true
     const detail = await getProjectDetailApi({ id: projectId.value })
-    
-    console.log('项目详情:', detail)
     
     // 回填基本信息表单数据
     formData.value = {
@@ -619,7 +590,6 @@ const fetchRepositoryFiles = async () => {
     // 模拟请求延迟
     await new Promise(resolve => setTimeout(resolve, 1000))
     message.success('仓库文件查询成功')
-    console.log('模拟请求仓库地址：', formData.value.gitUrl)
   } catch (error) {
     message.error('仓库文件查询失败')
   }
@@ -789,7 +759,6 @@ const handleNext = async () => {
         formRef.value?.validate(),
         trainingScopeFormRef.value?.validate()
       ])
-      console.log('表单数据：', formData.value)
       currentStep.value = 1
       scrollToTop()
     } catch (error) {
@@ -821,31 +790,6 @@ const handleNext = async () => {
     if (hasUnsavedLevel) {
       message.error('请先保存所有任务关卡后再进行下一步')
       return
-    }
-    
-    // 编辑页面：可选验证（只提示，不阻止）
-    // 检查选择题任务是否有题目
-    const choiceLevelWithoutQuestions = taskLevels.value.filter(level =>
-      level.type === 'choice' &&
-      level.taskId &&
-      (!level.questions || level.questions.length === 0)
-    )
-    if (choiceLevelWithoutQuestions.length > 0) {
-      console.warn('存在未添加题目的选择题任务:', choiceLevelWithoutQuestions.map(l => l.name))
-    }
-    
-    // 检查编程任务是否配置了评测设置
-    const programmingLevelWithoutEvaluation = taskLevels.value.filter(level => {
-      if (level.type !== 'programming' || !level.taskId || !level.evaluationSettings) {
-        return false
-      }
-      if (level.evaluationSettings.testValidateType === 1) {
-        return !level.evaluationSettings.testContent || level.evaluationSettings.testContent.length === 0
-      }
-      return false
-    })
-    if (programmingLevelWithoutEvaluation.length > 0) {
-      console.warn('存在未配置完整评测设置的编程任务:', programmingLevelWithoutEvaluation.map(l => l.name))
     }
     
     currentStep.value = 3
@@ -890,8 +834,6 @@ const handleUpdateProject = async (isComplete: boolean = false) => {
       submitData.repositoryType = formData.value.repositoryType
       submitData.gitUrl = formData.value.gitUrl
     }
-
-    console.log('更新项目数据：', submitData)
 
     await updateProjectApi(submitData)
     
@@ -963,8 +905,6 @@ const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0)
       projectId: projectId.value,
       envisDel: envisDel,
     }
-
-    console.log('保存实验环境数据：', updateData)
 
     await updateProjectEnvironmentApi(updateData)
 
@@ -1177,11 +1117,9 @@ const handleDrop = async (e: DragEvent, dropIndex: number) => {
     updateQuestionsOrder(questions)
 
     try {
-      console.log('开始保存题目排序...')
       await saveQuestionsOrder(questions)
       message.success('题目顺序已更新')
     } catch (error: any) {
-      console.error('保存题目排序失败:', error)
       message.error(error.message || '保存题目排序失败，请重试')
     }
   }
