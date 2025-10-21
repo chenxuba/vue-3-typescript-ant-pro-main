@@ -19,7 +19,15 @@ const formRef = ref()
 const projectType = ref(1)
 
 // 新建项目表单
-const createForm = ref({
+const createForm = ref<{
+  name: string
+  description: string
+  difficulty: number | undefined
+  environment: string | undefined
+  secondType: number | undefined
+  classHour: string
+  showTaskRequire: boolean
+}>({
   name: '',
   description: '',
   difficulty: undefined,
@@ -94,7 +102,6 @@ const loadEnvironmentOptions = async (type: number) => {
       environmentOptionsMap.value[type] = data.list
     }
   } catch (error) {
-    console.error('加载实验环境选项失败：', error)
     message.error('加载实验环境选项失败')
   } finally {
     loadingEnvironment.value = false
@@ -129,7 +136,6 @@ const handleNext = async () => {
   try {
     await formRef.value?.validate()
   } catch (error) {
-    console.log('表单验证失败', error)
     return
   }
   
@@ -158,11 +164,6 @@ const handleNext = async () => {
     message.error('请选择小类别')
     return
   }
-  
-  console.log('下一步', {
-    projectType: projectType.value,
-    ...createForm.value,
-  })
   
   // 准备传递给下一个页面的数据
   const routeData = {

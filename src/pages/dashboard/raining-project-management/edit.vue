@@ -32,7 +32,7 @@ const editForm = ref<{
   name: string
   description: string
   difficulty: number | undefined
-  environment: number | undefined
+  environment: string | undefined
   secondType: number | undefined
   classHour: string
   showTaskRequire: boolean
@@ -85,10 +85,11 @@ const environmentOptionsMap = ref<Record<number, DictionaryItem[]>>({
 // 获取实验环境选项（根据项目类型不同而不同）
 const getEnvironmentOptions = () => {
   const options = environmentOptionsMap.value[projectType.value] || []
-  return options.map(item => ({
+  const result = options.map(item => ({
     label: item.name,
     value: item.value,
   }))
+  return result
 }
 
 // 加载实验环境字典数据
@@ -108,7 +109,6 @@ const loadEnvironmentOptions = async (type: number) => {
       environmentOptionsMap.value[type] = data.list
     }
   } catch (error) {
-    console.error('加载实验环境选项失败：', error)
     message.error('加载实验环境选项失败')
   } finally {
     loadingEnvironment.value = false
@@ -139,25 +139,24 @@ const fetchProjectDetail = async () => {
     loading.value = true
     const detail = await getProjectDetailApi({ id: projectId.value })
     
-    // 回填表单数据
+    // 先设置项目类型并加载字典选项
+    if (detail.projectType) {
+      projectType.value = detail.projectType
+      // 先加载对应的环境选项，再回填表单数据
+      await loadEnvironmentOptions(detail.projectType)
+    }
+    
+    // 回填表单数据（必须在字典数据加载完成后）
     editForm.value = {
       name: detail.name || '',
       description: detail.description || '',
       difficulty: detail.difficulty || undefined,
       environment: detail.environment || undefined,
       secondType: detail.secondType || undefined,
-      classHour: detail.classHour || '',
+      classHour: detail.classHour ? String(detail.classHour) : '',
       showTaskRequire: detail.showTaskRequire === 1,
     }
-    
-    // 设置项目类型
-    if (detail.projectType) {
-      projectType.value = detail.projectType
-      // 加载对应的环境选项
-      await loadEnvironmentOptions(detail.projectType)
-    }
   } catch (error: any) {
-    console.error('获取项目详情失败：', error)
     message.error(error.message || '获取项目详情失败')
     router.back()
   } finally {
@@ -176,7 +175,6 @@ const handleNext = async () => {
   try {
     await formRef.value?.validate()
   } catch (error) {
-    console.log('表单验证失败', error)
     return
   }
   
@@ -247,7 +245,7 @@ const getProjectTypeName = computed(() => {
 const getEnvironmentName = computed(() => {
   if (!editForm.value.environment) return ''
   const items = environmentOptionsMap.value[projectType.value] || []
-  const item = items.find(opt => Number(opt.value) === editForm.value.environment)
+  const item = items.find(opt => opt.value === editForm.value.environment)
   return item?.name || ''
 })
 
