@@ -420,7 +420,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         
         // 只在更新时验证测试集的输入内容和期望输出不能为空
         if (taskLevelFormData.value.taskId && evaluationFormData.value.testContent.length > 0) {
-          const emptyTestCase = evaluationFormData.value.testContent.find(tc => !tc.args.trim() || !tc.answer.trim())
+          const emptyTestCase = evaluationFormData.value.testContent.find(tc => !tc.arg.trim() || !tc.answer.trim())
           if (emptyTestCase) {
             message.error('测试集的输入内容和期望输出不能为空')
             return
@@ -437,7 +437,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       if (isProgrammingTask.value) {
         // 将测试集数据转换为符合后端格式的数组
         const testContentArray = evaluationFormData.value.testContent.map(tc => ({
-          args: tc.args,
+          arg: tc.arg,
           answer: tc.answer,
           select: tc.select,
         }))
@@ -622,7 +622,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
   const addTestCase = () => {
     evaluationFormData.value.testContent.push({
       id: Date.now().toString(),
-      args: '',
+      arg: '',
       answer: '',
       select: 1,
     })

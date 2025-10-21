@@ -242,7 +242,7 @@ interface EvaluationData {
 
 interface TestSet {
   id: number
-  args: string
+  arg: string
   answer: string
   select: number
 }
@@ -280,7 +280,7 @@ let testSetIdCounter = 1
 const addTestSet = () => {
   evaluationData.value.testSets.push({
     id: testSetIdCounter++,
-    args: '',
+    arg: '',
     answer: '',
     select: 1,
   })
@@ -496,7 +496,7 @@ const fetchProjectTaskList = async () => {
             const testContent = JSON.parse(task.testContent)
             evaluationData.value.testSets = testContent.map((item: any, index: number) => ({
               id: index + 1,
-              args: item.args || '',
+              arg: item.arg || '',
               answer: item.answer || '',
               select: item.select || 1,
             }))
@@ -509,8 +509,8 @@ const fetchProjectTaskList = async () => {
         // 如果没有测试集，添加默认的两个
         if (evaluationData.value.testSets.length === 0) {
           evaluationData.value.testSets = [
-            { id: 1, args: '', answer: '', select: 1 },
-            { id: 2, args: '', answer: '', select: 1 },
+            { id: 1, arg: '', answer: '', select: 1 },
+            { id: 2, arg: '', answer: '', select: 1 },
           ]
           testSetIdCounter = 3
         }
@@ -920,7 +920,7 @@ const handleSaveEvaluation = async () => {
       
       for (let i = 0; i < selectedTestSets.length; i++) {
         const testSet = selectedTestSets[i]
-        if (!testSet.args || testSet.args.trim() === '') {
+        if (!testSet.arg || testSet.arg.trim() === '') {
           message.error(`测试集${i + 1}的输入内容不能为空`)
           return
         }
@@ -932,7 +932,7 @@ const handleSaveEvaluation = async () => {
     }
     
     const testContentArray = evaluationData.value.testSets.map(item => ({
-      args: item.args,
+      arg: item.arg,
       answer: item.answer,
       select: item.select,
     }))
@@ -1404,7 +1404,7 @@ onMounted(async () => {
                       />
                       <span class="test-set-label">测试集{{ index + 1 }}</span>
                       <a-input 
-                        v-model:value="testSet.args" 
+                        v-model:value="testSet.arg" 
                         placeholder="请输入输入内容"
                         class="test-set-input"
                       />

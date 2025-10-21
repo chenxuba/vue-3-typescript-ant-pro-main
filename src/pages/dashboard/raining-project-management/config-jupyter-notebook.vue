@@ -53,7 +53,7 @@ interface EvaluationData {
 
 interface TestSet {
   id: number
-  args: string
+  arg: string
   answer: string
   select: number
 }
@@ -65,8 +65,8 @@ const evaluationData = ref<EvaluationData>({
   scoreRule: 1, // 默认通过全部测试集
   evaluationSetting: '通过所有代码块评测',
   testSets: [
-    { id: 1, args: '', answer: '', select: 1 },
-    { id: 2, args: '', answer: '', select: 1 },
+    { id: 1, arg: '', answer: '', select: 1 },
+    { id: 2, arg: '', answer: '', select: 1 },
   ],
 })
 
@@ -94,7 +94,7 @@ let testSetIdCounter = 3
 const addTestSet = () => {
   evaluationData.value.testSets.push({
     id: testSetIdCounter++,
-    args: '',
+    arg: '',
     answer: '',
     select: 1,
   })
@@ -580,7 +580,7 @@ const handleSaveEvaluation = async () => {
       // 校验选中的测试集是否填写了输入内容和期望输出
       for (let i = 0; i < selectedTestSets.length; i++) {
         const testSet = selectedTestSets[i]
-        if (!testSet.args || testSet.args.trim() === '') {
+        if (!testSet.arg || testSet.arg.trim() === '') {
           message.error(`测试集${i + 1}的输入内容不能为空`)
           return
         }
@@ -594,7 +594,7 @@ const handleSaveEvaluation = async () => {
     // 准备测试集数据（转换为与 config-full-stack.vue 一致的格式）
     // 注意：需要传递所有测试集，包括未选中的（select=2），不包含id字段
     const testContentArray = evaluationData.value.testSets.map(item => ({
-      args: item.args,
+      arg: item.arg,
       answer: item.answer,
       select: item.select, // 1=选中, 2=未选中
     }))
@@ -1085,7 +1085,7 @@ const handleCoverUpload = async (file: File) => {
                     />
                     <span class="test-set-label">测试集{{ index + 1 }}</span>
                     <a-input 
-                      v-model:value="testSet.args" 
+                      v-model:value="testSet.arg" 
                       placeholder="请输入输入内容"
                       class="test-set-input"
                     />

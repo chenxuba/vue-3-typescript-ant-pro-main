@@ -98,7 +98,7 @@ export interface TaskLevelForm {
 // 测试集
 export interface TestCase {
   id: string
-  args: string  // 输入内容
+  arg: string  // 输入内容
   answer: string  // 期望输出
   select: number  // 1选中 2未选中
 }
