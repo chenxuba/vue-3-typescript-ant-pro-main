@@ -93,16 +93,16 @@ export default [
           hideInMenu: true,
         },
       },
-      // {
-      //   path: '/dashboard/raining-project-management/edit-jupyter-notebook',
-      //   name: 'EditJupyterNotebook',
-      //   component: () => import('~/pages/dashboard/raining-project-management/edit-jupyter-notebook.vue'),
-      //   meta: {
-      //     title: '编辑JupyterNotebook环境实训项目',
-      //     parentKeys:['/dashboard'],
-      //     hideInMenu: true,
-      //   },
-      // },
+      {
+        path: '/dashboard/raining-project-management/edit-jupyter-notebook',
+        name: 'EditJupyterNotebook',
+        component: () => import('~/pages/dashboard/raining-project-management/edit-jupyter-notebook.vue'),
+        meta: {
+          title: '编辑JupyterNotebook环境实训项目',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
+        },
+      },
       // {
       //   path: '/dashboard/raining-project-management/edit-jupyter-lab',
       //   name: 'EditJupyterLab',
