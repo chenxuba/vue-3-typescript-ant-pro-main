@@ -356,19 +356,19 @@ const handleTestValidateFilesUpload = async (info: any) => {
 
 // 实验环境列表
 const environmentList = [
-  { id: '1', name: 'Python3/JupyterLab', value: 'Python3/JupyterLab' },
-  { id: '2', name: 'R4.2/Jupyterlab', value: 'R4.2/Jupyterlab' },
-  { id: '3', name: 'Python3-tensorflow2.6/JupyterLab', value: 'Python3-tensorflow2.6/JupyterLab' },
-  { id: '4', name: 'Python3.7/Jupyterlab', value: 'Python3.7/Jupyterlab' },
-  { id: '5', name: 'Python3.7-TensorFlow1.13/JupyterLab', value: 'Python3.7-TensorFlow1.13/JupyterLab' },
-  { id: '6', name: 'Python3.8/JupyterLab', value: 'Python3.8/JupyterLab' },
-  { id: '7', name: 'Python3.10/Jupyterlab', value: 'Python3.10/Jupyterlab' },
-  { id: '8', name: 'Python3.11/JupyterLab', value: 'Python3.11/JupyterLab' },
-  { id: '9', name: 'Python3.10-ultralytics/JupyterLab', value: 'Python3.10-ultralytics/JupyterLab' },
+  { id: '1', name: 'Python3/JupyterLab', value: '1' },
+  { id: '2', name: 'R4.2/Jupyterlab', value: '2' },
+  { id: '3', name: 'Python3-tensorflow2.6/JupyterLab', value: '3' },
+  { id: '4', name: 'Python3.7/Jupyterlab', value: '4' },
+  { id: '5', name: 'Python3.7-TensorFlow1.13/JupyterLab', value: '5' },
+  { id: '6', name: 'Python3.8/JupyterLab', value: '6' },
+  { id: '7', name: 'Python3.10/Jupyterlab', value: '7' },
+  { id: '8', name: 'Python3.11/JupyterLab', value: '8' },
+  { id: '9', name: 'Python3.10-ultralytics/JupyterLab', value: '9' },
 ]
 
 // 选中的实验环境
-const selectedEnvironment = ref('Python3/JupyterLab')
+const selectedEnvironment = ref('1')
 
 // 环境搜索关键词
 const environmentSearchKeyword = ref('')
@@ -1519,9 +1519,9 @@ onMounted(async () => {
                       v-model:value="environmentConfig.secondType"
                       placeholder="请选择附带环境"
                     >
-                      <a-select-option value="Bwapp">Bwapp</a-select-option>
-                      <a-select-option value="Css">Css</a-select-option>
-                      <a-select-option value="DataTurks">DataTurks</a-select-option>
+                      <a-select-option :value="1">Bwapp</a-select-option>
+                      <a-select-option :value="2">Css</a-select-option>
+                      <a-select-option :value="3">DataTurks</a-select-option>
                     </a-select>
                   </a-form-item>
 
