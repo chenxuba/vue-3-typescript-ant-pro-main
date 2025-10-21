@@ -419,7 +419,7 @@ const fetchProjectTaskList = async () => {
 }
 
 // 监听步骤变化
-watch(currentStep, async (newStep, oldStep) => {
+watch(currentStep, async (newStep) => {
   // 当进入第二步，且已有任务ID时，获取Pod配置
   if (newStep === 1 && taskId.value) {
     await fetchPodConfig()
