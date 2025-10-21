@@ -670,3 +670,78 @@ export async function stopPodApi(params: StopPodParams): Promise<StopPodResponse
   throw new Error('停止Pod失败')
 }
 
+/**
+ * 获取项目用户列表的请求参数
+ */
+export interface GetProjectUserListParams {
+  createTime?: number
+  currentTask?: number
+  id?: number
+  joinTime?: number
+  limit: number
+  orderbyFiled?: string // 排序字段，如 "name:desc,github:asc"
+  page: number
+  projectId?: number
+  startNum?: number
+  updateTime?: number
+  userId?: number
+}
+
+/**
+ * 项目用户列表项数据结构
+ */
+export interface ProjectUserListItem {
+  createTime: number
+  currentTask: number
+  id: number
+  joinTime: number
+  projectId: number
+  updateTime: number
+  userId: number
+}
+
+/**
+ * 获取项目用户列表的响应数据
+ */
+export interface GetProjectUserListResponse {
+  result: number
+  msg: string
+  data: {
+    count: number
+    cursor: number
+    hasMore: number
+    limit: number
+    list: ProjectUserListItem[]
+    page: number
+    total: number
+    totalPage: number
+  }
+  ext: Record<string, any>
+}
+
+/**
+ * 获取项目用户列表（分页）- 参训整体情况
+ * @param params 查询参数
+ * @returns 返回项目用户列表数据
+ */
+export async function getProjectUserListPagerApi(params: GetProjectUserListParams): Promise<GetProjectUserListResponse['data']> {
+  const response = await usePost<GetProjectUserListResponse['data']>('/admin/api/projectUser/getListPager', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  return {
+    count: 0,
+    cursor: 0,
+    hasMore: 0,
+    limit: params.limit || 20,
+    list: [],
+    page: params.page || 1,
+    total: 0,
+    totalPage: 0,
+  }
+}
+

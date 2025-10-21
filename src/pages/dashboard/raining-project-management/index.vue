@@ -190,8 +190,8 @@ const handleStatistics = (record: any) => {
   router.push({
     path: '/dashboard/raining-project-management/statistics',
     query: {
-      id: record.key,
-      name: record.projectName,
+      id: record.id,
+      name: record.name,
     },
   })
 }
@@ -315,14 +315,22 @@ const handleDelete = (record: any) => {
         </div>
       </div>
 
-      <a-table :columns="columns" :data-source="dataSource" :loading="loading" :pagination="{
-        current: pagination.current,
-        pageSize: pagination.pageSize,
-        total: pagination.total,
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (total) => `共 ${total} 条`,
-      }" @change="handleTableChange" bordered>
+      <a-table 
+        :columns="columns" 
+        :data-source="dataSource" 
+        :loading="loading" 
+        :row-key="(record) => record.id"
+        :pagination="{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }" 
+        @change="handleTableChange" 
+        bordered
+      >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'projectName'">
             {{ record.name }}

@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { message } from 'ant-design-vue'
+import { 
+  getProjectUserListPagerApi, 
+  type GetProjectUserListParams,
+  type ProjectUserListItem
+} from '@/api/project'
 
 defineOptions({
   name: 'ProjectStatistics',
@@ -276,16 +282,76 @@ const taskData = ref([
 // 分页配置
 const pagination = ref({
   current: 1,
-  pageSize: 10,
-  total: 123,
+  pageSize: 20,
+  total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `数据共 ${total} 条`,
 })
 
+// 加载状态
+const loading = ref(false)
+
+// 获取项目ID（从路由参数）
+const projectId = ref(Number(route.query.id) || 0)
+
+// 格式化时间戳
+const formatTimestamp = (timestamp: number) => {
+  if (!timestamp) return '-'
+  
+  // 如果是秒级时间戳（小于10000000000），转换为毫秒
+  const time = timestamp < 10000000000 ? timestamp * 1000 : timestamp
+  const date = new Date(time)
+  
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+// 获取参训整体情况数据
+const fetchParticipationData = async () => {
+  loading.value = true
+  try {
+    const params: GetProjectUserListParams = {
+      limit: pagination.value.pageSize,
+      page: pagination.value.current,
+      projectId: projectId.value,
+    }
+
+    const response = await getProjectUserListPagerApi(params)
+    
+    if (response && response.list) {
+      // 将接口返回的数据转换为表格需要的格式
+      participationData.value = response.list.map((item: ProjectUserListItem) => ({
+        key: String(item.id),
+        userNumber: `user${item.userId}`, // 可根据实际需要调整
+        userName: `用户${item.userId}`, // 可根据实际需要调整
+        unit: '中国科学院计算机网络信息中心', // 可根据实际需要调整
+        trainingTime: formatTimestamp(item.joinTime),
+        trainingStatus: `${item.currentTask} / 5`, // 可根据实际需要调整
+        statusType: item.currentTask >= 5 ? 'completed' : 'inProgress',
+      }))
+      
+      pagination.value.total = response.total
+    }
+  } catch (error) {
+    console.error('获取参训数据失败:', error)
+    message.error('获取参训数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 查询
 const handleSearch = () => {
   console.log('查询', filterForm.value)
+  pagination.value.current = 1
+  fetchParticipationData()
 }
 
 // 重置
@@ -307,6 +373,18 @@ const handleExport = () => {
 const handleBack = () => {
   router.back()
 }
+
+// 处理分页变化
+const handleTableChange = (pag: any) => {
+  pagination.value.current = pag.current
+  pagination.value.pageSize = pag.pageSize
+  fetchParticipationData()
+}
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchParticipationData()
+})
 </script>
 
 <template>
@@ -372,7 +450,7 @@ const handleBack = () => {
             <div class="table-header">
               <div class="table-info">
                 数据列表
-                <span class="total-info">数据共 <span class="total-number">123</span> 条</span>
+                <span class="total-info">数据共 <span class="total-number">{{ pagination.total }}</span> 条</span>
               </div>
               <a-button type="primary" @click="handleExport">导出</a-button>
             </div>
@@ -381,7 +459,9 @@ const handleBack = () => {
               :columns="participationColumns" 
               :data-source="participationData"
               :pagination="pagination"
+              :loading="loading"
               :scroll="{ x: 1000 }"
+              @change="handleTableChange"
             >
               <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'userName'">
