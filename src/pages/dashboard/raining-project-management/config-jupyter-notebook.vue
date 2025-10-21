@@ -473,8 +473,8 @@ const fetchPodConfig = async () => {
     
     if (podData && podData.config && podData.config.url) {
       // 拼接完整的URL - 基础URL + config中的url
-      const baseUrl = 'http://101.200.13.193'
-      jupyterUrl.value = baseUrl + podData.config.url
+      // const baseUrl = 'http://101.200.13.193'
+      jupyterUrl.value = podData.config.url
       console.log('更新Jupyter URL为：', jupyterUrl.value)
       message.success('实验环境加载成功！')
     } else {

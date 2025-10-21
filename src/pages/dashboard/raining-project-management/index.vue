@@ -1,14 +1,61 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import { getProjectListPagerApi, updateProjectApi, deleteProjectApi, type ProjectListItem } from '@/api/project'
+import { getDicGroupApi, type DictionaryItem } from '@/api/common/dictionary'
 
 defineOptions({
   name: 'RainingProjectManagement',
 })
 
 const router = useRouter()
+
+// 环境字典数据
+const environmentDictList = ref<DictionaryItem[]>([])
+
+/**
+ * 获取环境字典数据
+ * 需要查询三个字典组：project#environment_1, project#environment_2, project#environment_3
+ */
+const fetchEnvironmentDict = async () => {
+  try {
+    const codes = ['project#environment_1', 'project#environment_2', 'project#environment_3']
+    
+    // 并行查询三个字典组
+    const results = await Promise.all(
+      codes.map(code => getDicGroupApi({ code }))
+    )
+    
+    // 合并所有字典项
+    const allDictItems: DictionaryItem[] = []
+    results.forEach(result => {
+      if (result && result.list) {
+        allDictItems.push(...result.list)
+      }
+    })
+    
+    environmentDictList.value = allDictItems
+  } catch (error) {
+    console.error('获取环境字典失败：', error)
+    environmentDictList.value = []
+  }
+}
+
+/**
+ * 获取环境名称
+ * @param envValue 环境值
+ * @returns 环境名称
+ */
+const getEnvironmentName = (envValue: number | string | undefined): string => {
+  if (!envValue && envValue !== 0) return '-'
+  
+  // 将 envValue 转为字符串进行匹配
+  const valueStr = String(envValue)
+  const item = environmentDictList.value.find(dict => dict.value === valueStr)
+  
+  return item ? item.name : '-'
+}
 
 // 筛选表单数据
 const searchForm = ref({
@@ -17,13 +64,13 @@ const searchForm = ref({
   organizer: undefined,
 })
 
-// 环境选项
-const environmentOptions = [
-  { label: '全栈环境', value: '全栈环境' },
-  { label: 'JupyterNotebook环境', value: 'JupyterNotebook环境' },
-  { label: 'JupyterLab环境', value: 'JupyterLab环境' },
-  { label: '其他', value: '其他' },
-]
+// 环境选项 - 从字典数据动态生成
+const environmentOptions = computed(() => {
+  return environmentDictList.value.map(item => ({
+    label: item.name,
+    value: item.value,
+  }))
+})
 
 // 主办单位选项
 const organizerOptions = [
@@ -127,8 +174,9 @@ const handleSearch = () => {
   fetchProjectList()
 }
 
-// 组件挂载时获取列表
+// 组件挂载时获取字典和列表
 onMounted(() => {
+  fetchEnvironmentDict() // 先获取字典数据
   fetchProjectList()
 })
 
@@ -276,10 +324,7 @@ const handleDelete = (record: any) => {
           </template>
           <!-- 实验环境 -->
           <template v-else-if="column.key === 'environment'">
-            {{ record.environment == 1 ? '全栈环境' :
-              record.environment == 2 ? 'Python3.6' :
-                record.environment == 3 ? 'Python3.13' :
-                  record.environment == 4 ? 'Python3.12/VNC' : '-' }}
+            {{ getEnvironmentName(record.environment) }}
           </template>
           <template v-else-if="column.key === 'skillTag'">
             {{ record.tag }}
