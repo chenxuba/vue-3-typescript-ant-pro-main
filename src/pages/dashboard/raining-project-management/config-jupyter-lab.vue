@@ -629,7 +629,7 @@ const handleCreateProject = async () => {
   try {
     // 准备提交的数据
     const submitData: any = {
-      projectType: 2, // JupyterLab环境实训项目
+      projectType: 3, // JupyterLab环境实训项目
       environment: formData.value.environment,
       name: formData.value.name,
       tag: formData.value.tag,

@@ -103,16 +103,16 @@ export default [
           hideInMenu: true,
         },
       },
-      // {
-      //   path: '/dashboard/raining-project-management/edit-jupyter-lab',
-      //   name: 'EditJupyterLab',
-      //   component: () => import('~/pages/dashboard/raining-project-management/edit-jupyter-lab.vue'),
-      //   meta: {
-      //     title: '编辑JupyterLab环境实训项目',
-      //     parentKeys:['/dashboard'],
-      //     hideInMenu: true,
-      //   },
-      // },
+      {
+        path: '/dashboard/raining-project-management/edit-jupyter-lab',
+        name: 'EditJupyterLab',
+        component: () => import('~/pages/dashboard/raining-project-management/edit-jupyter-lab.vue'),
+        meta: {
+          title: '编辑JupyterLab环境实训项目',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
+        },
+      },
       
     ],
   },
