@@ -228,7 +228,12 @@ const handlePublish = (record: any) => {
 
 // 编辑
 const handleEdit = (record: any) => {
-  console.log('编辑', record)
+  router.push({
+    path: '/dashboard/raining-project-management/edit',
+    query: {
+      id: record.id,
+    },
+  })
 }
 
 // 删除

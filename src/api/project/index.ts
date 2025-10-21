@@ -197,6 +197,39 @@ export async function updateProjectApi(params: UpdateProjectParams): Promise<Cre
 }
 
 /**
+ * 获取项目详情的请求参数
+ */
+export interface GetProjectDetailParams {
+  id: number // 项目ID
+}
+
+/**
+ * 获取项目详情的响应数据
+ */
+export interface GetProjectDetailResponse {
+  result: number
+  msg: string
+  data: ProjectListItem
+}
+
+/**
+ * 获取项目详情
+ * @param params 包含项目ID的参数
+ * @returns 返回项目详情数据
+ */
+export async function getProjectDetailApi(params: GetProjectDetailParams): Promise<ProjectListItem> {
+  const response = await usePost<ProjectListItem>('/admin/api/project/get', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  throw new Error('获取项目详情失败')
+}
+
+/**
  * 删除项目的请求参数
  */
 export interface DeleteProjectParams {

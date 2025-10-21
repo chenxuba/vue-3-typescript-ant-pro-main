@@ -34,6 +34,16 @@ export default [
         },
       },
       {
+        path: '/dashboard/raining-project-management/edit',
+        name: 'RainingProjectEdit',
+        component: () => import('~/pages/dashboard/raining-project-management/edit.vue'),
+        meta: {
+          title: '编辑实训项目',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
+        },
+      },
+      {
         path: '/dashboard/raining-project-management/config-full-stack',
         name: 'ConfigFullStack',
         component: () => import('~/pages/dashboard/raining-project-management/config-full-stack.vue'),
@@ -73,6 +83,36 @@ export default [
           hideInMenu: true,
         },
       },
+      {
+        path: '/dashboard/raining-project-management/edit-full-stack',
+        name: 'EditFullStack',
+        component: () => import('~/pages/dashboard/raining-project-management/edit-full-stack.vue'),
+        meta: {
+          title: '编辑全栈环境实训项目',
+          parentKeys:['/dashboard'],
+          hideInMenu: true,
+        },
+      },
+      // {
+      //   path: '/dashboard/raining-project-management/edit-jupyter-notebook',
+      //   name: 'EditJupyterNotebook',
+      //   component: () => import('~/pages/dashboard/raining-project-management/edit-jupyter-notebook.vue'),
+      //   meta: {
+      //     title: '编辑JupyterNotebook环境实训项目',
+      //     parentKeys:['/dashboard'],
+      //     hideInMenu: true,
+      //   },
+      // },
+      // {
+      //   path: '/dashboard/raining-project-management/edit-jupyter-lab',
+      //   name: 'EditJupyterLab',
+      //   component: () => import('~/pages/dashboard/raining-project-management/edit-jupyter-lab.vue'),
+      //   meta: {
+      //     title: '编辑JupyterLab环境实训项目',
+      //     parentKeys:['/dashboard'],
+      //     hideInMenu: true,
+      //   },
+      // },
       
     ],
   },
