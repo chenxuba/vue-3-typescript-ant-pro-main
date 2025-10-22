@@ -128,18 +128,18 @@ onBeforeUnmount(() => {
             </span>
           </div>
           <div class="login-lang flex-center relative z-11">
-            <span
+            <!-- 暗色主题切换按钮已被禁用 -->
+            <!-- <span
               class="flex-center cursor-pointer text-16px"
               @click="appStore.toggleTheme(layoutSetting.theme === 'dark' ? 'light' : 'dark')"
             >
-              <!-- 亮色和暗黑模式切换按钮 -->
               <template v-if="layoutSetting.theme === 'light'">
                 <carbon-moon />
               </template>
               <template v-else>
                 <carbon-sun />
               </template>
-            </span>
+            </span> -->
             <SelectLang />
           </div>
         </div>

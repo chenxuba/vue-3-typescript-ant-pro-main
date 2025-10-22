@@ -89,7 +89,7 @@ onUnmounted(() => {
     ref="tabsRef"
     :active-key="activeKey"
     :style="tabStyle"
-    class=" bg-white dark:bg-#242525 w-100% pro-ant-multi-tab"
+    class=" bg-white w-100% pro-ant-multi-tab"
     pt-10px
     type="card"
     size="small"

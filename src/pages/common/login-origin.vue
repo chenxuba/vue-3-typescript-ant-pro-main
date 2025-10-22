@@ -99,16 +99,16 @@ async function submit() {
 <template>
   <div class="login-container">
     <div class="login-lang" flex="~" items-center justify-end gap-2 px-24px>
-      <span flex items-center justify-center cursor-pointer text-16px @click="appStore.toggleTheme(layoutSetting.theme === 'dark' ? 'light' : 'dark')">
-        <!-- 亮色和暗黑模式切换按钮 -->
+      <!-- 暗色主题切换按钮已被禁用 -->
+      <!-- <span flex items-center justify-center cursor-pointer text-16px @click="appStore.toggleTheme(layoutSetting.theme === 'dark' ? 'light' : 'dark')">
         <template v-if="layoutSetting.theme === 'light'">
           <carbon-moon />
         </template>
         <template v-else>
           <carbon-sun />
         </template>
-        <SelectLang />
-      </span>
+      </span> -->
+      <SelectLang />
     </div>
     <div class="login-content">
       <div class="ant-pro-form-login-container">

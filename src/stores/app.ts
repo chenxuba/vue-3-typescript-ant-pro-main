@@ -101,19 +101,22 @@ export const useAppStore = defineStore('app', () => {
       themeConfig.token.colorPrimary = color
   }
 
-  // 监听isDark的变化
-  watch(
-    isDark,
-    () => {
-      if (isDark.value)
-        toggleTheme('dark')
-      else
-        toggleTheme('light')
-    },
-    {
-      immediate: true,
-    },
-  )
+  // 禁用暗色模式的自动监听，强制使用配置中的主题设置
+  // watch(
+  //   isDark,
+  //   () => {
+  //     if (isDark.value)
+  //       toggleTheme('dark')
+  //     else
+  //       toggleTheme('light')
+  //   },
+  //   {
+  //     immediate: true,
+  //   },
+  // )
+  
+  // 初始化时使用默认设置中的主题
+  toggleTheme(layoutSetting.theme)
 
   // 监听isDark的变化
   watch(preferredLanguages, () => {

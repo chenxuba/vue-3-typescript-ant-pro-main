@@ -151,13 +151,14 @@ const { token } = useAntdToken()
             :is-dark="props.theme === 'dark'"
             @click="changeTheme('inverted')"
           />
-          <BlockCheckbox
+          <!-- 暗色主题已被禁用 -->
+          <!-- <BlockCheckbox
             :t="t"
             :checked="props.theme === 'dark'"
             theme="dark"
             :is-dark="props.theme === 'dark'"
             @click="changeTheme('dark')"
-          />
+          /> -->
         </div>
       </Body>
       <Body :title="t?.('app.setting.themecolor') ?? '主题色'">
