@@ -68,7 +68,7 @@ const handleExpand = (expandedKeys: (string | number)[], info: any) => {
             <span class="tree-node-title">
               <span v-if="children !== undefined || isLeaf === false" class="folder-icon">📁</span>
               <span v-else class="file-icon">📄</span>
-              {{ title }}
+              <span class="tree-node-text" :title="title">{{ title }}</span>
             </span>
             <a-dropdown :trigger="['click']" placement="bottomRight">
               <template #overlay>
@@ -212,6 +212,14 @@ const handleExpand = (expandedKeys: (string | number)[], info: any) => {
           .file-icon {
             font-size: 14px;
             flex-shrink: 0;
+          }
+
+          .tree-node-text {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
         }
 

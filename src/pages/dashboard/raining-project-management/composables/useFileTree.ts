@@ -47,20 +47,32 @@ export function useFileTree() {
   }
 
   // 处理文件选择
-  const handleSelectFile = (_selectedKeys: any[], _e: any) => {
-    // 禁用文件预览功能
-    return
+  const handleSelectFile = (selectedKeys: any[], e: any) => {
+    if (selectedKeys.length === 0 || !e.node) return
+    
+    const node = e.node
+    
+    // 如果是文件夹，不处理
+    if (!node.isLeaf) return
+    
+    const key = selectedKeys[0]
+    const title = node.title
+    const fileUrl = node.dataRef?.fileUrl || node.fileUrl
+    
+    // 设置选中的文件（用于显示下载按钮）
+    selectedFile.value = {
+      key,
+      title,
+      content: '', // 不需要内容，只需要下载按钮
+      fileUrl: fileUrl || null
+    }
+    
+    console.log('选中文件:', { key, title, fileUrl })
   }
 
-  // 高亮后的代码
+  // 高亮后的代码（现在不再使用，保留接口兼容性）
   const highlightedCode = computed(() => {
-    if (!selectedFile.value) return ''
-    const language = getLanguageByFilename(selectedFile.value.title)
-    try {
-      return hljs.highlight(selectedFile.value.content, { language }).value
-    } catch (e) {
-      return hljs.highlightAuto(selectedFile.value.content).value
-    }
+    return ''
   })
 
   // 获取节点的完整路径
@@ -279,6 +291,7 @@ export function useFileTree() {
       const node: FileTreeNode = {
         title: item.fileName || 'untitled',
         key: key,
+        fileUrl: item.fileUrl || null, // 保存文件URL
       }
       
       // 保存节点路径映射

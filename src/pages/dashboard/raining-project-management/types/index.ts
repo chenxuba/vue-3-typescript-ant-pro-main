@@ -22,6 +22,7 @@ export interface FileTreeNode {
   key: string
   isLeaf?: boolean
   children?: FileTreeNode[]
+  fileUrl?: string | null // 文件URL路径
 }
 
 // 选中文件类型
@@ -29,6 +30,7 @@ export interface SelectedFile {
   key: string
   title: string
   content: string
+  fileUrl?: string | null // 文件下载URL
 }
 
 // 新建文件表单

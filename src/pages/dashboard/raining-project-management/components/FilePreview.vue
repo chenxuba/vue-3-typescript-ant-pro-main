@@ -6,7 +6,28 @@ interface Props {
   highlightedCode: string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+// 下载文件
+const handleDownload = () => {
+  if (!props.selectedFile?.fileUrl) {
+    return
+  }
+  
+  // 拼接完整的文件URL
+  const fullUrl = `http://101.200.13.193${props.selectedFile.fileUrl}`
+  
+  // 创建一个隐藏的a标签来触发下载
+  const link = document.createElement('a')
+  link.href = fullUrl
+  link.download = props.selectedFile.title // 使用文件名作为下载名称
+  link.target = '_blank'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  
+  console.log('下载文件:', fullUrl)
+}
 </script>
 
 <template>
@@ -17,7 +38,16 @@ defineProps<Props>()
         <span class="file-name">{{ selectedFile.title }}</span>
       </div>
       <div class="file-content">
-        <pre><code class="hljs" v-html="highlightedCode"></code></pre>
+        <div class="download-container">
+          <a-button 
+            type="primary" 
+            size="large"
+            :disabled="!selectedFile.fileUrl"
+            @click="handleDownload"
+          >
+            点击下载
+          </a-button>
+        </div>
       </div>
     </div>
     <div v-else class="empty-preview">
@@ -66,6 +96,15 @@ defineProps<Props>()
       overflow: auto;
       padding: 16px;
       background: #f6f8fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .download-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
       pre {
         margin: 0;
