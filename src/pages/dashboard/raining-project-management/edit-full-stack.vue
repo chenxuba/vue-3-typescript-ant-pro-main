@@ -1273,7 +1273,7 @@ onMounted(() => {
               </a-form-item>
 
               <a-form-item label="简介" name="description">
-                <RichTextEditor v-model="formData.description" />
+                <RichTextEditor v-model="formData.description" :height="400" />
               </a-form-item>
 
               <a-form-item label="任务要求" name="showTaskRequire">

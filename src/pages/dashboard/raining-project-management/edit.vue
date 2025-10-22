@@ -5,7 +5,7 @@ import { message } from 'ant-design-vue'
 import RichTextEditor from './components/RichTextEditor.vue'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 import type { DictionaryItem } from '@/api/common/dictionary'
-import { getProjectDetailApi } from '@/api/project'
+import { getProjectDetailApi, updateProjectApi } from '@/api/project'
 
 defineOptions({
   name: 'EditRainingProject',
@@ -23,9 +23,13 @@ const formRef = ref()
 // 加载状态
 const loading = ref(false)
 const loadingEnvironment = ref(false)
+const saving = ref(false)
 
 // 项目类型
 const projectType = ref(1)
+
+// 完整的项目详情数据（用于更新时合并）
+const projectDetail = ref<any>(null)
 
 // 编辑项目表单
 const editForm = ref<{
@@ -139,6 +143,9 @@ const fetchProjectDetail = async () => {
     loading.value = true
     const detail = await getProjectDetailApi({ id: projectId.value })
     
+    // 保存完整的项目详情
+    projectDetail.value = detail
+    
     // 先设置项目类型并加载字典选项
     if (detail.projectType) {
       projectType.value = detail.projectType
@@ -204,21 +211,57 @@ const handleNext = async () => {
     return
   }
   
-  // 根据项目类型跳转到不同的编辑页面
-  const routeMap: Record<number, string> = {
-    1: '/dashboard/raining-project-management/edit-full-stack', // 全栈环境
-    2: '/dashboard/raining-project-management/edit-jupyter-notebook', // JupyterNotebook环境
-    3: '/dashboard/raining-project-management/edit-jupyter-lab', // JupyterLab环境
+  // 保存修改的数据到后端
+  if (!projectId.value || !projectDetail.value) {
+    message.error('项目信息缺失')
+    return
   }
   
-  const targetRoute = routeMap[projectType.value]
-  if (targetRoute) {
-    router.push({
-      path: targetRoute,
-      query: { id: projectId.value },
-    })
-  } else {
-    message.error('未知的项目类型')
+  try {
+    saving.value = true
+    
+    // 合并原始项目数据和修改后的表单数据
+    const updateParams = {
+      id: projectId.value,
+      name: editForm.value.name,
+      tag: projectDetail.value.tag || '',
+      fieldType: editForm.value.secondType,
+      difficulty: editForm.value.difficulty,
+      classHour: editForm.value.classHour,
+      topCover: projectDetail.value.topCover || '',
+      cover: projectDetail.value.cover || '',
+      description: editForm.value.description,
+      showTaskRequire: editForm.value.showTaskRequire ? 1 : 2,
+      authType: projectDetail.value.authType || 1,
+      enableCodeRepository: projectDetail.value.enableCodeRepository || false,
+      repositoryType: projectDetail.value.repositoryType || '',
+      gitUrl: projectDetail.value.gitUrl || '',
+      environment: editForm.value.environment,
+    }
+    
+    await updateProjectApi(updateParams)
+    message.success('保存成功')
+    
+    // 根据项目类型跳转到不同的编辑页面
+    const routeMap: Record<number, string> = {
+      1: '/dashboard/raining-project-management/edit-full-stack', // 全栈环境
+      2: '/dashboard/raining-project-management/edit-jupyter-notebook', // JupyterNotebook环境
+      3: '/dashboard/raining-project-management/edit-jupyter-lab', // JupyterLab环境
+    }
+    
+    const targetRoute = routeMap[projectType.value]
+    if (targetRoute) {
+      router.push({
+        path: targetRoute,
+        query: { id: projectId.value },
+      })
+    } else {
+      message.error('未知的项目类型')
+    }
+  } catch (error: any) {
+    message.error(error.message || '保存失败')
+  } finally {
+    saving.value = false
   }
 }
 
@@ -369,7 +412,7 @@ onMounted(() => {
         <!-- 底部按钮 -->
         <div class="page-footer">
           <a-button @click="handleBack">返回</a-button>
-          <a-button type="primary" :loading="loading" @click="handleNext">下一步</a-button>
+          <a-button type="primary" :loading="saving" @click="handleNext">下一步</a-button>
         </div>
       </div>
     </a-spin>
