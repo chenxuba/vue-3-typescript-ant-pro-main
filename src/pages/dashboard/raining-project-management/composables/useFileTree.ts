@@ -6,52 +6,20 @@ import hljs from 'highlight.js/lib/core'
 import type { FileTreeNode, SelectedFile } from '../types'
 
 export function useFileTree() {
-  // 文件树数据
-  const fileTreeData = ref<FileTreeNode[]>([
-    {
-      title: 'src',
-      key: '0-0',
-      children: [
-        {
-          title: 'components',
-          key: '0-0-0',
-          children: [
-            { title: 'Header.vue', key: '0-0-0-0', isLeaf: true },
-            { title: 'Footer.vue', key: '0-0-0-1', isLeaf: true },
-          ],
-        },
-        {
-          title: 'views',
-          key: '0-0-1',
-          children: [
-            { title: 'Home.vue', key: '0-0-1-0', isLeaf: true },
-            { title: 'About.vue', key: '0-0-1-1', isLeaf: true },
-          ],
-        },
-        { title: 'App.vue', key: '0-0-2', isLeaf: true },
-        { title: 'main.ts', key: '0-0-3', isLeaf: true },
-      ],
-    },
-    {
-      title: 'public',
-      key: '0-1',
-      children: [
-        { title: 'index.html', key: '0-1-0', isLeaf: true },
-        { title: 'favicon.ico', key: '0-1-1', isLeaf: true },
-      ],
-    },
-    { title: 'package.json', key: '0-2', isLeaf: true },
-    { title: 'README.md', key: '0-3', isLeaf: true },
-  ])
+  // 文件树数据（初始为空，等待从仓库加载）
+  const fileTreeData = ref<FileTreeNode[]>([])
 
   // 展开的节点
-  const expandedKeys = ref<(string | number)[]>(['0-0', '0-0-0'])
+  const expandedKeys = ref<(string | number)[]>([])
 
   // 选中的文件
   const selectedFile = ref<SelectedFile | null>(null)
 
   // 动态文件内容存储
   const dynamicFileContents = ref<Record<string, string>>({})
+  
+  // 节点路径映射 (key -> path)
+  const nodePathMap = ref<Record<string, string>>({})
 
   // 文件内容映射
   const getFileContent = (key: string): string => {
@@ -59,18 +27,8 @@ export function useFileTree() {
       return dynamicFileContents.value[key]
     }
     
-    const contents: Record<string, string> = {
-      '0-0-0-0': '// Header.vue\n<div class="app-header">\n  <div class="logo">My App</div>\n  <nav>\n    <a href="/">Home</a>\n    <a href="/about">About</a>\n  </nav>\n</div>\n\n// Component logic\nconst headerTitle = "My App"// Header.vue\n<div class="app-header">\n  <div class="logo">My App</div>\n  <nav>\n    <a href="/">Home</a>\n    <a href="/about">About</a>\n  </nav>\n</div>\n\n// Component logic\nconst headerTitle = "My App"// Header.vue\n<div class="app-header">\n  <div class="logo">My App</div>\n  <nav>\n    <a href="/">Home</a>\n    <a href="/about">About</a>\n  </nav>\n</div>\n\n// Component logic\nconst headerTitle = "My App"// Header.vue\n<div class="app-header">\n  <div class="logo">My App</div>\n  <nav>\n    <a href="/">Home</a>\n    <a href="/about">About</a>\n  </nav>\n</div>\n\n// Component logic\nconst headerTitle = "My App"// Header.vue\n<div class="app-header">\n  <div class="logo">My App</div>\n  <nav>\n    <a href="/">Home</a>\n    <a href="/about">About</a>\n  </nav>\n</div>\n\n// Component logic\nconst headerTitle = "My App"// Header.vue\n<div class="app-header">\n  <div class="logo">My App</div>\n  <nav>\n    <a href="/">Home</a>\n    <a href="/about">About</a>\n  </nav>\n</div>\n\n// Component logic\nconst headerTitle = "My App"// Header.vue\n<div class="app-header">\n  <div class="logo">My App</div>\n  <nav>\n    <a href="/">Home</a>\n    <a href="/about">About</a>\n  </nav>\n</div>\n\n// Component logic\nconst headerTitle = "My App"// Header.vue\n<div class="app-header">\n  <div class="logo">My App</div>\n  <nav>\n    <a href="/">Home</a>\n    <a href="/about">About</a>\n  </nav>\n</div>\n\n// Component logic\nconst headerTitle = "My App"',
-      '0-0-0-1': '// Footer.vue\n<div class="app-footer">\n  <p>&copy; 2024 My App. All rights reserved.</p>\n</div>\n\n// Component styles\n.app-footer {\n  padding: 2rem;\n  text-align: center;\n}',
-      '0-0-1-0': '// Home.vue\n<div class="home-page">\n  <h1>Welcome to Home Page</h1>\n  <p>This is the home page content.</p>\n</div>\n\nimport { ref } from "vue"\nconst message = ref("Hello World!")',
-      '0-0-1-1': '// About.vue\n<div class="about-page">\n  <h1>About Us</h1>\n  <p>Learn more about our application.</p>\n</div>',
-      '0-0-2': '// App.vue\n<div id="app">\n  <Header />\n  <router-view />\n  <Footer />\n</div>\n\nimport Header from "./components/Header.vue"\nimport Footer from "./components/Footer.vue"',
-      '0-0-3': 'import { createApp } from "vue"\nimport App from "./App.vue"\nimport router from "./router"\n\nconst app = createApp(App)\napp.use(router)\napp.mount("#app")',
-      '0-1-0': '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>My App</title>\n</head>\n<body>\n  <div id="app"></div>\n</body>\n</html>',
-      '0-2': '{\n  "name": "my-app",\n  "version": "1.0.0",\n  "description": "A Vue 3 application",\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build"\n  },\n  "dependencies": {\n    "vue": "^3.3.0"\n  }\n}',
-      '0-3': '# My App\n\nVue 3 application.\n\n## Setup\nnpm install\n\n## Development\nnpm run dev\n\n## Build\nnpm run build',
-    }
-    return contents[key] || '// File content'
+    // 如果没有内容，返回提示信息
+    return '// 文件内容加载中...\n// 请从Git仓库加载文件'
   }
 
   // 根据文件扩展名获取语言类型
@@ -89,16 +47,9 @@ export function useFileTree() {
   }
 
   // 处理文件选择
-  const handleSelectFile = (_selectedKeys: any[], e: any) => {
-    const node = e.node
-    if (node.isLeaf === true || (node.isLeaf !== false && !node.children)) {
-      const content = getFileContent(node.key)
-      selectedFile.value = {
-        key: node.key,
-        title: node.title,
-        content: content,
-      }
-    }
+  const handleSelectFile = (_selectedKeys: any[], _e: any) => {
+    // 禁用文件预览功能
+    return
   }
 
   // 高亮后的代码
@@ -145,13 +96,18 @@ export function useFileTree() {
     // 保存文件内容
     dynamicFileContents.value[newKey] = fileContent
     
+    // 计算并保存文件路径
+    const filePath = parentPath === '/' ? fileName : `${parentPath.replace(/^\//, '')}/${fileName}`
+    nodePathMap.value[newKey] = filePath
+    
     if (parentPath === '/') {
       fileTreeData.value.push(newFile)
     } else {
       const findAndAddToParent = (nodes: FileTreeNode[], targetPath: string): boolean => {
         for (const node of nodes) {
-          const nodePath = getNodePath(node.key)
-          if (nodePath === targetPath) {
+          // 优先使用路径映射
+          const nodePath = nodePathMap.value[node.key] || getNodePath(node.key)
+          if (nodePath === targetPath || nodePath === targetPath.replace(/^\//, '')) {
             if (!node.children) {
               node.children = []
             }
@@ -178,16 +134,22 @@ export function useFileTree() {
     const newFolder: FileTreeNode = {
       title: folderName,
       key: newKey,
+      isLeaf: false,
       children: [],
     }
+    
+    // 计算并保存文件夹路径
+    const folderPath = parentPath === '/' ? folderName : `${parentPath.replace(/^\//, '')}/${folderName}`
+    nodePathMap.value[newKey] = folderPath
     
     if (parentPath === '/') {
       fileTreeData.value.push(newFolder)
     } else {
       const findAndAddToParent = (nodes: FileTreeNode[], targetPath: string): boolean => {
         for (const node of nodes) {
-          const nodePath = getNodePath(node.key)
-          if (nodePath === targetPath) {
+          // 优先使用路径映射
+          const nodePath = nodePathMap.value[node.key] || getNodePath(node.key)
+          if (nodePath === targetPath || nodePath === targetPath.replace(/^\//, '')) {
             if (!node.children) {
               node.children = []
             }
@@ -303,6 +265,92 @@ export function useFileTree() {
     })
   }
 
+  // 将API返回的文件列表转换为树形结构
+  const convertApiDataToTreeNodes = (apiData: any[], keyPrefix: string = '0', parentPath: string = ''): FileTreeNode[] => {
+    if (!apiData || !Array.isArray(apiData)) {
+      console.warn('convertApiDataToTreeNodes: apiData is not an array', apiData)
+      return []
+    }
+    
+    return apiData.map((item, index) => {
+      const key = `${keyPrefix}-${index}`
+      const currentPath = parentPath ? `${parentPath}/${item.fileName}` : item.fileName
+      
+      const node: FileTreeNode = {
+        title: item.fileName || 'untitled',
+        key: key,
+      }
+      
+      // 保存节点路径映射
+      nodePathMap.value[key] = currentPath
+      
+      // 根据文件类型设置不同的属性
+      if (item.fileType === 'dir') {
+        // 文件夹：明确设置为非叶子节点，children 设为空数组（表示可展开但未加载）
+        node.isLeaf = false
+        node.children = []
+      } else {
+        // 文件：明确设置 isLeaf 为 true，不设置 children
+        node.isLeaf = true
+      }
+      
+      return node
+    })
+  }
+
+  // 加载远程文件树数据（根目录）
+  const loadRemoteFileTree = (apiData: any[]) => {
+    try {
+      console.log('加载远程文件树，原始数据:', apiData)
+      nodePathMap.value = {} // 清空路径映射
+      dynamicFileContents.value = {} // 清空文件内容缓存
+      const treeNodes = convertApiDataToTreeNodes(apiData, '0', '')
+      console.log('转换后的树节点:', treeNodes)
+      fileTreeData.value = treeNodes
+      expandedKeys.value = []
+      selectedFile.value = null
+    } catch (error) {
+      console.error('加载文件树失败:', error)
+      fileTreeData.value = []
+    }
+  }
+  
+  // 加载子文件夹数据
+  const loadChildrenData = (nodeKey: string, apiData: any[]) => {
+    try {
+      console.log('加载子文件夹数据:', { nodeKey, apiData })
+      const parentPath = nodePathMap.value[nodeKey] || ''
+      const newChildren = convertApiDataToTreeNodes(apiData, nodeKey, parentPath)
+      console.log('转换后的子节点:', newChildren)
+      
+      // 在树中找到对应节点并更新children
+      const updateNodeChildren = (nodes: FileTreeNode[]): boolean => {
+        for (const node of nodes) {
+          if (node.key === nodeKey) {
+            node.children = newChildren
+            return true
+          }
+          if (node.children && updateNodeChildren(node.children)) {
+            return true
+          }
+        }
+        return false
+      }
+      
+      const updated = updateNodeChildren(fileTreeData.value)
+      if (!updated) {
+        console.warn('未找到对应的节点进行更新:', nodeKey)
+      }
+    } catch (error) {
+      console.error('加载子文件夹失败:', error)
+    }
+  }
+  
+  // 获取节点路径（从路径映射中获取）
+  const getNodePathFromMap = (nodeKey: string): string => {
+    return nodePathMap.value[nodeKey] || ''
+  }
+
   return {
     fileTreeData,
     expandedKeys,
@@ -318,6 +366,9 @@ export function useFileTree() {
     handleRenameNode,
     handleCopyPath,
     handleDeleteNode,
+    loadRemoteFileTree,
+    loadChildrenData,
+    getNodePathFromMap,
   }
 }
 

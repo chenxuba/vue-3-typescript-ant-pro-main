@@ -12,6 +12,7 @@ interface Emits {
   (e: 'update:expandedKeys', value: (string | number)[]): void
   (e: 'select', selectedKeys: any[], info: any): void
   (e: 'menu-click', info: any, nodeData: any): void
+  (e: 'expand', expandedKeys: (string | number)[], info: any): void
 }
 
 defineProps<Props>()
@@ -28,6 +29,10 @@ const handleSelect = (selectedKeys: any[], info: any) => {
 const handleMenuClick = (info: any, nodeData: any) => {
   emit('menu-click', info, nodeData)
 }
+
+const handleExpand = (expandedKeys: (string | number)[], info: any) => {
+  emit('expand', expandedKeys, info)
+}
 </script>
 
 <template>
@@ -36,13 +41,27 @@ const handleMenuClick = (info: any, nodeData: any) => {
       <span class="tree-title">文件目录</span>
     </div>
     <div class="tree-content">
+      <!-- 空状态 -->
+      <a-empty 
+        v-if="!fileTreeData || fileTreeData.length === 0"
+        description="暂无文件"
+        class="empty-tree"
+      >
+        <template #image>
+          <div class="empty-icon">📂</div>
+        </template>
+      </a-empty>
+      
+      <!-- 文件树 -->
       <a-tree 
+        v-else
         :expanded-keys="expandedKeys" 
         @update:expanded-keys="handleUpdateExpandedKeys"
         :tree-data="fileTreeData" 
         :show-icon="false"
         :show-line="true" 
         @select="handleSelect"
+        @expand="handleExpand"
       >
         <template #title="{ title, isLeaf, children, key }">
           <span class="tree-node-title-wrapper">
@@ -127,6 +146,25 @@ const handleMenuClick = (info: any, nodeData: any) => {
     flex: 1;
     padding: 12px;
     overflow-y: auto;
+
+    .empty-tree {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      
+      .empty-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+      }
+
+      :deep(.ant-empty-description) {
+        color: rgba(0, 0, 0, 0.45);
+        font-size: 14px;
+      }
+    }
 
     :deep(.ant-tree) {
       background: transparent;
