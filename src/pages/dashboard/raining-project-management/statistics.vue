@@ -73,11 +73,11 @@ const handleSelectTaskLevel = (taskId: string) => {
 
 // 表格列定义 - 参训整体情况
 const participationColumns = [
-  { title: '用户编号', dataIndex: 'userNumber', key: 'userNumber', width: 150 },
-  { title: '用户姓名', dataIndex: 'userName', key: 'userName', width: 150 },
-  { title: '单位', dataIndex: 'unit', key: 'unit', width: 300 },
-  { title: '参训时间', dataIndex: 'trainingTime', key: 'trainingTime', width: 200 },
-  { title: '参训状态', dataIndex: 'trainingStatus', key: 'trainingStatus', width: 150, align: 'center' as const },
+  { title: '用户编号', dataIndex: 'userId', key: 'userId', width: 150 },
+  { title: '用户姓名', dataIndex: 'nickName', key: 'nickName', width: 150 },
+  { title: '单位', dataIndex: 'orgName', key: 'orgName', width: 300 },
+  { title: '参训时间', dataIndex: 'joinTime', key: 'joinTime', width: 200 },
+  { title: '参训状态', dataIndex: 'currentTask', key: 'currentTask', width: 150, align: 'center' as const },
 ]
 
 // 根据不同任务关卡返回不同的表格列定义
@@ -151,63 +151,8 @@ const getTaskColumns = computed(() => {
   ]
 })
 
-// 模拟数据 - 参训整体情况
-const participationData = ref([
-  {
-    key: '1',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    trainingTime: '2025-07-21 12:12:12',
-    trainingStatus: '5 / 5',
-    statusType: 'completed',
-  },
-  {
-    key: '2',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    trainingTime: '2025-07-21 12:12:12',
-    trainingStatus: '5 / 5',
-    statusType: 'completed',
-  },
-  {
-    key: '3',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    trainingTime: '2025-07-21 12:12:12',
-    trainingStatus: '1 / 5',
-    statusType: 'inProgress',
-  },
-  {
-    key: '4',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    trainingTime: '2025-07-21 12:12:12',
-    trainingStatus: '1 / 5',
-    statusType: 'inProgress',
-  },
-  {
-    key: '5',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    trainingTime: '2025-07-21 12:12:12',
-    trainingStatus: '1 / 5',
-    statusType: 'inProgress',
-  },
-  {
-    key: '6',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    trainingTime: '2025-07-21 12:12:12',
-    trainingStatus: '1 / 5',
-    statusType: 'inProgress',
-  },
-])
+// 参训整体情况数据
+const participationData = ref<ProjectUserListItem[]>([])
 
 // 模拟数据 - 任务完成情况
 const taskData = ref([
@@ -323,20 +268,29 @@ const fetchParticipationData = async () => {
       projectId: projectId.value,
     }
 
+    // 添加筛选条件
+    if (filterForm.value.userNumber) {
+      params.userId = filterForm.value.userNumber
+    }
+    if (filterForm.value.userName) {
+      params.nickName = filterForm.value.userName
+    }
+    if (filterForm.value.unit) {
+      params.orgName = filterForm.value.unit
+    }
+    // 参训状态筛选（如果后端支持按currentTask筛选）
+    // 注意：这里的逻辑需要根据后端实际支持的筛选方式调整
+    // 如果后端不支持这种筛选，可能需要在前端过滤数据
+    if (filterForm.value.trainingStatus) {
+      // 根据选择的状态，可以传递对应的筛选条件
+      // 具体实现取决于后端API的设计
+    }
+
     const response = await getProjectUserListPagerApi(params)
     
     if (response && response.list) {
-      // 将接口返回的数据转换为表格需要的格式
-      participationData.value = response.list.map((item: ProjectUserListItem) => ({
-        key: String(item.id),
-        userNumber: `user${item.userId}`, // 可根据实际需要调整
-        userName: `用户${item.userId}`, // 可根据实际需要调整
-        unit: '中国科学院计算机网络信息中心', // 可根据实际需要调整
-        trainingTime: formatTimestamp(item.joinTime),
-        trainingStatus: `${item.currentTask} / 5`, // 可根据实际需要调整
-        statusType: item.currentTask >= 5 ? 'completed' : 'inProgress',
-      }))
-      
+      // 直接使用后端返回的数据
+      participationData.value = response.list
       pagination.value.total = response.total
     }
   } catch (error) {
@@ -362,6 +316,8 @@ const handleReset = () => {
     unit: undefined,
     trainingStatus: undefined,
   }
+  pagination.value.current = 1
+  fetchParticipationData()
 }
 
 // 导出
@@ -460,21 +416,25 @@ onMounted(() => {
               :data-source="participationData"
               :pagination="pagination"
               :loading="loading"
+              :row-key="(record) => record.id"
               :scroll="{ x: 1000 }"
               @change="handleTableChange"
             >
               <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'userName'">
-                  <a class="user-link">{{ record.userName }}</a>
+                <template v-if="column.key === 'nickName'">
+                  <a class="user-link">{{ record.nickName }}</a>
                 </template>
-                <template v-else-if="column.key === 'trainingStatus'">
+                <template v-else-if="column.key === 'joinTime'">
+                  {{ formatTimestamp(record.joinTime) }}
+                </template>
+                <template v-else-if="column.key === 'currentTask'">
                   <div class="status-cell">
-                    <span>{{ record.trainingStatus }}</span>
+                    <span>{{ record.currentTask }} / {{ record.currentTask }}</span>
                     <span 
                       class="status-icon"
-                      :class="record.statusType"
+                      :class="record.currentTask >= record.currentTask ? 'completed' : 'inProgress'"
                     >
-                      <template v-if="record.statusType === 'completed'">✓</template>
+                      <template v-if="record.currentTask >= record.currentTask">✓</template>
                       <template v-else>⟳</template>
                     </span>
                   </div>

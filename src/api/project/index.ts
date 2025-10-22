@@ -674,30 +674,37 @@ export async function stopPodApi(params: StopPodParams): Promise<StopPodResponse
  * 获取项目用户列表的请求参数
  */
 export interface GetProjectUserListParams {
-  createTime?: number
-  currentTask?: number
-  id?: number
-  joinTime?: number
   limit: number
-  orderbyFiled?: string // 排序字段，如 "name:desc,github:asc"
   page: number
   projectId?: number
+  // 筛选条件
+  userId?: number | string // 用户编号
+  nickName?: string // 用户姓名
+  orgName?: string // 单位
+  currentTask?: number // 当前任务（用于筛选参训状态）
+  // 其他可选参数
+  createTime?: number
+  joinTime?: number
+  id?: number
+  orderbyFiled?: string // 排序字段，如 "name:desc,github:asc"
   startNum?: number
   updateTime?: number
-  userId?: number
 }
 
 /**
  * 项目用户列表项数据结构
  */
 export interface ProjectUserListItem {
-  createTime: number
-  currentTask: number
   id: number
-  joinTime: number
   projectId: number
-  updateTime: number
   userId: number
+  joinTime: number
+  currentTask: number
+  createTime: number
+  updateTime: number
+  nickName: string
+  avatar: string | null
+  orgName: string
 }
 
 /**
