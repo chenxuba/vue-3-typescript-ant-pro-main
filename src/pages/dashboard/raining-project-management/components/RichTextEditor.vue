@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { shallowRef, onBeforeUnmount, watch } from 'vue'
+import { message } from 'ant-design-vue'
 // @ts-ignore
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
 import '@wangeditor/editor/dist/css/style.css'
+import { uploadFileApi } from '@/api/common/file'
 
 interface Props {
   modelValue: string
@@ -49,7 +51,30 @@ const toolbarConfig: Partial<IToolbarConfig> = {
 const editorConfig: Partial<IEditorConfig> = {
   placeholder: props.placeholder,
   autoFocus: false,
-  MENU_CONF: {},
+  MENU_CONF: {
+    // 配置上传图片
+    uploadImage: {
+      // 自定义上传
+      async customUpload(file: File, insertFn: any) {
+        try {
+          // 调用上传接口
+          const url = await uploadFileApi(file)
+          // 插入图片到编辑器
+          insertFn(url, file.name, url)
+          message.success('图片上传成功')
+        } catch (error) {
+          console.error('图片上传失败:', error)
+          message.error('图片上传失败')
+        }
+      },
+      // 最大文件大小 10M
+      maxFileSize: 10 * 1024 * 1024,
+      // 最多上传 5 张图片
+      maxNumberOfFiles: 5,
+      // 选择文件时的类型限制
+      allowedFileTypes: ['image/*'],
+    },
+  },
 }
 
 const handleCreated = (editor: any) => {

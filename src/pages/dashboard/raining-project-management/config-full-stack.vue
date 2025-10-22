@@ -1429,23 +1429,23 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                           <a-form-item label="学员任务文件" name="userFiles" required>
                             <a-upload v-model:file-list="userFileList"
                               :custom-request="handleLearningResourceCustomRequest" @change="handleUserFilesUpload"
-                              accept=".js,.ts,.py,.java,.cpp,.c" :max-count="10">
+                              :max-count="10">
                               <a-button type="primary">点击上传</a-button>
                             </a-upload>
                             <div class="upload-hint">
-                              说明：支持上传多个代码文件，每个文件大小不能超过500M。（学员评测基本任务时名称，查看效果页上需要编辑的文件类型）
+                              说明：支持上传多个文件，每个文件大小不能超过500M。（学员评测基本任务时名称，查看效果页上需要编辑的文件类型）
                             </div>
                           </a-form-item>
 
                           <a-form-item label="评测执行文件" name="testValidateFiles" required>
                             <a-upload v-model:file-list="testValidateFileList"
                               :custom-request="handleLearningResourceCustomRequest"
-                              @change="handleTestValidateFilesUpload" accept=".js,.ts,.py,.java,.cpp,.c"
+                              @change="handleTestValidateFilesUpload"
                               :max-count="10">
                               <a-button type="primary">点击上传</a-button>
                             </a-upload>
                             <div class="upload-hint">
-                              说明：支持上传多个代码文件，每个文件大小不能超过500M。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确，可与"学员任务文件"一致）
+                              说明：支持上传多个文件，每个文件大小不能超过500M。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确，可与"学员任务文件"一致）
                             </div>
                           </a-form-item>
 

@@ -418,8 +418,8 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
           return
         }
         
-        // 只在更新时验证测试集的输入内容和期望输出不能为空
-        if (taskLevelFormData.value.taskId && evaluationFormData.value.testContent.length > 0) {
+        // 只在更新时且用例类型为文本时，验证测试集的输入内容和期望输出不能为空
+        if (taskLevelFormData.value.taskId && evaluationFormData.value.testValidateType === 1 && evaluationFormData.value.testContent.length > 0) {
           const emptyTestCase = evaluationFormData.value.testContent.find(tc => !tc.arg.trim() || !tc.answer.trim())
           if (emptyTestCase) {
             message.error('测试集的输入内容和期望输出不能为空')
