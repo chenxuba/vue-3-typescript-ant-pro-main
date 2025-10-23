@@ -4,29 +4,62 @@ import type { SelectedFile } from '../types'
 interface Props {
   selectedFile: SelectedFile | null
   highlightedCode: string
+  dynamicFileContents?: Record<string, string>
 }
 
 const props = defineProps<Props>()
 
 // 下载文件
 const handleDownload = () => {
-  if (!props.selectedFile?.fileUrl) {
-    return
+  const file = props.selectedFile
+  if (!file) return
+  
+  // 如果有 fileUrl，从服务器下载
+  if (file.fileUrl) {
+    // 拼接完整的文件URL
+    const fullUrl = `http://101.200.13.193${file.fileUrl}`
+    
+    // 创建一个隐藏的a标签来触发下载
+    const link = document.createElement('a')
+    link.href = fullUrl
+    link.download = file.title // 使用文件名作为下载名称
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    console.log('下载文件:', fullUrl)
+  } 
+  // 如果没有 fileUrl 但有文件内容，下载本地内容
+  else if (file.content || (props.dynamicFileContents && props.dynamicFileContents[file.key])) {
+    const content = file.content || (props.dynamicFileContents?.[file.key] || '')
+    
+    // 创建 Blob 对象
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    
+    // 创建下载链接
+    const link = document.createElement('a')
+    link.href = url
+    link.download = file.title
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    // 释放 URL 对象
+    URL.revokeObjectURL(url)
+    
+    console.log('下载本地文件:', file.title)
   }
+}
+
+// 判断是否可以下载
+const canDownload = () => {
+  const file = props.selectedFile
+  if (!file) return false
   
-  // 拼接完整的文件URL
-  const fullUrl = `http://101.200.13.193${props.selectedFile.fileUrl}`
-  
-  // 创建一个隐藏的a标签来触发下载
-  const link = document.createElement('a')
-  link.href = fullUrl
-  link.download = props.selectedFile.title // 使用文件名作为下载名称
-  link.target = '_blank'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  
-  console.log('下载文件:', fullUrl)
+  // 有 fileUrl 或者有文件内容都可以下载
+  return !!(file.fileUrl || file.content || (props.dynamicFileContents && props.dynamicFileContents[file.key]))
 }
 </script>
 
@@ -42,7 +75,7 @@ const handleDownload = () => {
           <a-button 
             type="primary" 
             size="large"
-            :disabled="!selectedFile.fileUrl"
+            :disabled="!canDownload()"
             @click="handleDownload"
           >
             点击下载

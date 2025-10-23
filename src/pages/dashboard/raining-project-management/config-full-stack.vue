@@ -256,6 +256,7 @@ const {
   expandedKeys,
   selectedFile,
   highlightedCode,
+  dynamicFileContents,
   handleSelectFile,
   getNodePath,
   addFileToTree,
@@ -1485,7 +1486,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
             <!-- 右侧：文件预览区域 -->
             <div class="repository-right">
               <FilePreview v-if="formData.enableCodeRepository" :selected-file="selectedFile"
-                :highlighted-code="highlightedCode" />
+                :highlighted-code="highlightedCode" :dynamic-file-contents="dynamicFileContents" />
               <div v-else class="empty-area">
                 在左侧代码仓库区域点击目录打开文件
               </div>
