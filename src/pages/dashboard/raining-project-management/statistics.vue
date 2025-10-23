@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { 
   getProjectUserListPagerApi, 
   type GetProjectUserListParams,
-  type ProjectUserListItem
+  type ProjectUserListItem,
+  getProjectTaskListApi,
+  type GetProjectTaskListParams,
+  getProjectUserTaskListPagerApi,
+  type GetProjectUserTaskListParams,
+  type ProjectUserTaskListItem
 } from '@/api/project'
 import { 
   getAllOrganizationListApi,
@@ -61,22 +66,16 @@ const fetchOrganizationList = async () => {
 
 // 参训状态选项
 const statusOptions = [
-  { label: '已完成', value: '已完成' },
-  { label: '进行中', value: '进行中' },
-  { label: '未开始', value: '未开始' },
+  { label: '已完成', value: '1' },
+  { label: '进行中', value: '2' },
+  { label: '未开始', value: '3' },
 ]
 
-// 任务关卡列表
-const taskLevelList = [
-  { id: '1', name: '第1关：编码任务' },
-  { id: '2', name: '第2关：选择题任务' },
-  { id: '3', name: '第3关：内嵌链接任务' },
-  { id: '4', name: '第4关：lab任务' },
-  { id: '5', name: '第5关：notebook任务' },
-]
+// 任务关卡列表（从接口获取）
+const taskLevelList = ref<Array<{ taskId: number; name: string }>>([])
 
 // 选中的任务关卡
-const selectedTaskLevel = ref('1')
+const selectedTaskLevel = ref<number | null>(null)
 
 // 任务关卡搜索关键词
 const taskLevelSearchKeyword = ref('')
@@ -84,16 +83,18 @@ const taskLevelSearchKeyword = ref('')
 // 过滤后的任务关卡列表
 const filteredTaskLevelList = computed(() => {
   if (!taskLevelSearchKeyword.value) {
-    return taskLevelList
+    return taskLevelList.value
   }
-  return taskLevelList.filter(task => 
+  return taskLevelList.value.filter(task => 
     task.name.toLowerCase().includes(taskLevelSearchKeyword.value.toLowerCase())
   )
 })
 
 // 选择任务关卡
-const handleSelectTaskLevel = (taskId: string) => {
+const handleSelectTaskLevel = (taskId: number) => {
   selectedTaskLevel.value = taskId
+  taskPagination.value.current = 1
+  fetchTaskUserData()
 }
 
 // 表格列定义 - 参训整体情况
@@ -119,78 +120,21 @@ const taskColumns = [
 // 参训整体情况数据
 const participationData = ref<ProjectUserListItem[]>([])
 
-// 模拟数据 - 任务完成情况
-const taskData = ref([
-  {
-    key: '1',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '已完成',
-    statusType: 'completed',
-  },
-  {
-    key: '2',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '已完成',
-    statusType: 'completed',
-  },
-  {
-    key: '3',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '进行中',
-    statusType: 'inProgress',
-  },
-  {
-    key: '4',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '进行中',
-    statusType: 'inProgress',
-  },
-  {
-    key: '5',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '进行中',
-    statusType: 'inProgress',
-  },
-  {
-    key: '6',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '进行中',
-    statusType: 'inProgress',
-  },
-])
+// 任务完成情况数据
+const taskData = ref<ProjectUserTaskListItem[]>([])
 
-// 分页配置
+// 分页配置 - 参训整体情况
 const pagination = ref({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `数据共 ${total} 条`,
+})
+
+// 分页配置 - 任务完成情况
+const taskPagination = ref({
   current: 1,
   pageSize: 20,
   total: 0,
@@ -204,6 +148,36 @@ const loading = ref(false)
 
 // 获取项目ID（从路由参数）
 const projectId = ref(Number(route.query.id) || 0)
+
+// 项目任务总数
+const totalTaskCount = ref(0)
+
+// 获取项目任务列表
+const fetchProjectTaskCount = async () => {
+  try {
+    const params: GetProjectTaskListParams = {
+      projectId: projectId.value,
+    }
+    
+    const response = await getProjectTaskListApi(params)
+    
+    if (response && Array.isArray(response)) {
+      totalTaskCount.value = response.length
+      // 将任务列表数据存储到 taskLevelList
+      taskLevelList.value = response.map((task: any) => ({
+        taskId: task.taskId,
+        name: task.name,
+      }))
+      // 默认选中第一个任务
+      if (taskLevelList.value.length > 0) {
+        selectedTaskLevel.value = taskLevelList.value[0].taskId
+      }
+    }
+  } catch (error) {
+    console.error('获取项目任务列表失败:', error)
+    message.error('获取项目任务列表失败')
+  }
+}
 
 // 格式化时间戳
 const formatTimestamp = (timestamp: number) => {
@@ -243,12 +217,9 @@ const fetchParticipationData = async () => {
     if (filterForm.value.unit) {
       params.orgName = filterForm.value.unit
     }
-    // 参训状态筛选（如果后端支持按currentTask筛选）
-    // 注意：这里的逻辑需要根据后端实际支持的筛选方式调整
-    // 如果后端不支持这种筛选，可能需要在前端过滤数据
+    // 参训状态筛选
     if (filterForm.value.status) {
-      // 根据选择的状态，可以传递对应的筛选条件
-      // 具体实现取决于后端API的设计
+      params.status = filterForm.value.status
     }
 
     const response = await getProjectUserListPagerApi(params)
@@ -302,9 +273,73 @@ const handleTableChange = (pag: any) => {
   fetchParticipationData()
 }
 
+// 获取任务用户数据（任务完成情况）
+const fetchTaskUserData = async () => {
+  if (!selectedTaskLevel.value) return
+  
+  loading.value = true
+  try {
+    const params: GetProjectUserTaskListParams = {
+      limit: taskPagination.value.pageSize,
+      page: taskPagination.value.current,
+      taskId: selectedTaskLevel.value,
+    }
+
+    // 添加筛选条件
+    if (filterForm.value.userNumber) {
+      params.userNumber = filterForm.value.userNumber
+    }
+    if (filterForm.value.userName) {
+      params.userName = filterForm.value.userName
+    }
+    if (filterForm.value.unit) {
+      params.unit = filterForm.value.unit
+    }
+
+    const response = await getProjectUserTaskListPagerApi(params)
+    
+    if (response && response.list) {
+      taskData.value = response.list
+      taskPagination.value.total = response.total
+    }
+  } catch (error) {
+    console.error('获取任务用户数据失败:', error)
+    message.error('获取任务用户数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 处理任务完成情况表格分页变化
+const handleTaskTableChange = (pag: any) => {
+  taskPagination.value.current = pag.current
+  taskPagination.value.pageSize = pag.pageSize
+  fetchTaskUserData()
+}
+
+// 任务完成情况 - 查询
+const handleTaskSearch = () => {
+  console.log('任务查询', filterForm.value)
+  taskPagination.value.current = 1
+  fetchTaskUserData()
+}
+
+// 任务完成情况 - 重置
+const handleTaskReset = () => {
+  filterForm.value = {
+    userNumber: '',
+    userName: '',
+    unit: undefined,
+    status: undefined,
+  }
+  taskPagination.value.current = 1
+  fetchTaskUserData()
+}
+
 // 组件挂载时获取数据
 onMounted(() => {
   fetchOrganizationList() // 获取组织列表
+  fetchProjectTaskCount() // 获取项目任务总数
   fetchParticipationData()
 })
 </script>
@@ -395,12 +430,12 @@ onMounted(() => {
                 </template>
                 <template v-else-if="column.key === 'currentTask'">
                   <div class="status-cell">
-                    <span>{{ record.currentTask }} / {{ record.currentTask }}</span>
+                    <span>{{ record.currentTask }} / {{ totalTaskCount }}</span>
                     <span 
                       class="status-icon"
-                      :class="record.currentTask >= record.currentTask ? 'completed' : 'inProgress'"
+                      :class="record.currentTask >= totalTaskCount ? 'completed' : 'inProgress'"
                     >
-                      <template v-if="record.currentTask >= record.currentTask">✓</template>
+                      <template v-if="record.currentTask >= totalTaskCount">✓</template>
                       <template v-else>⟳</template>
                     </span>
                   </div>
@@ -439,8 +474,8 @@ onMounted(() => {
                 </a-col>
                 <a-col :span="6">
                   <div class="filter-actions">
-                    <a-button type="primary" @click="handleSearch">查询</a-button>
-                    <a-button @click="handleReset">重置</a-button>
+                    <a-button type="primary" @click="handleTaskSearch">查询</a-button>
+                    <a-button @click="handleTaskReset">重置</a-button>
                   </div>
                 </a-col>
               </a-row>
@@ -466,10 +501,10 @@ onMounted(() => {
               <div class="task-level-list">
                 <div 
                   v-for="task in filteredTaskLevelList" 
-                  :key="task.id"
+                  :key="task.taskId"
                   class="task-level-item"
-                  :class="{ active: selectedTaskLevel === task.id }"
-                  @click="handleSelectTaskLevel(task.id)"
+                  :class="{ active: selectedTaskLevel === task.taskId }"
+                  @click="handleSelectTaskLevel(task.taskId)"
                 >
                   {{ task.name }}
                 </div>
@@ -481,7 +516,7 @@ onMounted(() => {
               <div class="table-header">
                 <div class="table-info">
                   数据列表
-                  <span class="total-info">数据共 <span class="total-number">123</span> 条</span>
+                  <span class="total-info">数据共 <span class="total-number">{{ taskPagination.total }}</span> 条</span>
                 </div>
                 <a-button type="primary" @click="handleExport">导出</a-button>
               </div>
@@ -489,8 +524,11 @@ onMounted(() => {
               <a-table 
                 :columns="taskColumns" 
                 :data-source="taskData"
-                :pagination="pagination"
+                :pagination="taskPagination"
+                :loading="loading"
+                :row-key="(record) => record.id"
                 :scroll="{ x: 1200 }"
+                @change="handleTaskTableChange"
               >
                 <template #bodyCell="{ column, record }">
                   <template v-if="column.key === 'userName'">
