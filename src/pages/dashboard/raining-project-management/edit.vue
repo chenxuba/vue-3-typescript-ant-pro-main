@@ -55,9 +55,13 @@ const validateDescription = (_rule: any, value: string) => {
   if (!value) {
     return Promise.reject('请输入简介')
   }
-  // 移除所有 HTML 标签和空格，检查是否有实际内容
+  // 检查是否包含图片
+  const hasImage = /<img\s+[^>]*src\s*=\s*["'][^"']+["'][^>]*>/i.test(value)
+  // 移除所有 HTML 标签和空格，检查是否有实际文本内容
   const textContent = value.replace(/<[^>]*>/g, '').trim()
-  if (!textContent) {
+  
+  // 如果既没有图片也没有文本内容，则验证失败
+  if (!hasImage && !textContent) {
     return Promise.reject('请输入简介')
   }
   return Promise.resolve()
@@ -190,9 +194,11 @@ const handleNext = async () => {
     message.error('请输入名称')
     return
   }
-  // 验证简介内容（移除 HTML 标签后检查）
-  const descTextContent = editForm.value.description?.replace(/<[^>]*>/g, '').trim() || ''
-  if (!descTextContent) {
+  // 验证简介内容（检查是否有文本或图片）
+  const descValue = editForm.value.description || ''
+  const hasImage = /<img\s+[^>]*src\s*=\s*["'][^"']+["'][^>]*>/i.test(descValue)
+  const descTextContent = descValue.replace(/<[^>]*>/g, '').trim()
+  if (!hasImage && !descTextContent) {
     message.error('请输入简介')
     return
   }
