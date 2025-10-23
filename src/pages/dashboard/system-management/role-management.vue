@@ -57,6 +57,11 @@ const columns = [
     key: 'name',
   },
   {
+    title: '角色编码',
+    dataIndex: 'code',
+    key: 'code',
+  },
+  {
     title: '管理范围',
     dataIndex: 'authTypeContent',
     key: 'authTypeContent',
@@ -106,6 +111,7 @@ const batchDeleteStatus = ref<'active' | 'success' | 'exception'>('active')
 // 表单数据
 const formData = reactive({
   name: '',
+  code: '',
   isAdmin: undefined as number | undefined,
   authType: undefined as number | undefined,
   authTypeContent: undefined as string | undefined,
@@ -171,6 +177,7 @@ const handleCreate = () => {
   isEdit.value = false
   currentEditId.value = undefined
   formData.name = ''
+  formData.code = ''
   formData.isAdmin = undefined
   formData.authType = undefined
   formData.authTypeContent = undefined
@@ -184,6 +191,7 @@ const handleEdit = (record: any) => {
   isEdit.value = true
   currentEditId.value = record.roleId || record.id
   formData.name = record.name || record.roleName || ''
+  formData.code = record.code || ''
   formData.isAdmin = record.isAdmin
   formData.authType = record.authType
   formData.authTypeContent = record.authTypeContent
@@ -196,13 +204,14 @@ const handleSubmit = async () => {
   modalLoading.value = true
   try {
     if (isEdit.value && currentEditId.value) {
-      if (!formData.name || formData.isAdmin === undefined || formData.authType === undefined || !formData.authTypeContent) {
+      if (!formData.name || !formData.code || formData.isAdmin === undefined || formData.authType === undefined || !formData.authTypeContent) {
         message.error('请填写所有必填项')
         return
       }
       await updateRolePagerApi({
         roleId: currentEditId.value,
         name: formData.name,
+        code: formData.code,
         isAdmin: formData.isAdmin,
         authType: formData.authType,
         authTypeContent: formData.authTypeContent,
@@ -210,12 +219,13 @@ const handleSubmit = async () => {
       })
       message.success('更新成功')
     } else {
-      if (!formData.name || formData.isAdmin === undefined || formData.authType === undefined || !formData.authTypeContent) {
+      if (!formData.name || !formData.code || formData.isAdmin === undefined || formData.authType === undefined || !formData.authTypeContent) {
         message.error('请填写所有必填项')
         return
       }
       await createRolePagerApi({
         name: formData.name,
+        code: formData.code,
         isAdmin: formData.isAdmin,
         authType: formData.authType,
         authTypeContent: formData.authTypeContent,
@@ -614,6 +624,9 @@ onMounted(() => {
               <template v-if="column.key === 'name'">
                 <a class="role-link">{{ record.name || record.roleName }}</a>
               </template>
+              <template v-else-if="column.key === 'code'">
+                <span>{{ record.code || '-' }}</span>
+              </template>
               <template v-else-if="column.key === 'createTime'">
                 <span>{{ formatTime(record.createTime) }}</span>
               </template>
@@ -676,6 +689,20 @@ onMounted(() => {
           <a-input 
             v-model:value="formData.name" 
             placeholder="请输入角色名称"
+            allow-clear
+          />
+        </a-form-item>
+
+        <a-form-item 
+          label="角色编码" 
+          name="code"
+          :rules="[
+            { required: true, message: '请输入角色编码', trigger: 'blur' }
+          ]"
+        >
+          <a-input 
+            v-model:value="formData.code" 
+            placeholder="请输入角色编码"
             allow-clear
           />
         </a-form-item>

@@ -391,7 +391,7 @@ const handleDelete = (record: any) => {
             {{ record.tag }}
           </template>
           <template v-else-if="column.key === 'organizer'">
-            {{ record.connectUnit || '-' }}
+            {{ record.orgName || '-' }}
           </template>
           <template v-else-if="column.key === 'publicScope'">
             <div class="public-scope-cell">

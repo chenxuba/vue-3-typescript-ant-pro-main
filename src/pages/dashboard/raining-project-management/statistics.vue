@@ -7,6 +7,10 @@ import {
   type GetProjectUserListParams,
   type ProjectUserListItem
 } from '@/api/project'
+import { 
+  getAllOrganizationListApi,
+  type RawOrganizationModel
+} from '@/api/system/organization'
 
 defineOptions({
   name: 'ProjectStatistics',
@@ -26,16 +30,37 @@ const filterForm = ref({
   userNumber: '',
   userName: '',
   unit: undefined,
-  trainingStatus: undefined,
+  status: undefined,
 })
 
-// 单位选项
-const unitOptions = [
-  { label: '中国科学院计算机网络信息中心', value: '中国科学院计算机网络信息中心' },
-]
+// 单位选项（从接口获取）
+const unitOptions = ref<Array<{ label: string; value: string }>>([])
+
+// 获取组织列表
+const fetchOrganizationList = async () => {
+  try {
+    const response = await getAllOrganizationListApi({
+      limit: 10000, // 获取所有数据
+      page: 1,
+      startNum: 0,
+      orderbyFiled: 'orgCode:asc',
+    })
+    
+    if (response && response.data && response.data.list) {
+      // 将组织列表转换为下拉选项格式
+      unitOptions.value = response.data.list.map((org: RawOrganizationModel) => ({
+        label: org.orgName,
+        value: org.orgName,
+      }))
+    }
+  } catch (error) {
+    console.error('获取组织列表失败:', error)
+    message.error('获取组织列表失败')
+  }
+}
 
 // 参训状态选项
-const trainingStatusOptions = [
+const statusOptions = [
   { label: '已完成', value: '已完成' },
   { label: '进行中', value: '进行中' },
   { label: '未开始', value: '未开始' },
@@ -80,76 +105,16 @@ const participationColumns = [
   { title: '参训状态', dataIndex: 'currentTask', key: 'currentTask', width: 150, align: 'center' as const },
 ]
 
-// 根据不同任务关卡返回不同的表格列定义
-const getTaskColumns = computed(() => {
-  const selectedLevel = selectedTaskLevel.value
-  
-  // 编码任务的列
-  if (selectedLevel === '1') {
-    return [
-      { title: '用户编号', dataIndex: 'userNumber', key: 'userNumber', width: 150 },
-      { title: '用户姓名', dataIndex: 'userName', key: 'userName', width: 150 },
-      { title: '单位', dataIndex: 'unit', key: 'unit', width: 300 },
-      { title: '任务开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime', width: 200 },
-      { title: '实验状态', dataIndex: 'experimentStatus', key: 'experimentStatus', width: 150 },
-    ]
-  }
-  
-  // 选择题任务的列
-  if (selectedLevel === '2') {
-    return [
-      { title: '用户编号', dataIndex: 'userNumber', key: 'userNumber', width: 150 },
-      { title: '用户姓名', dataIndex: 'userName', key: 'userName', width: 150 },
-      { title: '单位', dataIndex: 'unit', key: 'unit', width: 250 },
-      { title: '任务开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime', width: 180 },
-      { title: '任务结束时间', dataIndex: 'taskEndTime', key: 'taskEndTime', width: 180 },
-      { title: '累计时间', dataIndex: 'totalTime', key: 'totalTime', width: 120 },
-      { title: '实验状态', dataIndex: 'experimentStatus', key: 'experimentStatus', width: 120 },
-    ]
-  }
-  
-  // 内嵌链接任务的列
-  if (selectedLevel === '3') {
-    return [
-      { title: '用户编号', dataIndex: 'userNumber', key: 'userNumber', width: 150 },
-      { title: '用户姓名', dataIndex: 'userName', key: 'userName', width: 150 },
-      { title: '单位', dataIndex: 'unit', key: 'unit', width: 300 },
-      { title: '任务开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime', width: 200 },
-      { title: '实验状态', dataIndex: 'experimentStatus', key: 'experimentStatus', width: 150 },
-    ]
-  }
-  
-  // lab任务的列
-  if (selectedLevel === '4') {
-    return [
-      { title: '用户编号', dataIndex: 'userNumber', key: 'userNumber', width: 150 },
-      { title: '用户姓名', dataIndex: 'userName', key: 'userName', width: 150 },
-      { title: '单位', dataIndex: 'unit', key: 'unit', width: 300 },
-      { title: '任务开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime', width: 200 },
-      { title: '实验状态', dataIndex: 'experimentStatus', key: 'experimentStatus', width: 150 },
-    ]
-  }
-  
-  // notebook任务的列
-  if (selectedLevel === '5') {
-    return [
-      { title: '用户编号', dataIndex: 'userNumber', key: 'userNumber', width: 150 },
-      { title: '用户姓名', dataIndex: 'userName', key: 'userName', width: 150 },
-      { title: '单位', dataIndex: 'unit', key: 'unit', width: 300 },
-      { title: '任务开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime', width: 200 },
-      { title: '实验状态', dataIndex: 'experimentStatus', key: 'experimentStatus', width: 150 },
-    ]
-  }
-  
-  // 默认返回
-  return [
-    { title: '用户编号', dataIndex: 'userNumber', key: 'userNumber', width: 150 },
-    { title: '用户姓名', dataIndex: 'userName', key: 'userName', width: 150 },
-    { title: '单位', dataIndex: 'unit', key: 'unit', width: 300 },
-    { title: '任务开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime', width: 200 },
-    { title: '实验状态', dataIndex: 'experimentStatus', key: 'experimentStatus', width: 150 },
-  ]
-})
+// 统一的任务完成情况表格列定义（所有任务类型使用相同字段）
+const taskColumns = [
+  { title: '用户编号', dataIndex: 'userNumber', key: 'userNumber', width: 150 },
+  { title: '用户姓名', dataIndex: 'userName', key: 'userName', width: 150 },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 250 },
+  { title: '任务开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime', width: 180 },
+  { title: '任务结束时间', dataIndex: 'taskEndTime', key: 'taskEndTime', width: 180 },
+  { title: '累计时间', dataIndex: 'totalTime', key: 'totalTime', width: 120 },
+  { title: '实验状态', dataIndex: 'experimentStatus', key: 'experimentStatus', width: 120 },
+]
 
 // 参训整体情况数据
 const participationData = ref<ProjectUserListItem[]>([])
@@ -281,7 +246,7 @@ const fetchParticipationData = async () => {
     // 参训状态筛选（如果后端支持按currentTask筛选）
     // 注意：这里的逻辑需要根据后端实际支持的筛选方式调整
     // 如果后端不支持这种筛选，可能需要在前端过滤数据
-    if (filterForm.value.trainingStatus) {
+    if (filterForm.value.status) {
       // 根据选择的状态，可以传递对应的筛选条件
       // 具体实现取决于后端API的设计
     }
@@ -314,7 +279,7 @@ const handleReset = () => {
     userNumber: '',
     userName: '',
     unit: undefined,
-    trainingStatus: undefined,
+    status: undefined,
   }
   pagination.value.current = 1
   fetchParticipationData()
@@ -339,6 +304,7 @@ const handleTableChange = (pag: any) => {
 
 // 组件挂载时获取数据
 onMounted(() => {
+  fetchOrganizationList() // 获取组织列表
   fetchParticipationData()
 })
 </script>
@@ -384,9 +350,9 @@ onMounted(() => {
                 <a-col :span="5">
                   <a-form-item label="参训状态：" :label-col="{ span: 9 }" :wrapper-col="{ span: 15 }">
                     <a-select 
-                      v-model:value="filterForm.trainingStatus" 
+                      v-model:value="filterForm.status" 
                       placeholder="请选择" 
-                      :options="trainingStatusOptions"
+                      :options="statusOptions"
                       allow-clear
                     />
                   </a-form-item>
@@ -521,7 +487,7 @@ onMounted(() => {
               </div>
 
               <a-table 
-                :columns="getTaskColumns" 
+                :columns="taskColumns" 
                 :data-source="taskData"
                 :pagination="pagination"
                 :scroll="{ x: 1200 }"

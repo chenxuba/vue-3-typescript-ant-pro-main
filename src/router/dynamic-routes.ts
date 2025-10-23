@@ -11,7 +11,7 @@ export default [
       title: '实训项目管理',
       icon: 'DashboardOutlined',
       hideChildrenInMenu:true,
-      // access: [AccessEnum.PROJECT_VIEW],
+      access: [AccessEnum.PROJECT_VIEW],
     },
     component: basicRouteMap.RouteView,
     children: [
@@ -134,7 +134,7 @@ export default [
     meta: {
       title: '系统管理',
       icon: 'FormOutlined',
-      // access: [AccessEnum.SYSTEM_VIEW],
+      access: [AccessEnum.SYSTEM_VIEW],
     },
     component: basicRouteMap.RouteView,
     children: [
@@ -144,7 +144,7 @@ export default [
         component: () => import('~/pages/dashboard/system-management/organization-management.vue'),
         meta: {
           title: '组织机构管理',
-          // access: [AccessEnum.SYSTEM_ORGANIZATION_VIEW],
+          access: [AccessEnum.SYSTEM_ORGANIZATION_VIEW],
         },
       },
       {
@@ -153,7 +153,7 @@ export default [
         component: () => import('~/pages/dashboard/system-management/personnel-management.vue'),
         meta: {
           title: '人员管理',
-          // access: [AccessEnum.SYSTEM_PERSONNEL_VIEW],
+          access: [AccessEnum.SYSTEM_PERSONNEL_VIEW],
         },
       },
       {
@@ -162,7 +162,7 @@ export default [
         component: () => import('~/pages/dashboard/system-management/role-management.vue'),
         meta: {
           title: '角色管理',
-          // access: [AccessEnum.SYSTEM_ROLE_VIEW],
+          access: [AccessEnum.SYSTEM_ROLE_VIEW],
         },
       },
       {
@@ -171,7 +171,7 @@ export default [
         component: () => import('~/pages/dashboard/system-management/role-assignment.vue'),
         meta: {
           title: '角色分配',
-          // access: [AccessEnum.SYSTEM_ROLE_ASSIGN],
+          access: [AccessEnum.SYSTEM_ROLE_ASSIGN],
         },
       },
     ],
