@@ -15,6 +15,7 @@ export const useUserStore = defineStore('user', () => {
   const avatar = computed(() => userInfo.value?.avatar)
   const nickname = computed(() => userInfo.value?.operatorName ?? userInfo.value?.nickname ?? userInfo.value?.username)
   const roles = computed(() => userInfo.value?.roles ?? userInfo.value?.shixun?.roles)
+  const permissions = computed(() => userInfo.value?.permissions ?? userInfo.value?.shixun?.menus ?? [])
 
   const getMenuRoutes = async () => {
     const { data } = await getRouteMenusApi()
@@ -58,6 +59,7 @@ export const useUserStore = defineStore('user', () => {
   return {
     userInfo,
     roles,
+    permissions,
     getUserInfo,
     logout,
     routerData,

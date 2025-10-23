@@ -4,6 +4,7 @@ export interface UserInfo {
   nickname?: string
   avatar?: string
   roles?: (string | number)[]
+  permissions?: string[]
   orgName: string
   gender: number
   isCtnEduRequire: number
@@ -22,6 +23,7 @@ export interface UserInfo {
   empCode: string
   shixun: {
     roles: string[]
+    menus: string[]
   }
   lastModifyTime: string
   tenantOrgId: number

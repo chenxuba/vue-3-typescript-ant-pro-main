@@ -146,6 +146,7 @@ const columns = [
     title: '技能标签',
     dataIndex: 'skillTag',
     key: 'skillTag',
+    ellipsis: true,
   },
   {
     title: '主办单位',
@@ -388,7 +389,9 @@ const handleDelete = (record: any) => {
             {{ getEnvironmentName(record.environment) }}
           </template>
           <template v-else-if="column.key === 'skillTag'">
-            {{ record.tag }}
+            <a-tooltip :title="record.tag" placement="topLeft">
+              <span>{{ record.tag }}</span>
+            </a-tooltip>
           </template>
           <template v-else-if="column.key === 'organizer'">
             {{ record.orgName || '-' }}

@@ -171,6 +171,11 @@ const onSelectChange = (keys: (string | number)[], rows: any[]) => {
   selectedRows.value = rows as RoleModel[]
 }
 
+// 复选框属性配置
+const getCheckboxProps = (record: any) => ({
+  disabled: record.code === 'admin',
+})
+
 // 打开新建模态框
 const handleCreate = () => {
   modalTitle.value = '新建角色'
@@ -187,6 +192,12 @@ const handleCreate = () => {
 
 // 打开编辑模态框
 const handleEdit = (record: any) => {
+  // 判断是否为 admin 角色，不允许编辑
+  if (record.code === 'admin') {
+    message.warning('admin 角色不允许编辑')
+    return
+  }
+  
   modalTitle.value = '编辑角色'
   isEdit.value = true
   currentEditId.value = record.roleId || record.id
@@ -349,6 +360,12 @@ const permissionTree = ref(buildPermissionTree())
 
 // 权限管理
 const handlePermissionManage = async (record: any) => {
+  // 判断是否为 admin 角色，不允许修改权限
+  if (record.code === 'admin') {
+    message.warning('admin 角色不允许修改权限')
+    return
+  }
+  
   currentRole.value = record
   permissionModalVisible.value = true
   
@@ -380,6 +397,12 @@ const handlePermissionManage = async (record: any) => {
 
 // 保存权限
 const handleSavePermissions = async () => {
+  // 再次检查是否为 admin 角色
+  if (currentRole.value?.code === 'admin') {
+    message.warning('admin 角色不允许修改权限')
+    return
+  }
+  
   permissionLoading.value = true
   try {
     // 将选中的路由路径转换为权限标识
@@ -389,6 +412,21 @@ const handleSavePermissions = async () => {
       const accessList = routeAccessMap[routePath]
       if (accessList && Array.isArray(accessList)) {
         accessList.forEach(access => accessSet.add(access))
+      }
+    })
+    
+    // 检查是否有子菜单被勾选，如果有，自动添加父菜单的权限标识
+    dynamicRoutes.forEach((route: any) => {
+      if (route.children && route.children.length > 0) {
+        // 检查是否有任何子菜单被选中
+        const hasSelectedChild = route.children.some((child: any) => 
+          checkedKeys.value.includes(child.path)
+        )
+        
+        // 如果有子菜单被选中，且父路由有权限标识，自动添加父路由的权限标识
+        if (hasSelectedChild && route.meta?.access && Array.isArray(route.meta.access)) {
+          route.meta.access.forEach((access: string) => accessSet.add(access))
+        }
       }
     })
     
@@ -434,6 +472,12 @@ const handleCancelPermission = () => {
 
 // 删除单个角色
 const handleDelete = (record: any) => {
+  // 判断是否为 admin 角色，不允许删除
+  if (record.code === 'admin') {
+    message.warning('admin 角色不允许删除')
+    return
+  }
+  
   Modal.confirm({
     title: '确认删除',
     icon: h(ExclamationCircleOutlined),
@@ -459,21 +503,34 @@ const handleBatchDelete = () => {
     return
   }
   
+  // 过滤掉 admin 角色
+  const deletableRoles = selectedRows.value.filter((role: any) => role.code !== 'admin')
+  
+  if (deletableRoles.length === 0) {
+    message.warning('所选角色中包含 admin 角色，不允许删除')
+    return
+  }
+  
+  // 如果选中的角色中包含 admin，提示用户
+  if (deletableRoles.length < selectedRows.value.length) {
+    message.warning('admin 角色不允许删除，将跳过该角色')
+  }
+  
   Modal.confirm({
     title: '确认批量删除',
     icon: h(ExclamationCircleOutlined),
-    content: `确定要删除选中的 ${selectedRowKeys.value.length} 个角色吗？`,
+    content: `确定要删除选中的 ${deletableRoles.length} 个角色吗？`,
     okText: '确定',
     cancelText: '取消',
     onOk: async () => {
-      await executeBatchDelete()
+      await executeBatchDelete(deletableRoles)
     },
   })
 }
 
 // 执行批量删除
-const executeBatchDelete = async () => {
-  const total = selectedRows.value.length
+const executeBatchDelete = async (rolesToDelete: any[] = selectedRows.value) => {
+  const total = rolesToDelete.length
   
   // 初始化进度
   batchDeleteTotal.value = total
@@ -485,8 +542,8 @@ const executeBatchDelete = async () => {
   batchDeleteModalVisible.value = true
   
   // 循环删除
-  for (let i = 0; i < selectedRows.value.length; i++) {
-    const role: any = selectedRows.value[i]
+  for (let i = 0; i < rolesToDelete.length; i++) {
+    const role: any = rolesToDelete[i]
     batchDeleteCurrent.value = i + 1
     
     try {
@@ -615,6 +672,7 @@ onMounted(() => {
             :row-selection="{
               selectedRowKeys: selectedRowKeys,
               onChange: onSelectChange,
+              getCheckboxProps: getCheckboxProps,
             }"
             :scroll="{ x: 1000 }"
             :row-key="(record) => record.roleId || record.id"
@@ -638,6 +696,7 @@ onMounted(() => {
                   <a-button 
                     type="link" 
                     size="small"
+                    :disabled="record.code === 'admin'"
                     @click="handleEdit(record)"
                   >
                     编辑
@@ -645,6 +704,7 @@ onMounted(() => {
                   <a-button 
                     type="link" 
                     size="small"
+                    :disabled="record.code === 'admin'"
                     @click="handlePermissionManage(record)"
                   >
                     权限管理
@@ -653,6 +713,7 @@ onMounted(() => {
                     type="link" 
                     size="small"
                     danger
+                    :disabled="record.code === 'admin'"
                     @click="handleDelete(record)"
                   >
                     删除
