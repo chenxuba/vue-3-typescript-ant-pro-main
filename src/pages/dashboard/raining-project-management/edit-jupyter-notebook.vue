@@ -49,6 +49,7 @@ const evaluationActiveTab = ref('settings')
 interface EvaluationData {
   openTestValidate: number // 1开 2不开
   testValidateFiles: string // 评测文件URL
+  testValidateSh: string // 评测执行命令
   timeLimitM: string // 评测时长限制（分钟）
   scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
   evaluationSetting: string
@@ -65,6 +66,7 @@ interface TestSet {
 const evaluationData = ref<EvaluationData>({
   openTestValidate: 1, // 默认开启
   testValidateFiles: '', // 评测文件
+  testValidateSh: '', // 评测执行命令
   timeLimitM: '', // 评测时长限制
   scoreRule: 1, // 默认通过全部测试集
   evaluationSetting: '通过所有代码块评测',
@@ -364,6 +366,7 @@ const fetchProjectTaskList = async () => {
         
         // 回填评测设置数据
         evaluationData.value.openTestValidate = task.openTestValidate || 1
+        evaluationData.value.testValidateSh = task.testValidateSh || ''
         evaluationData.value.timeLimitM = task.timeLimitM ? String(task.timeLimitM) : ''
         evaluationData.value.scoreRule = task.scoreRule || 1
         evaluationData.value.evaluationSetting = task.evaluationSetting || '通过所有代码块评测'
@@ -554,6 +557,12 @@ const handleSaveEvaluation = async () => {
         return
       }
       
+      // 校验评测执行命令
+      if (!evaluationData.value.testValidateSh || evaluationData.value.testValidateSh.trim() === '') {
+        message.error('请输入评测执行命令')
+        return
+      }
+      
       // 校验评测时长限制
       if (!evaluationData.value.timeLimitM || evaluationData.value.timeLimitM.trim() === '') {
         message.error('请输入评测时长限制')
@@ -600,6 +609,7 @@ const handleSaveEvaluation = async () => {
       projectId: projectId.value,
       openTestValidate: evaluationData.value.openTestValidate,
       testValidateFiles: evaluationData.value.testValidateFiles,
+      testValidateSh: evaluationData.value.testValidateSh,
       timeLimitM: evaluationData.value.timeLimitM,
       scoreRule: evaluationData.value.scoreRule,
       testContent: JSON.stringify(testContentArray),
@@ -1029,6 +1039,16 @@ onMounted(async () => {
                           </div>
                         </a-form-item>
 
+                        <a-form-item label="评测执行命令" required>
+                          <a-input 
+                            v-model:value="evaluationData.testValidateSh"
+                            placeholder="请输入评测执行命令，例如：python main.py" 
+                          />
+                          <div class="upload-hint">
+                            （执行评测文件的命令，如：python main.py、node index.js、java Main 等）
+                          </div>
+                        </a-form-item>
+
                         <a-form-item label="评测时长限制" required>
                           <a-input 
                             v-model:value="evaluationData.timeLimitM" 
@@ -1185,6 +1205,8 @@ onMounted(async () => {
     background: #fff;
     padding: 24px;
     border-radius: 4px;
+    overflow-x: hidden;
+    max-width: 100%;
 
     .steps-section {
       margin-bottom: 32px;
@@ -1212,6 +1234,8 @@ onMounted(async () => {
 
     .form-section {
       margin-bottom: 24px;
+      max-width: 100%;
+      overflow-x: hidden;
 
       .ant-form-item {
         margin-bottom: 24px;

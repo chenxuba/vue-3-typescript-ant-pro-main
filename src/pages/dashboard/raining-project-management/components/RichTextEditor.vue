@@ -129,6 +129,9 @@ onBeforeUnmount(() => {
   border: 1px solid #d9d9d9;
   border-radius: 2px;
   transition: all 0.3s;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 
   &:hover {
     border-color: #40a9ff;
@@ -142,18 +145,76 @@ onBeforeUnmount(() => {
   .editor-toolbar {
     border-bottom: 1px solid #e8e8e8;
     background: #fafafa;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .editor-content {
     overflow-y: auto;
+    overflow-x: hidden;
     background: #fff;
+    width: 100%;
+    max-width: 100%;
 
     :deep(.w-e-text-container) {
       background: #fff;
+      overflow-x: hidden !important;
+      width: 100%;
+      max-width: 100%;
     }
 
     :deep(.w-e-text-placeholder) {
       color: #bfbfbf;
+    }
+
+    :deep(.w-e-text-container [data-slate-editor]) {
+      overflow-wrap: break-word !important;
+      word-wrap: break-word !important;
+      word-break: break-word !important;
+      white-space: pre-wrap !important;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden !important;
+    }
+
+    :deep(.w-e-text-container p) {
+      overflow-wrap: break-word !important;
+      word-wrap: break-word !important;
+      word-break: break-word !important;
+      white-space: pre-wrap !important;
+      max-width: 100%;
+    }
+
+    :deep(.w-e-text-container div) {
+      overflow-wrap: break-word !important;
+      word-wrap: break-word !important;
+      word-break: break-word !important;
+      max-width: 100%;
+    }
+
+    :deep(.w-e-scroll) {
+      overflow-x: hidden !important;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    :deep(.w-e-text-container pre),
+    :deep(.w-e-text-container code) {
+      max-width: 100% !important;
+      white-space: pre-wrap !important;
+      word-wrap: break-word !important;
+      word-break: break-word !important;
+      overflow-wrap: break-word !important;
+      overflow-x: auto !important;
+    }
+
+    :deep(.w-e-text-container span),
+    :deep(.w-e-text-container strong),
+    :deep(.w-e-text-container em) {
+      overflow-wrap: break-word !important;
+      word-wrap: break-word !important;
+      word-break: break-word !important;
     }
   }
 }

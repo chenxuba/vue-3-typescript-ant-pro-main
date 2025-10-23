@@ -2060,6 +2060,8 @@ onMounted(() => {
     background: #fff;
     padding: 24px;
     border-radius: 4px;
+    overflow-x: hidden;
+    max-width: 100%;
 
     .steps-container {
       margin-bottom: 32px;
@@ -2086,6 +2088,9 @@ onMounted(() => {
     }
 
     .form-section {
+      max-width: 100%;
+      overflow-x: hidden;
+      
       .ant-form-item {
         margin-bottom: 24px;
 
