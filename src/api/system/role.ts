@@ -46,7 +46,79 @@ interface RoleQueryParams {
   pageSize?: number
 }
 
+interface RolePagerQueryParams {
+  /**
+   * 权限代码
+   */
+  authCode?: string
+  /**
+   * 权限菜单
+   */
+  authMenus?: string
+  /**
+   * 权限类型
+   */
+  authType?: number
+  /**
+   * 权限类型内容
+   */
+  authTypeContent?: string
+  /**
+   * 角色代码
+   */
+  code?: string
+  /**
+   * 创建时间
+   */
+  createTime?: number
+  /**
+   * 是否内部角色
+   */
+  inner?: number
+  /**
+   * 是否管理员
+   */
+  isAdmin?: number
+  /**
+   * 每页数量
+   */
+  limit?: number
+  /**
+   * 角色名称
+   */
+  name?: string
+  /**
+   * 排序字段 格式: "name:desc,github:asc"
+   */
+  orderbyFiled?: string
+  /**
+   * 页码
+   */
+  page?: number
+  /**
+   * 备注
+   */
+  remark?: string
+  /**
+   * 角色ID
+   */
+  roleId?: number
+  /**
+   * 起始数量
+   */
+  startNum?: number
+  /**
+   * 更新时间
+   */
+  updateTime?: number
+  /**
+   * 用户ID
+   */
+  userId?: number
+}
+
 interface RoleListResult {
+  count: any
   list: RoleModel[]
   total: number
 }
@@ -61,6 +133,61 @@ interface CreateRoleParams {
   status?: boolean
 }
 
+interface CreateRolePagerParams {
+  /**
+   * 权限代码
+   */
+  authCode?: string
+  /**
+   * 权限菜单
+   */
+  authMenus?: string
+  /**
+   * 权限类型 / 管理范围类型
+   */
+  authType?: number
+  /**
+   * 权限类型内容 / 管理范围
+   */
+  authTypeContent?: string
+  /**
+   * 角色代码
+   */
+  code?: string
+  /**
+   * 创建时间
+   */
+  createTime?: number
+  /**
+   * 是否内部角色
+   */
+  inner?: number
+  /**
+   * 是否管理员 / 是否虚拟机构管理员角色
+   */
+  isAdmin?: number
+  /**
+   * 角色名称
+   */
+  name: string
+  /**
+   * 备注
+   */
+  remark?: string
+  /**
+   * 角色ID
+   */
+  roleId?: number
+  /**
+   * 更新时间
+   */
+  updateTime?: number
+  /**
+   * 用户ID / 角色编号
+   */
+  userId?: number
+}
+
 interface UpdateRoleParams {
   id: string | number
   roleName?: string
@@ -72,11 +199,63 @@ interface UpdateRoleParams {
   status?: boolean
 }
 
+interface UpdateRolePagerParams {
+  /**
+   * 角色ID
+   */
+  roleId: string | number
+  /**
+   * 权限代码
+   */
+  authCode?: string
+  /**
+   * 权限菜单
+   */
+  authMenus?: string
+  /**
+   * 权限类型 / 管理范围类型
+   */
+  authType?: number
+  /**
+   * 权限类型内容 / 管理范围
+   */
+  authTypeContent?: string
+  /**
+   * 角色代码
+   */
+  code?: string
+  /**
+   * 是否内部角色
+   */
+  inner?: number
+  /**
+   * 是否管理员 / 是否虚拟机构管理员角色
+   */
+  isAdmin?: number
+  /**
+   * 角色名称
+   */
+  name?: string
+  /**
+   * 备注
+   */
+  remark?: string
+}
+
 /**
  * 获取角色列表
  */
 export async function getRoleListApi(params?: RoleQueryParams) {
   return usePost<RoleListResult>('/role/list', params)
+}
+
+/**
+ * 获取角色分页列表
+ */
+export async function getRoleListPagerApi(params?: RolePagerQueryParams) {
+  return usePost<RoleListResult>('/admin/api/role/getListPager', params,{
+    customDev: true,
+  })
 }
 
 /**
@@ -87,6 +266,15 @@ export async function createRoleApi(data: CreateRoleParams) {
 }
 
 /**
+ * 创建角色 (新接口)
+ */
+export async function createRolePagerApi(data: CreateRolePagerParams) {
+  return usePost('/admin/api/role/create', data, {
+    customDev: true,
+  })
+}
+
+/**
  * 更新角色
  */
 export async function updateRoleApi(data: UpdateRoleParams) {
@@ -94,10 +282,28 @@ export async function updateRoleApi(data: UpdateRoleParams) {
 }
 
 /**
+ * 更新角色 (新接口)
+ */
+export async function updateRolePagerApi(data: UpdateRolePagerParams) {
+  return usePost('/admin/api/role/update', data, {
+    customDev: true,
+  })
+}
+
+/**
  * 删除角色
  */
 export async function deleteRoleApi(id: string | number) {
   return useDelete(`/role/${id}`)
+}
+
+/**
+ * 删除角色 (新接口)
+ */
+export async function deleteRolePagerApi(roleId: string | number) {
+  return usePost('/admin/api/role/del', { roleId }, {
+    customDev: true,
+  })
 }
 
 /**
@@ -138,8 +344,11 @@ export async function saveRolePermissionsApi(id: string | number, permissions: s
 export type {
   RoleModel,
   RoleQueryParams,
+  RolePagerQueryParams,
   RoleListResult,
   CreateRoleParams,
+  CreateRolePagerParams,
   UpdateRoleParams,
+  UpdateRolePagerParams,
 }
 
