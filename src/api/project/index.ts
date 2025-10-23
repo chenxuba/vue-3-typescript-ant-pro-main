@@ -11,6 +11,7 @@ export interface GetProjectListParams {
   startNum?: number // 起始数
   name?: string // 项目名称
   orgName?: string // 主办单位
+  environment?: string // 实验环境
   orderbyFiled?: string // 排序字段，如 "name:desc,github:asc"
 }
 

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import { getProjectListPagerApi, updateProjectApi, deleteProjectApi, type ProjectListItem } from '@/api/project'
 import { getDicGroupApi, type DictionaryItem } from '@/api/common/dictionary'
+import { getAllOrganizationListApi, type RawOrganizationModel } from '@/api/system/organization'
 
 defineOptions({
   name: 'RainingProjectManagement',
@@ -13,6 +14,9 @@ const router = useRouter()
 
 // 环境字典数据
 const environmentDictList = ref<DictionaryItem[]>([])
+
+// 组织列表数据
+const organizationList = ref<RawOrganizationModel[]>([])
 
 /**
  * 获取环境字典数据
@@ -35,10 +39,39 @@ const fetchEnvironmentDict = async () => {
       }
     })
     
-    environmentDictList.value = allDictItems
+    // 根据 value 字段去重
+    const uniqueMap = new Map<string, DictionaryItem>()
+    allDictItems.forEach(item => {
+      if (!uniqueMap.has(item.value)) {
+        uniqueMap.set(item.value, item)
+      }
+    })
+    
+    environmentDictList.value = Array.from(uniqueMap.values())
   } catch (error) {
     console.error('获取环境字典失败：', error)
     environmentDictList.value = []
+  }
+}
+
+/**
+ * 获取组织列表数据
+ */
+const fetchOrganizationList = async () => {
+  try {
+    const response = await getAllOrganizationListApi({
+      limit: 10000, // 获取所有数据
+      page: 1,
+      startNum: 0,
+      orderbyFiled: 'orgCode:asc',
+    })
+    
+    if (response && response.data && response.data.list) {
+      organizationList.value = response.data.list
+    }
+  } catch (error) {
+    console.error('获取组织列表失败：', error)
+    organizationList.value = []
   }
 }
 
@@ -72,10 +105,23 @@ const environmentOptions = computed(() => {
   }))
 })
 
-// 主办单位选项
-const organizerOptions = [
-  { label: '中国科学院计算机网络信息中心', value: '中国科学院计算机网络信息中心' },
-]
+// 主办单位选项 - 从组织列表动态生成
+const organizerOptions = computed(() => {
+  // 去重并按组织名称排序
+  const uniqueOrgs = new Map<string, string>()
+  organizationList.value.forEach(org => {
+    if (org.orgName && !uniqueOrgs.has(org.orgName)) {
+      uniqueOrgs.set(org.orgName, org.orgName)
+    }
+  })
+  
+  return Array.from(uniqueOrgs.values())
+    .sort()
+    .map(name => ({
+      label: name,
+      value: name,
+    }))
+})
 
 // 分页配置
 const pagination = ref({
@@ -134,6 +180,7 @@ const fetchProjectList = async () => {
       startNum: (pagination.value.current - 1) * pagination.value.pageSize,
       name: searchForm.value.projectName || undefined,
       orgName: searchForm.value.organizer || undefined,
+      environment: searchForm.value.environment || undefined,
       orderbyFiled: 'createTime:desc', // 按创建时间正序
     }
 
@@ -176,7 +223,8 @@ const handleSearch = () => {
 
 // 组件挂载时获取字典和列表
 onMounted(() => {
-  fetchEnvironmentDict() // 先获取字典数据
+  fetchEnvironmentDict() // 获取环境字典数据
+  fetchOrganizationList() // 获取组织列表数据
   fetchProjectList()
 })
 
