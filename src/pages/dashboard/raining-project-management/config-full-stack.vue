@@ -5,7 +5,7 @@ import { message, Modal } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
-import { createProjectApi, updateProjectApi, updateProjectEnvironmentApi } from '@/api/project'
+import { createProjectApi, updateProjectApi, updateProjectEnvironmentApi, aiEmbellishApi } from '@/api/project'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -89,6 +89,9 @@ const coverUrl = ref<string>('')
 const uploadingTopCover = ref(false)
 const uploadingCover = ref(false)
 const imageUrlPrefix = 'http://101.200.13.193'
+
+// AI润色相关
+// const aiEmbellishLoading = ref(false)
 
 // 实验环境相关
 const selectedEnvironment = ref<number | undefined>(undefined)
@@ -383,6 +386,8 @@ const handleCoverUpload = async (file: File) => {
 
   return false
 }
+
+
 
 // 代码仓库开关变化
 const handleRepositorySwitchChange = (checked: boolean | string | number) => {
@@ -1385,7 +1390,9 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
             </a-form-item>
 
             <a-form-item label="简介" name="description">
-              <RichTextEditor v-model="formData.description" />
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <RichTextEditor v-model="formData.description" />
+              </div>
             </a-form-item>
 
             <a-form-item label="任务要求" name="showTaskRequire">

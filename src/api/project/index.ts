@@ -755,65 +755,22 @@ export async function getProjectUserListPagerApi(params: GetProjectUserListParam
 }
 
 /**
- * 获取项目任务用户列表的请求参数
+ * AI润色接口
+ * @param content 需要润色的内容
+ * @returns 返回润色后的内容
  */
-export interface GetProjectUserTaskListParams {
-  limit: number
-  page: number
-  taskId: number
-  // 筛选条件
-  userNumber?: string // 用户编号
-  userName?: string // 用户姓名
-  unit?: string // 单位
-  // 其他可选参数
-  startNum?: number
-  orderbyFiled?: string // 排序字段
+export interface AIEmbellishParams {
+  content: string
 }
 
-/**
- * 项目任务用户列表项数据结构
- */
-export interface ProjectUserTaskListItem {
-  id: number
-  taskId: number
-  userId: number
-  userNumber: string
-  userName: string
-  unit: string
-  taskStartTime: string
-  taskEndTime: string
-  totalTime: string
-  experimentStatus: string
-  statusType?: string
-  [key: string]: any
-}
-
-/**
- * 获取项目任务用户列表的响应数据
- */
-export interface GetProjectUserTaskListResponse {
+export interface AIEmbellishResponse {
   result: number
   msg: string
-  data: {
-    count: number
-    cursor: number
-    hasMore: number
-    limit: number
-    list: ProjectUserTaskListItem[]
-    page: number
-    total: number
-    totalPage: number
-  }
-  ext: Record<string, any>
+  data: string
 }
 
-/**
- * 获取项目任务用户列表（分页）- 任务完成情况
- * @param params 查询参数
- * @returns 返回项目任务用户列表数据
- */
-export async function getProjectUserTaskListPagerApi(params: GetProjectUserTaskListParams): Promise<GetProjectUserTaskListResponse['data']> {
-  const response = await usePost<GetProjectUserTaskListResponse['data']>('/admin/api/projectUserTask/getListPager', params, {
+export async function aiEmbellishApi(content: string): Promise<string> {
+  const response = await usePost<string>('/admin/api/ai/aiEmbellish', { content }, {
     customDev: true,
   })
   
@@ -821,15 +778,6 @@ export async function getProjectUserTaskListPagerApi(params: GetProjectUserTaskL
     return response.data
   }
   
-  return {
-    count: 0,
-    cursor: 0,
-    hasMore: 0,
-    limit: params.limit || 20,
-    list: [],
-    page: params.page || 1,
-    total: 0,
-    totalPage: 0,
-  }
+  return content
 }
 

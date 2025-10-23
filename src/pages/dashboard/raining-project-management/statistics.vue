@@ -7,10 +7,7 @@ import {
   type GetProjectUserListParams,
   type ProjectUserListItem,
   getProjectTaskListApi,
-  type GetProjectTaskListParams,
-  getProjectUserTaskListPagerApi,
-  type GetProjectUserTaskListParams,
-  type ProjectUserTaskListItem
+  type GetProjectTaskListParams
 } from '@/api/project'
 import { 
   getAllOrganizationListApi,
@@ -93,8 +90,6 @@ const filteredTaskLevelList = computed(() => {
 // 选择任务关卡
 const handleSelectTaskLevel = (taskId: number) => {
   selectedTaskLevel.value = taskId
-  taskPagination.value.current = 1
-  fetchTaskUserData()
 }
 
 // 表格列定义 - 参训整体情况
@@ -120,21 +115,78 @@ const taskColumns = [
 // 参训整体情况数据
 const participationData = ref<ProjectUserListItem[]>([])
 
-// 任务完成情况数据
-const taskData = ref<ProjectUserTaskListItem[]>([])
+// 模拟数据 - 任务完成情况
+const taskData = ref([
+  {
+    key: '1',
+    userNumber: 'ceshi123456',
+    userName: '李清照',
+    unit: '中国科学院计算机网络信息中心',
+    taskStartTime: '2025-07-21  12:12:12',
+    taskEndTime: '2025-07-21  12:12:12',
+    totalTime: '12:12:12',
+    experimentStatus: '已完成',
+    statusType: 'completed',
+  },
+  {
+    key: '2',
+    userNumber: 'ceshi123456',
+    userName: '李清照',
+    unit: '中国科学院计算机网络信息中心',
+    taskStartTime: '2025-07-21  12:12:12',
+    taskEndTime: '2025-07-21  12:12:12',
+    totalTime: '12:12:12',
+    experimentStatus: '已完成',
+    statusType: 'completed',
+  },
+  {
+    key: '3',
+    userNumber: 'ceshi123456',
+    userName: '李清照',
+    unit: '中国科学院计算机网络信息中心',
+    taskStartTime: '2025-07-21  12:12:12',
+    taskEndTime: '2025-07-21  12:12:12',
+    totalTime: '12:12:12',
+    experimentStatus: '进行中',
+    statusType: 'inProgress',
+  },
+  {
+    key: '4',
+    userNumber: 'ceshi123456',
+    userName: '李清照',
+    unit: '中国科学院计算机网络信息中心',
+    taskStartTime: '2025-07-21  12:12:12',
+    taskEndTime: '2025-07-21  12:12:12',
+    totalTime: '12:12:12',
+    experimentStatus: '进行中',
+    statusType: 'inProgress',
+  },
+  {
+    key: '5',
+    userNumber: 'ceshi123456',
+    userName: '李清照',
+    unit: '中国科学院计算机网络信息中心',
+    taskStartTime: '2025-07-21  12:12:12',
+    taskEndTime: '2025-07-21  12:12:12',
+    totalTime: '12:12:12',
+    experimentStatus: '进行中',
+    statusType: 'inProgress',
+  },
+  {
+    key: '6',
+    userNumber: 'ceshi123456',
+    userName: '李清照',
+    unit: '中国科学院计算机网络信息中心',
+    taskStartTime: '2025-07-21  12:12:12',
+    taskEndTime: '2025-07-21  12:12:12',
+    totalTime: '12:12:12',
+    experimentStatus: '进行中',
+    statusType: 'inProgress',
+  },
+])
 
-// 分页配置 - 参训整体情况
+// 分页配置
 const pagination = ref({
-  current: 1,
-  pageSize: 20,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `数据共 ${total} 条`,
-})
-
-// 分页配置 - 任务完成情况
-const taskPagination = ref({
   current: 1,
   pageSize: 20,
   total: 0,
@@ -271,69 +323,6 @@ const handleTableChange = (pag: any) => {
   pagination.value.current = pag.current
   pagination.value.pageSize = pag.pageSize
   fetchParticipationData()
-}
-
-// 获取任务用户数据（任务完成情况）
-const fetchTaskUserData = async () => {
-  if (!selectedTaskLevel.value) return
-  
-  loading.value = true
-  try {
-    const params: GetProjectUserTaskListParams = {
-      limit: taskPagination.value.pageSize,
-      page: taskPagination.value.current,
-      taskId: selectedTaskLevel.value,
-    }
-
-    // 添加筛选条件
-    if (filterForm.value.userNumber) {
-      params.userNumber = filterForm.value.userNumber
-    }
-    if (filterForm.value.userName) {
-      params.userName = filterForm.value.userName
-    }
-    if (filterForm.value.unit) {
-      params.unit = filterForm.value.unit
-    }
-
-    const response = await getProjectUserTaskListPagerApi(params)
-    
-    if (response && response.list) {
-      taskData.value = response.list
-      taskPagination.value.total = response.total
-    }
-  } catch (error) {
-    console.error('获取任务用户数据失败:', error)
-    message.error('获取任务用户数据失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 处理任务完成情况表格分页变化
-const handleTaskTableChange = (pag: any) => {
-  taskPagination.value.current = pag.current
-  taskPagination.value.pageSize = pag.pageSize
-  fetchTaskUserData()
-}
-
-// 任务完成情况 - 查询
-const handleTaskSearch = () => {
-  console.log('任务查询', filterForm.value)
-  taskPagination.value.current = 1
-  fetchTaskUserData()
-}
-
-// 任务完成情况 - 重置
-const handleTaskReset = () => {
-  filterForm.value = {
-    userNumber: '',
-    userName: '',
-    unit: undefined,
-    status: undefined,
-  }
-  taskPagination.value.current = 1
-  fetchTaskUserData()
 }
 
 // 组件挂载时获取数据
@@ -474,8 +463,8 @@ onMounted(() => {
                 </a-col>
                 <a-col :span="6">
                   <div class="filter-actions">
-                    <a-button type="primary" @click="handleTaskSearch">查询</a-button>
-                    <a-button @click="handleTaskReset">重置</a-button>
+                    <a-button type="primary" @click="handleSearch">查询</a-button>
+                    <a-button @click="handleReset">重置</a-button>
                   </div>
                 </a-col>
               </a-row>
@@ -516,7 +505,7 @@ onMounted(() => {
               <div class="table-header">
                 <div class="table-info">
                   数据列表
-                  <span class="total-info">数据共 <span class="total-number">{{ taskPagination.total }}</span> 条</span>
+                  <span class="total-info">数据共 <span class="total-number">123</span> 条</span>
                 </div>
                 <a-button type="primary" @click="handleExport">导出</a-button>
               </div>
@@ -524,11 +513,8 @@ onMounted(() => {
               <a-table 
                 :columns="taskColumns" 
                 :data-source="taskData"
-                :pagination="taskPagination"
-                :loading="loading"
-                :row-key="(record) => record.id"
+                :pagination="pagination"
                 :scroll="{ x: 1200 }"
-                @change="handleTaskTableChange"
               >
                 <template #bodyCell="{ column, record }">
                   <template v-if="column.key === 'userName'">
