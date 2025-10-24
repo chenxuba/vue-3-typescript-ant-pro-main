@@ -337,7 +337,7 @@ const handleCreateItem = () => {
 }
 
 // 编辑字典项
-const handleEditItem = (item: DictionaryItemModel) => {
+const handleEditItem = (item: any) => {
   itemModalTitle.value = '编辑字典项'
   isItemEdit.value = true
   currentItemId.value = item.id
@@ -390,7 +390,7 @@ const handleSubmitItem = async () => {
 }
 
 // 删除字典项
-const handleDeleteItem = (item: DictionaryItemModel) => {
+const handleDeleteItem = (item: any) => {
   Modal.confirm({
     title: '确认删除',
     icon: h(ExclamationCircleOutlined),
@@ -470,24 +470,6 @@ const handleTableChange = (pagination: any) => {
   itemQueryForm.page = pagination.current
   itemQueryForm.limit = pagination.pageSize
   fetchItemList()
-}
-
-// 时间格式化
-const formatTime = (timestamp: number | string | undefined) => {
-  if (!timestamp) return '-'
-  
-  const date = new Date(typeof timestamp === 'number' ? timestamp : parseInt(timestamp))
-  
-  if (isNaN(date.getTime())) return '-'
-  
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
-  
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
 onMounted(() => {

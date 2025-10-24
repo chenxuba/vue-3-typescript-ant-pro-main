@@ -5,7 +5,7 @@ import { message, Modal } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
-import { createProjectApi, updateProjectApi, updateProjectEnvironmentApi, aiEmbellishApi } from '@/api/project'
+import { createProjectApi, updateProjectApi, updateProjectEnvironmentApi } from '@/api/project'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
