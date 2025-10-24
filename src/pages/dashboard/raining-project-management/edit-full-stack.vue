@@ -375,6 +375,7 @@ const fetchProjectTaskList = async () => {
             })) : [],
             testValidateSh: task.testValidateSh,
             passType: task.passType || 1,
+            passTypeRule: task.passTypeRule || '',
             blankCode: task.blankCode || 1,
             scoreRule: task.scoreRule || 1,
             testValidateType: task.testValidateType || 1,
@@ -1806,6 +1807,16 @@ onMounted(() => {
                                 <a-radio :value="1">实际输出与期望输出对比</a-radio>
                                 <a-radio :value="2">实际输出满足规则</a-radio>
                               </a-radio-group>
+                            </a-form-item>
+
+                            <a-form-item v-if="evaluationFormData.passType === 2" label="判定规则">
+                              <a-input 
+                                v-model:value="evaluationFormData.passTypeRule" 
+                                placeholder="请输入判定规则" 
+                              />
+                              <div class="upload-hint">
+                                （请输入实际输出满足的规则描述）
+                              </div>
                             </a-form-item>
 
                             <a-form-item label="空格处理">

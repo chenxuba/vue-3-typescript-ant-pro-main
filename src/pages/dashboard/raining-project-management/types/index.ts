@@ -75,6 +75,7 @@ export interface TaskLevel {
     testValidateFiles: UploadedFile[] // 评测执行文件（支持多个）
     testValidateSh: string // 评测执行命令
     passType: number // 通关判定：1-实际输出与期望输出对比 2-实际输出满足规则
+    passTypeRule?: string // 通关判定规则（当passType为2时使用）
     blankCode: number // 空格处理：1-不忽略空格 2-忽略首尾空格 3-忽略所有空格
     scoreRule: number // 得分规则：1-通过全部测试集 2-通过部分测试集
     testValidateType: number // 用例类型：1-文本 2-文件
@@ -112,6 +113,7 @@ export interface EvaluationForm {
   testValidateFiles: UploadedFile[] // 评测执行文件（支持多个）
   testValidateSh: string // 评测执行命令
   passType: number // 通关判定：1-实际输出与期望输出对比 2-实际输出满足规则
+  passTypeRule?: string // 通关判定规则（当passType为2时使用）
   blankCode: number // 空格处理：1-不忽略空格 2-忽略首尾空格 3-忽略所有空格
   scoreRule: number // 得分规则：1-通过全部测试集 2-通过部分测试集
   testValidateType: number // 用例类型：1-文本 2-文件

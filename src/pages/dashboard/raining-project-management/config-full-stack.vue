@@ -1698,6 +1698,16 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                             </a-radio-group>
                           </a-form-item>
 
+                          <a-form-item v-if="evaluationFormData.passType === 2" label="判定规则">
+                            <a-input 
+                              v-model:value="evaluationFormData.passTypeRule" 
+                              placeholder="请输入判定规则" 
+                            />
+                            <div class="upload-hint">
+                              （请输入实际输出满足的规则描述）
+                            </div>
+                          </a-form-item>
+
                           <a-form-item label="空格处理">
                             <a-radio-group v-model:value="evaluationFormData.blankCode" class="custom-radio">
                               <a-radio :value="1">不忽略空格</a-radio>
