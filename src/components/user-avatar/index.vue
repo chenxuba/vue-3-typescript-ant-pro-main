@@ -2,7 +2,7 @@
 import { GlobalOutlined } from '@ant-design/icons-vue'
 
 const userStore = useUserStore()
-const { avatar, nickname } = storeToRefs(userStore)
+const {  nickname } = storeToRefs(userStore)
 
 function handleClick({ key }: any) {
   if (key === 'backToFront') {
