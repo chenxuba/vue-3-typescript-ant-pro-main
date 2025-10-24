@@ -7,7 +7,10 @@ import {
   type GetProjectUserListParams,
   type ProjectUserListItem,
   getProjectTaskListApi,
-  type GetProjectTaskListParams
+  type GetProjectTaskListParams,
+  getProjectUserTaskListPagerApi,
+  type GetProjectUserTaskListParams,
+  type ProjectUserTaskListItem
 } from '@/api/project'
 import { 
   getAllOrganizationListApi,
@@ -90,6 +93,9 @@ const filteredTaskLevelList = computed(() => {
 // 选择任务关卡
 const handleSelectTaskLevel = (taskId: number) => {
   selectedTaskLevel.value = taskId
+  // 重置分页并获取新数据
+  taskPagination.value.current = 1
+  fetchTaskCompletionData()
 }
 
 // 表格列定义 - 参训整体情况
@@ -115,78 +121,21 @@ const taskColumns = [
 // 参训整体情况数据
 const participationData = ref<ProjectUserListItem[]>([])
 
-// 模拟数据 - 任务完成情况
-const taskData = ref([
-  {
-    key: '1',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '已完成',
-    statusType: 'completed',
-  },
-  {
-    key: '2',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '已完成',
-    statusType: 'completed',
-  },
-  {
-    key: '3',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '进行中',
-    statusType: 'inProgress',
-  },
-  {
-    key: '4',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '进行中',
-    statusType: 'inProgress',
-  },
-  {
-    key: '5',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '进行中',
-    statusType: 'inProgress',
-  },
-  {
-    key: '6',
-    userNumber: 'ceshi123456',
-    userName: '李清照',
-    unit: '中国科学院计算机网络信息中心',
-    taskStartTime: '2025-07-21  12:12:12',
-    taskEndTime: '2025-07-21  12:12:12',
-    totalTime: '12:12:12',
-    experimentStatus: '进行中',
-    statusType: 'inProgress',
-  },
-])
+// 任务完成情况数据
+const taskData = ref<ProjectUserTaskListItem[]>([])
 
-// 分页配置
+// 分页配置 - 参训整体情况
 const pagination = ref({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `数据共 ${total} 条`,
+})
+
+// 分页配置 - 任务完成情况
+const taskPagination = ref({
   current: 1,
   pageSize: 20,
   total: 0,
@@ -197,6 +146,7 @@ const pagination = ref({
 
 // 加载状态
 const loading = ref(false)
+const taskLoading = ref(false)
 
 // 获取项目ID（从路由参数）
 const projectId = ref(Number(route.query.id) || 0)
@@ -289,11 +239,99 @@ const fetchParticipationData = async () => {
   }
 }
 
+// 计算累计时间（时间戳差值转换为时分秒格式）
+const formatDuration = (beginTime: number, endTime: number) => {
+  if (!beginTime || !endTime) return '-'
+  
+  // 判断时间戳单位（秒级还是毫秒级）
+  const begin = beginTime < 10000000000 ? beginTime * 1000 : beginTime
+  const end = endTime < 10000000000 ? endTime * 1000 : endTime
+  
+  // 计算时间差（毫秒）并转换为秒
+  const duration = Math.floor((end - begin) / 1000)
+  
+  if (duration < 0) return '-'
+  
+  const hours = Math.floor(duration / 3600)
+  const minutes = Math.floor((duration % 3600) / 60)
+  const seconds = duration % 60
+  
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+// 获取实验状态文本
+const getExperimentStatusText = (status: number) => {
+  if (status === 10) {
+    return '已完成'
+  } else if (status > 0 && status < 10) {
+    return '进行中'
+  } else {
+    return '未开始'
+  }
+}
+
+// 获取实验状态类型
+const getExperimentStatusType = (status: number) => {
+  if (status === 10) {
+    return 'completed'
+  } else if (status > 0 && status < 10) {
+    return 'inProgress'
+  } else {
+    return 'notStarted'
+  }
+}
+
+// 获取任务完成情况数据
+const fetchTaskCompletionData = async () => {
+  if (!selectedTaskLevel.value) {
+    return
+  }
+  
+  taskLoading.value = true
+  try {
+    const params: GetProjectUserTaskListParams = {
+      limit: taskPagination.value.pageSize,
+      page: taskPagination.value.current,
+      projectId: projectId.value,
+      taskId: selectedTaskLevel.value,
+      orderbyFiled: 'id:desc',
+    }
+
+    // 添加筛选条件
+    if (filterForm.value.userNumber) {
+      params.userId = filterForm.value.userNumber
+    }
+    if (filterForm.value.userName) {
+      params.nickName = filterForm.value.userName
+    }
+    if (filterForm.value.unit) {
+      params.orgName = filterForm.value.unit
+    }
+
+    const response = await getProjectUserTaskListPagerApi(params)
+    
+    if (response && response.list) {
+      taskData.value = response.list
+      taskPagination.value.total = response.total
+    }
+  } catch (error) {
+    console.error('获取任务完成情况失败:', error)
+    message.error('获取任务完成情况失败')
+  } finally {
+    taskLoading.value = false
+  }
+}
+
 // 查询
 const handleSearch = () => {
   console.log('查询', filterForm.value)
-  pagination.value.current = 1
-  fetchParticipationData()
+  if (activeTab.value === 'participation') {
+    pagination.value.current = 1
+    fetchParticipationData()
+  } else if (activeTab.value === 'task') {
+    taskPagination.value.current = 1
+    fetchTaskCompletionData()
+  }
 }
 
 // 重置
@@ -304,8 +342,13 @@ const handleReset = () => {
     unit: undefined,
     status: undefined,
   }
-  pagination.value.current = 1
-  fetchParticipationData()
+  if (activeTab.value === 'participation') {
+    pagination.value.current = 1
+    fetchParticipationData()
+  } else if (activeTab.value === 'task') {
+    taskPagination.value.current = 1
+    fetchTaskCompletionData()
+  }
 }
 
 // 导出
@@ -318,18 +361,29 @@ const handleBack = () => {
   router.back()
 }
 
-// 处理分页变化
+// 处理分页变化 - 参训整体情况
 const handleTableChange = (pag: any) => {
   pagination.value.current = pag.current
   pagination.value.pageSize = pag.pageSize
   fetchParticipationData()
 }
 
+// 处理分页变化 - 任务完成情况
+const handleTaskTableChange = (pag: any) => {
+  taskPagination.value.current = pag.current
+  taskPagination.value.pageSize = pag.pageSize
+  fetchTaskCompletionData()
+}
+
 // 组件挂载时获取数据
-onMounted(() => {
+onMounted(async () => {
   fetchOrganizationList() // 获取组织列表
-  fetchProjectTaskCount() // 获取项目任务总数
+  await fetchProjectTaskCount() // 获取项目任务总数
   fetchParticipationData()
+  // 如果有选中的任务关卡，获取任务完成情况数据
+  if (selectedTaskLevel.value) {
+    fetchTaskCompletionData()
+  }
 })
 </script>
 
@@ -505,7 +559,7 @@ onMounted(() => {
               <div class="table-header">
                 <div class="table-info">
                   数据列表
-                  <span class="total-info">数据共 <span class="total-number">123</span> 条</span>
+                  <span class="total-info">数据共 <span class="total-number">{{ taskPagination.total }}</span> 条</span>
                 </div>
                 <a-button type="primary" @click="handleExport">导出</a-button>
               </div>
@@ -513,19 +567,37 @@ onMounted(() => {
               <a-table 
                 :columns="taskColumns" 
                 :data-source="taskData"
-                :pagination="pagination"
+                :pagination="taskPagination"
+                :loading="taskLoading"
+                :row-key="(record) => record.id"
                 :scroll="{ x: 1200 }"
+                @change="handleTaskTableChange"
               >
                 <template #bodyCell="{ column, record }">
-                  <template v-if="column.key === 'userName'">
-                    <a class="user-link">{{ record.userName }}</a>
+                  <template v-if="column.key === 'userNumber'">
+                    {{ record.userId }}
+                  </template>
+                  <template v-else-if="column.key === 'userName'">
+                    <a class="user-link">{{ record.nickName }}</a>
+                  </template>
+                  <template v-else-if="column.key === 'unit'">
+                    {{ record.orgName || '-' }}
+                  </template>
+                  <template v-else-if="column.key === 'taskStartTime'">
+                    {{ formatTimestamp(record.beginTime) }}
+                  </template>
+                  <template v-else-if="column.key === 'taskEndTime'">
+                    {{ formatTimestamp(record.endTime) }}
+                  </template>
+                  <template v-else-if="column.key === 'totalTime'">
+                    {{ formatDuration(record.beginTime, record.endTime) }}
                   </template>
                   <template v-else-if="column.key === 'experimentStatus'">
                     <span 
                       class="status-tag"
-                      :class="record.statusType"
+                      :class="getExperimentStatusType(record.status)"
                     >
-                      {{ record.experimentStatus }}
+                      {{ getExperimentStatusText(record.status) }}
                     </span>
                   </template>
                 </template>
@@ -679,13 +751,18 @@ onMounted(() => {
       font-size: 14px;
 
       &.completed {
-        color: #1890ff;
-        background: #e6f7ff;
+        color: #52c41a;
+        background: #f6ffed;
       }
 
       &.inProgress {
         color: #1890ff;
         background: #e6f7ff;
+      }
+
+      &.notStarted {
+        color: #8c8c8c;
+        background: #fafafa;
       }
     }
 

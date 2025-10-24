@@ -781,3 +781,121 @@ export async function aiEmbellishApi(content: string): Promise<string> {
   return content
 }
 
+/**
+ * AI出题接口
+ * @param content 题干内容
+ * @returns 返回生成的题目数据
+ */
+export interface AICreateQuestionParams {
+  content: string
+}
+
+export interface AICreateQuestionResponse {
+  result: number
+  msg: string
+  data: {
+    title?: string // 题干
+    options?: string[] // 选项数组
+    answer?: string // 正确答案
+    analysis?: string // 答案解析
+  }
+}
+
+export async function aiCreateQuestionApi(content: string): Promise<AICreateQuestionResponse['data']> {
+  const response = await usePost<AICreateQuestionResponse['data']>('/admin/api/ai/aiCreateQuestion', { content }, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  throw new Error('AI出题失败')
+}
+
+/**
+ * 获取任务完成情况列表的请求参数
+ */
+export interface GetProjectUserTaskListParams {
+  beginTime?: number
+  createTime?: number
+  endTime?: number
+  id?: number
+  limit: number
+  orderbyFiled?: string // 排序字段，如 "name:desc,github:asc"
+  page: number
+  projectId: number // 项目ID（必填）
+  score?: number
+  startNum?: number
+  status?: number
+  taskContent?: string
+  taskId: number // 任务ID（必填）
+  updateTime?: number
+  userId?: number | string
+  nickName?: string // 用户姓名（筛选条件）
+  orgName?: string // 单位（筛选条件）
+}
+
+/**
+ * 任务完成情况列表项数据结构
+ */
+export interface ProjectUserTaskListItem {
+  beginTime: number
+  createTime: number
+  endTime: number
+  id: number
+  projectId: number
+  score: number
+  status: number // 10: 已完成
+  taskContent: string
+  taskId: number
+  updateTime: number
+  userId: number
+  nickName: string // 用户姓名
+  orgName: string // 单位
+}
+
+/**
+ * 获取任务完成情况列表的响应数据
+ */
+export interface GetProjectUserTaskListResponse {
+  result: number
+  msg: string
+  data: {
+    count: number
+    cursor: number
+    hasMore: number
+    limit: number
+    list: ProjectUserTaskListItem[]
+    page: number
+    total: number
+    totalPage: number
+  }
+}
+
+/**
+ * 获取任务完成情况列表（分页）
+ * @param params 查询参数
+ * @returns 返回任务完成情况列表数据
+ */
+export async function getProjectUserTaskListPagerApi(params: GetProjectUserTaskListParams): Promise<GetProjectUserTaskListResponse['data']> {
+  const response = await usePost<GetProjectUserTaskListResponse['data']>('/admin/api/projectUserTask/getListPager', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data) {
+    return response.data
+  }
+  
+  return {
+    count: 0,
+    cursor: 0,
+    hasMore: 0,
+    limit: params.limit || 20,
+    list: [],
+    page: params.page || 1,
+    total: 0,
+    totalPage: 0,
+  }
+}
+

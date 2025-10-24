@@ -5,7 +5,7 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { CloseCircleOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import type { Question } from '../types'
 import RichTextEditor from './RichTextEditor.vue'
-import { createTaskQuestionApi, updateTaskQuestionApi } from '@/api/project'
+import { createTaskQuestionApi, updateTaskQuestionApi, aiCreateQuestionApi, aiEmbellishApi } from '@/api/project'
 
 interface Props {
   open: boolean
@@ -137,7 +137,7 @@ const convertToQuestionFormat = (internalData: InternalFormData): Question => {
   const selectsArray = internalData.options
     .filter(opt => opt.content.trim()) // 只保留有内容的选项
     .map(opt => ({ [opt.label]: opt.content }))
-  
+
   // 获取正确答案（多个正确答案用逗号分隔）
   const correctAnswers = internalData.options
     .filter(opt => opt.isCorrect)
@@ -171,14 +171,14 @@ const convertToQuestionFormat = (internalData: InternalFormData): Question => {
 const handleConfirm = async () => {
   try {
     await formRef.value?.validate()
-    
+
     // 检查是否至少填写了一个选项
     const hasOption = formData.value.options.some(opt => opt.content.trim())
     if (!hasOption) {
       message.error('请至少填写一个选项')
       return
     }
-    
+
     // 检查是否至少设置了一个正确答案
     const hasCorrect = formData.value.options.some(opt => opt.isCorrect)
     if (!hasCorrect) {
@@ -196,12 +196,12 @@ const handleConfirm = async () => {
       message.error('任务关卡ID不存在，请先保存任务关卡')
       return
     }
-    
+
     // 转换为 Question 格式
     const question = convertToQuestionFormat(formData.value)
     // 判断是新增还是编辑模式
     const isEditMode = props.question && props.question.id
-    
+
     console.log('=== 题目参数 ===')
     console.log('操作模式:', isEditMode ? '编辑' : '新增')
     console.log('题目ID (id):', question.id)
@@ -211,7 +211,7 @@ const handleConfirm = async () => {
     console.log('排序权重 (weight):', question.weight)
     console.log('已有题目数量:', props.existingQuestions?.length || 0)
     console.log('==================')
-    
+
     try {
       if (isEditMode) {
         // 编辑模式：调用更新接口
@@ -226,10 +226,10 @@ const handleConfirm = async () => {
           taskId: question.taskId!,
           weight: question.weight!,
         })
-        
+
         console.log('题目更新成功，返回数据:', response)
         message.success('题目更新成功')
-        
+
         emit('confirm', question)
         emit('update:open', false)
         formRef.value?.resetFields()
@@ -244,13 +244,13 @@ const handleConfirm = async () => {
           taskId: question.taskId!,
           weight: question.weight!,
         })
-        
+
         console.log('题目创建成功，返回数据:', response)
         message.success('题目创建成功')
-        
+
         // 更新题目ID
         question.id = response.id.toString()
-        
+
         emit('confirm', question)
         emit('update:open', false)
         formRef.value?.resetFields()
@@ -308,83 +308,156 @@ const addOption = () => {
   })
 }
 
+// AI出题加载状态
+const aiGenerating = ref(false)
+
+// AI润色加载状态
+const aiEmbellishing = ref(false)
+
+// AI润色题干
+const handleAIEmbellish = async () => {
+  // 检查题干内容
+  if (!formData.value.name) {
+    message.warning('请先输入题干内容')
+    return
+  }
+
+  // 去除HTML标签获取纯文本
+  const text = formData.value.name.replace(/<[^>]*>/g, '').trim()
+  if (!text) {
+    message.warning('请先输入题干内容')
+    return
+  }
+
+  try {
+    aiEmbellishing.value = true
+    message.loading('AI正在润色题干，请稍候...', 0)
+
+    // 调用AI润色接口
+    const embellishedContent = await aiEmbellishApi(formData.value.name)
+
+    message.destroy()
+
+    // 更新题干内容
+    formData.value.name = embellishedContent
+
+    message.success('AI润色成功')
+  } catch (error: any) {
+    message.destroy()
+    console.error('AI润色失败:', error)
+    message.error(error.message || 'AI润色失败，请重试')
+  } finally {
+    aiEmbellishing.value = false
+  }
+}
+
 // AI出题
-// const handleAIGenerate = () => {
-//   message.info('AI出题功能开发中...')
-// }
+const handleAIGenerate = async () => {
+  // 检查题干内容
+  if (!formData.value.name) {
+    message.warning('请先输入题干内容')
+    return
+  }
+
+  // 去除HTML标签获取纯文本
+  const text = formData.value.name.replace(/<[^>]*>/g, '').trim()
+  if (!text) {
+    message.warning('请先输入题干内容')
+    return
+  }
+
+  try {
+    aiGenerating.value = true
+    message.loading('AI正在生成题目，请稍候...', 0)
+
+    // 调用AI出题接口
+    const result = await aiCreateQuestionApi(formData.value.name)
+
+    message.destroy()
+
+    console.log('=== AI出题返回数据 ===')
+    console.log('返回结果:', result)
+
+    // 如果返回了题干，更新题干
+    if (result.title) {
+      formData.value.name = result.title
+    }
+
+    // 如果返回了选项，更新选项
+    if (result.options && Array.isArray(result.options) && result.options.length > 0) {
+      const newOptions = result.options.map((content, index) => {
+        const label = String.fromCharCode(65 + index) // A, B, C, D...
+        return {
+          id: (index + 1).toString(),
+          label: label,
+          content: content,
+          isCorrect: false
+        }
+      })
+      formData.value.options = newOptions
+    }
+
+    // 如果返回了正确答案，设置正确答案
+    if (result.answer) {
+      const correctAnswers = result.answer.split(',').map(a => a.trim())
+      formData.value.options.forEach(opt => {
+        opt.isCorrect = correctAnswers.includes(opt.label)
+      })
+    }
+
+    // 如果返回了答案解析，更新答案解析
+    if (result.analysis) {
+      formData.value.answerKey = result.analysis
+    }
+
+    message.success('AI出题成功')
+  } catch (error: any) {
+    message.destroy()
+    console.error('AI出题失败:', error)
+    message.error(error.message || 'AI出题失败，请重试')
+  } finally {
+    aiGenerating.value = false
+  }
+}
 </script>
 
 <template>
-  <a-modal
-    :open="open"
-    :title="question ? '编辑题目' : '添加题目'"
-    width="900px"
-    :mask-closable="false"
-    @cancel="handleCancel"
-  >
-    <a-form
-      ref="formRef"
-      :model="formData"
-      :rules="rules"
-      layout="vertical"
-    >
+  <a-modal :open="open" :title="question ? '编辑题目' : '添加题目'" width="900px" :mask-closable="false" @cancel="handleCancel">
+    <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
       <a-form-item label="题干" name="name" required>
-        <div class="title-input-wrapper">
-          <RichTextEditor 
-            v-model="formData.name" 
-            placeholder="请您输入题干"
-            :height="150"
-            class="title-input"
-          />
-          <!-- <a-button type="primary" @click="handleAIGenerate" class="ai-button">
+        <div class="ai-buttons-bar">
+          <a-button type="primary" @click="handleAIGenerate" :loading="aiGenerating" size="small">
             AI出题
-          </a-button> -->
+          </a-button>
+          <a-button type="primary" @click="handleAIEmbellish" :loading="aiEmbellishing" size="small">
+            AI润色
+          </a-button>
         </div>
+        <RichTextEditor v-model="formData.name" placeholder="请您输入题干" :height="150" :show-ai-embellish="false" />
       </a-form-item>
 
-      <a-form-item  required>
+      <a-form-item required>
         <!-- 自定义label内容 -->
         <template #label>
           <span>答案选项 <span class="options-hint ml-12px">点击字母设置正确答案（单选）</span></span>
         </template>
         <div class="options-list">
-          <div 
-            v-for="option in formData.options" 
-            :key="option.id"
-            class="option-item"
-          >
-            <div 
-              class="option-label"
-              :class="{ 'is-correct': option.isCorrect }"
-              @click="toggleCorrect(option.id)"
-            >
+          <div v-for="option in formData.options" :key="option.id" class="option-item">
+            <div class="option-label" :class="{ 'is-correct': option.isCorrect }" @click="toggleCorrect(option.id)">
               {{ option.label }}
             </div>
-            <a-input
-              v-model:value="option.content"
-              placeholder="请输入选项内容"
-              class="option-input"
-            />
-            <CloseCircleOutlined 
-              v-if="formData.options.length > 2"
-              class="remove-icon" 
-              @click="removeOption(option.id)"
-            />
+            <a-input v-model:value="option.content" placeholder="请输入选项内容" class="option-input" />
+            <CloseCircleOutlined v-if="formData.options.length > 2" class="remove-icon"
+              @click="removeOption(option.id)" />
             <PlusOutlined
               v-if="option.id === formData.options[formData.options.length - 1].id && formData.options.length < 10"
-              class="add-icon"
-              @click="addOption"
-            />
+              class="add-icon" @click="addOption" />
           </div>
         </div>
       </a-form-item>
 
       <a-form-item label="答案解析" name="answerKey" required>
-        <a-textarea 
-          v-model:value="formData.answerKey" 
-          placeholder="请输入答案解析"
-          :rows="1"
-        />
+        <a-textarea v-model:value="formData.answerKey" placeholder="请输入答案解析" :rows="1" />
       </a-form-item>
     </a-form>
 
@@ -406,18 +479,11 @@ const addOption = () => {
   font-weight: normal;
 }
 
-.title-input-wrapper {
+.ai-buttons-bar {
   display: flex;
-  gap: 12px;
-  align-items: center;
-
-  .title-input {
-    flex: 1;
-  }
-
-  .ai-button {
-    flex-shrink: 0;
-  }
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .options-list {
@@ -484,4 +550,3 @@ const addOption = () => {
   }
 }
 </style>
-
