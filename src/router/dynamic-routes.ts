@@ -174,6 +174,15 @@ export default [
           access: [AccessEnum.SYSTEM_ROLE_ASSIGN],
         },
       },
+      {
+        path: '/system-management/dictionary-management',
+        name: 'System-management-dictionary-management',
+        component: () => import('~/pages/dashboard/system-management/dictionary-management.vue'),
+        meta: {
+          title: '字典管理',
+          // access: [AccessEnum.SYSTEM_DICTIONARY_VIEW],
+        },
+      },
     ],
   },
  

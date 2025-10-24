@@ -32,6 +32,10 @@ export enum AccessEnum {
   // SYSTEM_ROLE_EDIT = 'system:role:edit',
   // SYSTEM_ROLE_DELETE = 'system:role:delete',
   SYSTEM_ROLE_ASSIGN = 'system:role:assign',
+  SYSTEM_DICTIONARY_VIEW = 'system:dictionary:view',
+  // SYSTEM_DICTIONARY_CREATE = 'system:dictionary:create',
+  // SYSTEM_DICTIONARY_EDIT = 'system:dictionary:edit',
+  // SYSTEM_DICTIONARY_DELETE = 'system:dictionary:delete',
 }
 
 export enum DynamicLoadEnum {

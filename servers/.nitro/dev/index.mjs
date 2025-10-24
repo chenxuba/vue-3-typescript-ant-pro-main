@@ -908,6 +908,18 @@ const plugins = [
 const _lazy_gyNdlQ = () => Promise.resolve().then(function () { return _401$1; });
 const _lazy_zC9CDx = () => Promise.resolve().then(function () { return _403$1; });
 const _lazy_o1GHsQ = () => Promise.resolve().then(function () { return _500$1; });
+const _lazy_kOS30d = () => Promise.resolve().then(function () { return _id__delete$7; });
+const _lazy_Am7psC = () => Promise.resolve().then(function () { return _id__get$b; });
+const _lazy_J0zAjZ = () => Promise.resolve().then(function () { return _id__put$5; });
+const _lazy_3N5RDn = () => Promise.resolve().then(function () { return create_post$9; });
+const _lazy_SLEKGP = () => Promise.resolve().then(function () { return list_post$9; });
+const _lazy_Pp7X9h = () => Promise.resolve().then(function () { return _typeCode__get$1; });
+const _lazy_aZTpkv = () => Promise.resolve().then(function () { return _id__delete$5; });
+const _lazy_DL2hkn = () => Promise.resolve().then(function () { return _id__get$9; });
+const _lazy_0_mdN3 = () => Promise.resolve().then(function () { return _id__put$3; });
+const _lazy_sLx2h8 = () => Promise.resolve().then(function () { return all_get$1; });
+const _lazy_6Mz7u8 = () => Promise.resolve().then(function () { return create_post$7; });
+const _lazy_WUT85d = () => Promise.resolve().then(function () { return list_post$7; });
 const _lazy_cZKuAY = () => Promise.resolve().then(function () { return index$3; });
 const _lazy__rLm9o = () => Promise.resolve().then(function () { return _id__delete$3; });
 const _lazy_NSYZIK = () => Promise.resolve().then(function () { return basicList_post$1; });
@@ -946,6 +958,18 @@ const handlers = [
   { route: '/401', handler: _lazy_gyNdlQ, lazy: true, middleware: false, method: undefined },
   { route: '/403', handler: _lazy_zC9CDx, lazy: true, middleware: false, method: undefined },
   { route: '/500', handler: _lazy_o1GHsQ, lazy: true, middleware: false, method: undefined },
+  { route: '/dictionary/item/:id', handler: _lazy_kOS30d, lazy: true, middleware: false, method: "delete" },
+  { route: '/dictionary/item/:id', handler: _lazy_Am7psC, lazy: true, middleware: false, method: "get" },
+  { route: '/dictionary/item/:id', handler: _lazy_J0zAjZ, lazy: true, middleware: false, method: "put" },
+  { route: '/dictionary/item/create', handler: _lazy_3N5RDn, lazy: true, middleware: false, method: "post" },
+  { route: '/dictionary/item/list', handler: _lazy_SLEKGP, lazy: true, middleware: false, method: "post" },
+  { route: '/dictionary/item/type/:typeCode', handler: _lazy_Pp7X9h, lazy: true, middleware: false, method: "get" },
+  { route: '/dictionary/type/:id', handler: _lazy_aZTpkv, lazy: true, middleware: false, method: "delete" },
+  { route: '/dictionary/type/:id', handler: _lazy_DL2hkn, lazy: true, middleware: false, method: "get" },
+  { route: '/dictionary/type/:id', handler: _lazy_0_mdN3, lazy: true, middleware: false, method: "put" },
+  { route: '/dictionary/type/all', handler: _lazy_sLx2h8, lazy: true, middleware: false, method: "get" },
+  { route: '/dictionary/type/create', handler: _lazy_6Mz7u8, lazy: true, middleware: false, method: "post" },
+  { route: '/dictionary/type/list', handler: _lazy_WUT85d, lazy: true, middleware: false, method: "post" },
   { route: '/', handler: _lazy_cZKuAY, lazy: true, middleware: false, method: undefined },
   { route: '/list/:id', handler: _lazy__rLm9o, lazy: true, middleware: false, method: "delete" },
   { route: '/list/basic-list', handler: _lazy_NSYZIK, lazy: true, middleware: false, method: "post" },
@@ -1279,6 +1303,692 @@ const _500 = eventHandler((event) => {
 const _500$1 = /*#__PURE__*/Object.freeze({
   __proto__: null,
   default: _500
+});
+
+const _id__delete$6 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  return {
+    code: 200,
+    message: "\u5220\u9664\u6210\u529F",
+    data: {
+      id: Number(id)
+    }
+  };
+});
+
+const _id__delete$7 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__delete$6
+});
+
+const _id__get$a = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const mockData = {
+    id: Number(id),
+    typeId: 1,
+    typeCode: "user_gender",
+    label: "\u7537",
+    value: "male",
+    description: "\u7537\u6027",
+    status: 1,
+    sort: 1,
+    createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+    updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+  };
+  return {
+    code: 200,
+    message: "success",
+    data: mockData
+  };
+});
+
+const _id__get$b = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__get$a
+});
+
+const _id__put$4 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: "\u66F4\u65B0\u6210\u529F",
+    data: {
+      id: Number(id),
+      ...body,
+      updateTime: Date.now()
+    }
+  };
+});
+
+const _id__put$5 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__put$4
+});
+
+const create_post$8 = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: "\u521B\u5EFA\u6210\u529F",
+    data: {
+      id: Math.floor(Math.random() * 1e4),
+      ...body,
+      createTime: Date.now(),
+      updateTime: Date.now()
+    }
+  };
+});
+
+const create_post$9 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: create_post$8
+});
+
+const list_post$8 = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const mockDataMap = {
+    1: [
+      // 用户性别
+      {
+        id: 1,
+        typeId: 1,
+        typeCode: "user_gender",
+        label: "\u7537",
+        value: "male",
+        description: "\u7537\u6027",
+        status: 1,
+        sort: 1,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 2,
+        typeId: 1,
+        typeCode: "user_gender",
+        label: "\u5973",
+        value: "female",
+        description: "\u5973\u6027",
+        status: 1,
+        sort: 2,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 3,
+        typeId: 1,
+        typeCode: "user_gender",
+        label: "\u4FDD\u5BC6",
+        value: "secret",
+        description: "\u4FDD\u5BC6",
+        status: 1,
+        sort: 3,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      }
+    ],
+    2: [
+      // 用户状态
+      {
+        id: 4,
+        typeId: 2,
+        typeCode: "user_status",
+        label: "\u6B63\u5E38",
+        value: "active",
+        description: "\u8D26\u53F7\u6B63\u5E38",
+        status: 1,
+        sort: 1,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 5,
+        typeId: 2,
+        typeCode: "user_status",
+        label: "\u7981\u7528",
+        value: "disabled",
+        description: "\u8D26\u53F7\u5DF2\u7981\u7528",
+        status: 1,
+        sort: 2,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 6,
+        typeId: 2,
+        typeCode: "user_status",
+        label: "\u9501\u5B9A",
+        value: "locked",
+        description: "\u8D26\u53F7\u5DF2\u9501\u5B9A",
+        status: 1,
+        sort: 3,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      }
+    ],
+    3: [
+      // 订单状态
+      {
+        id: 7,
+        typeId: 3,
+        typeCode: "order_status",
+        label: "\u5F85\u652F\u4ED8",
+        value: "pending",
+        description: "\u7B49\u5F85\u652F\u4ED8",
+        status: 1,
+        sort: 1,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 8,
+        typeId: 3,
+        typeCode: "order_status",
+        label: "\u5DF2\u652F\u4ED8",
+        value: "paid",
+        description: "\u5DF2\u5B8C\u6210\u652F\u4ED8",
+        status: 1,
+        sort: 2,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 9,
+        typeId: 3,
+        typeCode: "order_status",
+        label: "\u5DF2\u53D1\u8D27",
+        value: "shipped",
+        description: "\u5DF2\u53D1\u8D27",
+        status: 1,
+        sort: 3,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 10,
+        typeId: 3,
+        typeCode: "order_status",
+        label: "\u5DF2\u5B8C\u6210",
+        value: "completed",
+        description: "\u8BA2\u5355\u5DF2\u5B8C\u6210",
+        status: 1,
+        sort: 4,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 11,
+        typeId: 3,
+        typeCode: "order_status",
+        label: "\u5DF2\u53D6\u6D88",
+        value: "cancelled",
+        description: "\u8BA2\u5355\u5DF2\u53D6\u6D88",
+        status: 1,
+        sort: 5,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      }
+    ],
+    4: [
+      // 支付方式
+      {
+        id: 12,
+        typeId: 4,
+        typeCode: "payment_method",
+        label: "\u5FAE\u4FE1\u652F\u4ED8",
+        value: "wechat",
+        description: "\u4F7F\u7528\u5FAE\u4FE1\u652F\u4ED8",
+        status: 1,
+        sort: 1,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 13,
+        typeId: 4,
+        typeCode: "payment_method",
+        label: "\u652F\u4ED8\u5B9D",
+        value: "alipay",
+        description: "\u4F7F\u7528\u652F\u4ED8\u5B9D",
+        status: 1,
+        sort: 2,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 14,
+        typeId: 4,
+        typeCode: "payment_method",
+        label: "\u94F6\u884C\u5361",
+        value: "bank_card",
+        description: "\u4F7F\u7528\u94F6\u884C\u5361\u652F\u4ED8",
+        status: 1,
+        sort: 3,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 15,
+        typeId: 4,
+        typeCode: "payment_method",
+        label: "\u73B0\u91D1",
+        value: "cash",
+        description: "\u73B0\u91D1\u652F\u4ED8",
+        status: 0,
+        sort: 4,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      }
+    ],
+    5: [
+      // 数据权限
+      {
+        id: 16,
+        typeId: 5,
+        typeCode: "data_permission",
+        label: "\u5168\u90E8\u6570\u636E",
+        value: "all",
+        description: "\u53EF\u4EE5\u8BBF\u95EE\u6240\u6709\u6570\u636E",
+        status: 1,
+        sort: 1,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 17,
+        typeId: 5,
+        typeCode: "data_permission",
+        label: "\u672C\u5355\u4F4D\u53CA\u4E0B\u5C5E\u5355\u4F4D",
+        value: "org_and_sub",
+        description: "\u672C\u5355\u4F4D\u53CA\u4E0B\u5C5E\u5355\u4F4D\u6570\u636E",
+        status: 1,
+        sort: 2,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 18,
+        typeId: 5,
+        typeCode: "data_permission",
+        label: "\u4EC5\u672C\u5355\u4F4D",
+        value: "org_only",
+        description: "\u4EC5\u672C\u5355\u4F4D\u6570\u636E",
+        status: 1,
+        sort: 3,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      },
+      {
+        id: 19,
+        typeId: 5,
+        typeCode: "data_permission",
+        label: "\u4EC5\u672C\u4EBA",
+        value: "self_only",
+        description: "\u4EC5\u672C\u4EBA\u6570\u636E",
+        status: 1,
+        sort: 4,
+        createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+        updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+      }
+    ]
+  };
+  let filteredData = mockDataMap[body.typeId] || [];
+  if (body.label) {
+    filteredData = filteredData.filter(
+      (item) => item.label.includes(body.label)
+    );
+  }
+  if (body.value) {
+    filteredData = filteredData.filter(
+      (item) => item.value.includes(body.value)
+    );
+  }
+  if (body.status !== void 0 && body.status !== null) {
+    filteredData = filteredData.filter((item) => item.status === body.status);
+  }
+  if (body.orderbyFiled) {
+    const [field, order] = body.orderbyFiled.split(":");
+    filteredData.sort((a, b) => {
+      if (order === "asc") {
+        return a[field] > b[field] ? 1 : -1;
+      } else {
+        return a[field] < b[field] ? 1 : -1;
+      }
+    });
+  }
+  const count = filteredData.length;
+  const page = body.page || 1;
+  const limit = body.limit || 10;
+  const start = (page - 1) * limit;
+  const end = start + limit;
+  return {
+    code: 200,
+    message: "success",
+    data: {
+      list: filteredData.slice(start, end),
+      count,
+      page,
+      limit
+    }
+  };
+});
+
+const list_post$9 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: list_post$8
+});
+
+const _typeCode__get = defineEventHandler(async (event) => {
+  const typeCode = getRouterParam(event, "typeCode");
+  const mockDataMap = {
+    user_gender: [
+      {
+        id: 1,
+        typeId: 1,
+        typeCode: "user_gender",
+        label: "\u7537",
+        value: "male",
+        description: "\u7537\u6027",
+        status: 1,
+        sort: 1
+      },
+      {
+        id: 2,
+        typeId: 1,
+        typeCode: "user_gender",
+        label: "\u5973",
+        value: "female",
+        description: "\u5973\u6027",
+        status: 1,
+        sort: 2
+      }
+    ],
+    user_status: [
+      {
+        id: 4,
+        typeId: 2,
+        typeCode: "user_status",
+        label: "\u6B63\u5E38",
+        value: "active",
+        description: "\u8D26\u53F7\u6B63\u5E38",
+        status: 1,
+        sort: 1
+      },
+      {
+        id: 5,
+        typeId: 2,
+        typeCode: "user_status",
+        label: "\u7981\u7528",
+        value: "disabled",
+        description: "\u8D26\u53F7\u5DF2\u7981\u7528",
+        status: 1,
+        sort: 2
+      }
+    ]
+  };
+  return {
+    code: 200,
+    message: "success",
+    data: mockDataMap[typeCode || ""] || []
+  };
+});
+
+const _typeCode__get$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _typeCode__get
+});
+
+const _id__delete$4 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  return {
+    code: 200,
+    message: "\u5220\u9664\u6210\u529F",
+    data: {
+      id: Number(id)
+    }
+  };
+});
+
+const _id__delete$5 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__delete$4
+});
+
+const _id__get$8 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const mockData = {
+    id: Number(id),
+    typeName: "\u7528\u6237\u6027\u522B",
+    typeCode: "user_gender",
+    description: "\u7528\u6237\u6027\u522B\u5B57\u5178",
+    status: 1,
+    sort: 1,
+    createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+    updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+  };
+  return {
+    code: 200,
+    message: "success",
+    data: mockData
+  };
+});
+
+const _id__get$9 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__get$8
+});
+
+const _id__put$2 = defineEventHandler(async (event) => {
+  const id = getRouterParam(event, "id");
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: "\u66F4\u65B0\u6210\u529F",
+    data: {
+      id: Number(id),
+      ...body,
+      updateTime: Date.now()
+    }
+  };
+});
+
+const _id__put$3 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: _id__put$2
+});
+
+const all_get = defineEventHandler(async (event) => {
+  const mockData = [
+    {
+      id: 1,
+      typeName: "\u7528\u6237\u6027\u522B",
+      typeCode: "user_gender",
+      description: "\u7528\u6237\u6027\u522B\u5B57\u5178",
+      status: 1,
+      sort: 1,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 2,
+      typeName: "\u7528\u6237\u72B6\u6001",
+      typeCode: "user_status",
+      description: "\u7528\u6237\u8D26\u53F7\u72B6\u6001",
+      status: 1,
+      sort: 2,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 3,
+      typeName: "\u8BA2\u5355\u72B6\u6001",
+      typeCode: "order_status",
+      description: "\u8BA2\u5355\u72B6\u6001\u5B57\u5178",
+      status: 1,
+      sort: 3,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 4,
+      typeName: "\u652F\u4ED8\u65B9\u5F0F",
+      typeCode: "payment_method",
+      description: "\u652F\u4ED8\u65B9\u5F0F\u5B57\u5178",
+      status: 1,
+      sort: 4,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 5,
+      typeName: "\u6570\u636E\u6743\u9650",
+      typeCode: "data_permission",
+      description: "\u6570\u636E\u6743\u9650\u8303\u56F4",
+      status: 1,
+      sort: 5,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    }
+  ];
+  return {
+    code: 200,
+    message: "success",
+    data: mockData.filter((item) => item.status === 1)
+  };
+});
+
+const all_get$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: all_get
+});
+
+const create_post$6 = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  return {
+    code: 200,
+    message: "\u521B\u5EFA\u6210\u529F",
+    data: {
+      id: Math.floor(Math.random() * 1e4),
+      ...body,
+      createTime: Date.now(),
+      updateTime: Date.now()
+    }
+  };
+});
+
+const create_post$7 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: create_post$6
+});
+
+const list_post$6 = defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const mockData = [
+    {
+      id: 1,
+      typeName: "\u7528\u6237\u6027\u522B",
+      typeCode: "user_gender",
+      description: "\u7528\u6237\u6027\u522B\u5B57\u5178",
+      status: 1,
+      sort: 1,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 2,
+      typeName: "\u7528\u6237\u72B6\u6001",
+      typeCode: "user_status",
+      description: "\u7528\u6237\u8D26\u53F7\u72B6\u6001",
+      status: 1,
+      sort: 2,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 3,
+      typeName: "\u8BA2\u5355\u72B6\u6001",
+      typeCode: "order_status",
+      description: "\u8BA2\u5355\u72B6\u6001\u5B57\u5178",
+      status: 1,
+      sort: 3,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 4,
+      typeName: "\u652F\u4ED8\u65B9\u5F0F",
+      typeCode: "payment_method",
+      description: "\u652F\u4ED8\u65B9\u5F0F\u5B57\u5178",
+      status: 1,
+      sort: 4,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 5,
+      typeName: "\u6570\u636E\u6743\u9650",
+      typeCode: "data_permission",
+      description: "\u6570\u636E\u6743\u9650\u8303\u56F4",
+      status: 1,
+      sort: 5,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    },
+    {
+      id: 6,
+      typeName: "\u901A\u77E5\u7C7B\u578B",
+      typeCode: "notice_type",
+      description: "\u7CFB\u7EDF\u901A\u77E5\u7C7B\u578B",
+      status: 0,
+      sort: 6,
+      createTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime(),
+      updateTime: (/* @__PURE__ */ new Date("2024-01-01 10:00:00")).getTime()
+    }
+  ];
+  let filteredData = [...mockData];
+  if (body.typeName) {
+    filteredData = filteredData.filter(
+      (item) => item.typeName.includes(body.typeName)
+    );
+  }
+  if (body.typeCode) {
+    filteredData = filteredData.filter(
+      (item) => item.typeCode.includes(body.typeCode)
+    );
+  }
+  if (body.status !== void 0 && body.status !== null) {
+    filteredData = filteredData.filter((item) => item.status === body.status);
+  }
+  if (body.orderbyFiled) {
+    const [field, order] = body.orderbyFiled.split(":");
+    filteredData.sort((a, b) => {
+      if (order === "asc") {
+        return a[field] > b[field] ? 1 : -1;
+      } else {
+        return a[field] < b[field] ? 1 : -1;
+      }
+    });
+  }
+  const count = filteredData.length;
+  const page = body.page || 1;
+  const limit = body.limit || 10;
+  const start = (page - 1) * limit;
+  const end = start + limit;
+  return {
+    code: 200,
+    message: "success",
+    data: {
+      list: filteredData.slice(start, end),
+      count,
+      page,
+      limit
+    }
+  };
+});
+
+const list_post$7 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: list_post$6
 });
 
 const index$2 = eventHandler(() => {

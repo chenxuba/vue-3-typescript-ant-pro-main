@@ -12,6 +12,34 @@ declare module "nitropack/types" {
     '/500': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/500').default>>>>
     }
+    '/dictionary/item/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/item/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/item/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/item/[id].put').default>>>>
+    }
+    '/dictionary/item/create': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/item/create.post').default>>>>
+    }
+    '/dictionary/item/list': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/item/list.post').default>>>>
+    }
+    '/dictionary/item/type/:typeCode': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/item/type/[typeCode].get').default>>>>
+    }
+    '/dictionary/type/:id': {
+      'delete': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/type/[id].delete').default>>>>
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/type/[id].get').default>>>>
+      'put': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/type/[id].put').default>>>>
+    }
+    '/dictionary/type/all': {
+      'get': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/type/all.get').default>>>>
+    }
+    '/dictionary/type/create': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/type/create.post').default>>>>
+    }
+    '/dictionary/type/list': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/dictionary/type/list.post').default>>>>
+    }
     '/': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../routes/index').default>>>>
     }
