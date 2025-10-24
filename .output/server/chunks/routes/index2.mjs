@@ -1,4 +1,4 @@
-import { e as eventHandler, g as getHeader } from '../nitro/nitro.mjs';
+import { e as eventHandler, a as getHeader } from '../nitro/nitro.mjs';
 import 'node:http';
 import 'node:https';
 import 'node:events';

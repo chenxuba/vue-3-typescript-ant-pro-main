@@ -2,27 +2,31 @@
  * 字典类型模型
  */
 interface DictionaryTypeModel {
-  id?: string | number
+  dicGroupId?: string | number
   /**
    * 字典类型名称
    */
-  typeName: string
+  name: string
   /**
    * 字典类型编码
    */
-  typeCode: string
+  code: string
   /**
-   * 描述
+   * 备注
    */
-  description?: string
+  remark?: string
   /**
-   * 状态（1: 启用, 0: 禁用）
+   * 权重
    */
-  status: number
+  weight: number
   /**
-   * 排序
+   * 内容类型
    */
-  sort: number
+  contentType?: number
+  /**
+   * 用户ID
+   */
+  userId?: number
   /**
    * 创建时间
    */
@@ -39,52 +43,47 @@ interface DictionaryTypeModel {
 interface DictionaryItemModel {
   id?: string | number
   /**
-   * 字典类型ID
+   * 字典项名称
    */
-  typeId: string | number
+  name: string
   /**
-   * 字典类型编码
+   * 字典分组ID
    */
-  typeCode?: string
+  dicGroupId: string | number
   /**
-   * 字典项标签
+   * 字典项内容
    */
-  label: string
+  content: string
   /**
-   * 字典项值
+   * 权重
    */
-  value: string
-  /**
-   * 描述
-   */
-  description?: string
+  weight: number
   /**
    * 状态（1: 启用, 0: 禁用）
    */
   status: number
   /**
-   * 排序
+   * 用户ID
    */
-  sort: number
+  userId?: number | null
   /**
    * 创建时间
    */
-  createTime?: string | number
+  createTime?: string | number | null
   /**
    * 更新时间
    */
-  updateTime?: string | number
+  updateTime?: string | number | null
 }
 
 /**
  * 字典类型分页查询参数
  */
 interface DictionaryTypeQueryParams {
-  typeName?: string
-  typeCode?: string
-  status?: number
-  page: number
-  limit: number
+  name?: string
+  code?: string
+  page?: number
+  limit?: number
   orderbyFiled?: string
 }
 
@@ -92,10 +91,9 @@ interface DictionaryTypeQueryParams {
  * 字典项分页查询参数
  */
 interface DictionaryItemQueryParams {
-  typeId?: string | number
-  typeCode?: string
-  label?: string
-  value?: string
+  dicGroupId?: string | number
+  name?: string
+  content?: string
   status?: number
   page: number
   limit: number
@@ -112,7 +110,7 @@ interface PagerResponse<T> {
   limit: number
 }
 
-type DictionaryTypeParams = Partial<Omit<DictionaryTypeModel, 'id' | 'createTime' | 'updateTime'>>
+type DictionaryTypeParams = Partial<Omit<DictionaryTypeModel, 'dicGroupId' | 'createTime' | 'updateTime' | 'contentType' | 'userId'>>
 type DictionaryItemParams = Partial<Omit<DictionaryItemModel, 'id' | 'createTime' | 'updateTime'>>
 
 // ==================== 字典类型接口 ====================
@@ -120,43 +118,55 @@ type DictionaryItemParams = Partial<Omit<DictionaryItemModel, 'id' | 'createTime
 /**
  * 获取字典类型列表（分页）
  */
-export async function getDictionaryTypeListApi(params: DictionaryTypeQueryParams) {
-  return usePost<PagerResponse<DictionaryTypeModel>>('/dictionary/type/list', params)
+export async function getDictionaryTypeListApi(params?: DictionaryTypeQueryParams) {
+  return usePost<PagerResponse<DictionaryTypeModel>>('/admin/api/dicGroup/getList', params || {},{
+    customDev:true
+  })
 }
 
 /**
  * 获取所有字典类型列表（不分页）
  */
 export async function getAllDictionaryTypeListApi() {
-  return useGet<DictionaryTypeModel[]>('/dictionary/type/all')
+  return useGet<DictionaryTypeModel[]>('/admin/api/dicGroup/getList',{},{
+    customDev:true
+  })
 }
 
 /**
  * 获取字典类型详情
  */
-export async function getDictionaryTypeDetailApi(id: string | number) {
-  return useGet<DictionaryTypeModel>(`/dictionary/type/${id}`)
+export async function getDictionaryTypeDetailApi(dicGroupId: string | number) {
+  return useGet<DictionaryTypeModel>(`/admin/api/dicGroup/${dicGroupId}`,{},{
+    customDev:true
+  })
 }
 
 /**
  * 创建字典类型
  */
 export async function createDictionaryTypeApi(data: DictionaryTypeParams) {
-  return usePost('/dictionary/type/create', data)
+  return usePost('/admin/api/dicGroup/create', data,{
+    customDev:true
+  })
 }
 
 /**
  * 更新字典类型
  */
-export async function updateDictionaryTypeApi(id: string | number, data: DictionaryTypeParams) {
-  return usePut(`/dictionary/type/${id}`, data)
+export async function updateDictionaryTypeApi(dicGroupId: string | number, data: DictionaryTypeParams) {
+  return usePost('/admin/api/dicGroup/update', { dicGroupId, ...data },{
+    customDev:true
+  })
 }
 
 /**
  * 删除字典类型
  */
-export async function deleteDictionaryTypeApi(id: string | number) {
-  return useDelete(`/dictionary/type/${id}`)
+export async function deleteDictionaryTypeApi(dicGroupId: string | number) {
+  return usePost('/admin/api/dicGroup/del', { dicGroupId },{
+    customDev:true
+  })
 }
 
 // ==================== 字典项接口 ====================
@@ -165,7 +175,9 @@ export async function deleteDictionaryTypeApi(id: string | number) {
  * 获取字典项列表（分页）
  */
 export async function getDictionaryItemListApi(params: DictionaryItemQueryParams) {
-  return usePost<PagerResponse<DictionaryItemModel>>('/dictionary/item/list', params)
+  return usePost<PagerResponse<DictionaryItemModel>>('/admin/api/dic/getList', params, {
+    customDev: true
+  })
 }
 
 /**
@@ -186,21 +198,27 @@ export async function getDictionaryItemDetailApi(id: string | number) {
  * 创建字典项
  */
 export async function createDictionaryItemApi(data: DictionaryItemParams) {
-  return usePost('/dictionary/item/create', data)
+  return usePost('/admin/api/dic/create', data, {
+    customDev: true
+  })
 }
 
 /**
  * 更新字典项
  */
 export async function updateDictionaryItemApi(id: string | number, data: DictionaryItemParams) {
-  return usePut(`/dictionary/item/${id}`, data)
+  return usePost('/admin/api/dic/update', { id, ...data }, {
+    customDev: true
+  })
 }
 
 /**
  * 删除字典项
  */
 export async function deleteDictionaryItemApi(id: string | number) {
-  return useDelete(`/dictionary/item/${id}`)
+  return usePost('/admin/api/dic/del', { id }, {
+    customDev: true
+  })
 }
 
 export type {

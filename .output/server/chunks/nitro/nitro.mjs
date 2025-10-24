@@ -4489,6 +4489,18 @@ const _Hmie71 = eventHandler((event) => {
 const _lazy_gyNdlQ = () => import('../routes/401.mjs');
 const _lazy_zC9CDx = () => import('../routes/403.mjs');
 const _lazy_o1GHsQ = () => import('../routes/500.mjs');
+const _lazy_kOS30d = () => import('../routes/dictionary/item/_id_.delete.mjs');
+const _lazy_Am7psC = () => import('../routes/dictionary/item/_id_.get.mjs');
+const _lazy_J0zAjZ = () => import('../routes/dictionary/item/_id_.put.mjs');
+const _lazy_3N5RDn = () => import('../routes/dictionary/item/create.post.mjs');
+const _lazy_SLEKGP = () => import('../routes/dictionary/item/list.post.mjs');
+const _lazy_Pp7X9h = () => import('../routes/dictionary/item/type/_typeCode_.get.mjs');
+const _lazy_aZTpkv = () => import('../routes/dictionary/type/_id_.delete.mjs');
+const _lazy_DL2hkn = () => import('../routes/dictionary/type/_id_.get.mjs');
+const _lazy_0_mdN3 = () => import('../routes/dictionary/type/_id_.put.mjs');
+const _lazy_sLx2h8 = () => import('../routes/dictionary/type/all.get.mjs');
+const _lazy_6Mz7u8 = () => import('../routes/dictionary/type/create.post.mjs');
+const _lazy_WUT85d = () => import('../routes/dictionary/type/list.post.mjs');
 const _lazy_cZKuAY = () => import('../routes/index.mjs');
 const _lazy__rLm9o = () => import('../routes/list/_id_.delete.mjs');
 const _lazy_NSYZIK = () => import('../routes/list/basic-list.post.mjs');
@@ -4528,6 +4540,18 @@ const handlers = [
   { route: '/401', handler: _lazy_gyNdlQ, lazy: true, middleware: false, method: undefined },
   { route: '/403', handler: _lazy_zC9CDx, lazy: true, middleware: false, method: undefined },
   { route: '/500', handler: _lazy_o1GHsQ, lazy: true, middleware: false, method: undefined },
+  { route: '/dictionary/item/:id', handler: _lazy_kOS30d, lazy: true, middleware: false, method: "delete" },
+  { route: '/dictionary/item/:id', handler: _lazy_Am7psC, lazy: true, middleware: false, method: "get" },
+  { route: '/dictionary/item/:id', handler: _lazy_J0zAjZ, lazy: true, middleware: false, method: "put" },
+  { route: '/dictionary/item/create', handler: _lazy_3N5RDn, lazy: true, middleware: false, method: "post" },
+  { route: '/dictionary/item/list', handler: _lazy_SLEKGP, lazy: true, middleware: false, method: "post" },
+  { route: '/dictionary/item/type/:typeCode', handler: _lazy_Pp7X9h, lazy: true, middleware: false, method: "get" },
+  { route: '/dictionary/type/:id', handler: _lazy_aZTpkv, lazy: true, middleware: false, method: "delete" },
+  { route: '/dictionary/type/:id', handler: _lazy_DL2hkn, lazy: true, middleware: false, method: "get" },
+  { route: '/dictionary/type/:id', handler: _lazy_0_mdN3, lazy: true, middleware: false, method: "put" },
+  { route: '/dictionary/type/all', handler: _lazy_sLx2h8, lazy: true, middleware: false, method: "get" },
+  { route: '/dictionary/type/create', handler: _lazy_6Mz7u8, lazy: true, middleware: false, method: "post" },
+  { route: '/dictionary/type/list', handler: _lazy_WUT85d, lazy: true, middleware: false, method: "post" },
   { route: '/', handler: _lazy_cZKuAY, lazy: true, middleware: false, method: undefined },
   { route: '/list/:id', handler: _lazy__rLm9o, lazy: true, middleware: false, method: "delete" },
   { route: '/list/basic-list', handler: _lazy_NSYZIK, lazy: true, middleware: false, method: "post" },
@@ -4973,5 +4997,5 @@ trapUnhandledNodeErrors();
 setupGracefulShutdown(listener, nitroApp);
 const nodeServer = {};
 
-export { getRouterParam as a, defineEventHandler as d, eventHandler as e, getHeader as g, nodeServer as n, readBody as r, setResponseStatus as s };
+export { getHeader as a, defineEventHandler as d, eventHandler as e, getRouterParam as g, nodeServer as n, readBody as r, setResponseStatus as s };
 //# sourceMappingURL=nitro.mjs.map
