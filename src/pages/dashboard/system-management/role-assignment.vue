@@ -10,6 +10,8 @@ import {
 } from '@/api/system/role-assignment'
 import { getRoleListApi } from '@/api/system/role'
 import type { RoleModel } from '@/api/system/role'
+import { getPersonnelListApi } from '@/api/system/personnel'
+import type { PersonnelModel } from '@/api/system/personnel'
 
 defineOptions({
   name: 'RoleAssignment',
@@ -60,12 +62,11 @@ const columns = [
 const modalVisible = ref(false)
 const modalLoading = ref(false)
 const allRoles = ref<RoleModel[]>([])
+const allUsers = ref<PersonnelModel[]>([])
 
 // 表单数据
 const formData = reactive({
-  userCode: '',
-  userName: '',
-  organization: '',
+  userId: undefined as string | number | undefined,
   roleIds: [] as (string | number)[],
 })
 
@@ -97,6 +98,18 @@ const fetchAllRoles = async () => {
   }
 }
 
+// 获取所有用户列表
+const fetchAllUsers = async () => {
+  try {
+    const result = await getPersonnelListApi({ pageNum: 1, pageSize: 1000 })
+    if (result.data) {
+      allUsers.value = result.data.list
+    }
+  } catch (error) {
+    console.error('获取用户列表失败:', error)
+  }
+}
+
 // 查询
 const handleQuery = () => {
   queryForm.pageNum = 1
@@ -124,26 +137,31 @@ const onSelectChange = (keys: (string | number)[], rows: any[]) => {
 
 // 打开新增模态框
 const handleCreate = () => {
-  formData.userCode = ''
-  formData.userName = ''
-  formData.organization = ''
+  formData.userId = undefined
   formData.roleIds = []
   modalVisible.value = true
 }
 
 // 提交表单
 const handleSubmit = async () => {
-  if (!formData.userCode || !formData.userName || !formData.organization || formData.roleIds.length === 0) {
+  if (!formData.userId || formData.roleIds.length === 0) {
     message.error('请填写所有必填项')
+    return
+  }
+
+  // 根据选中的用户ID获取用户信息
+  const selectedUser = allUsers.value.find(user => user.id === formData.userId)
+  if (!selectedUser) {
+    message.error('未找到选中的用户信息')
     return
   }
 
   modalLoading.value = true
   try {
     await createRoleAssignmentApi({
-      userCode: formData.userCode,
-      userName: formData.userName,
-      organization: formData.organization,
+      userCode: selectedUser.userCode,
+      userName: selectedUser.userName,
+      organization: selectedUser.organization,
       roleIds: formData.roleIds,
     })
     message.success('创建成功')
@@ -193,6 +211,7 @@ const handleTableChange = (pagination: any) => {
 onMounted(() => {
   fetchAssignmentList()
   fetchAllRoles()
+  fetchAllUsers()
 })
 </script>
 
@@ -319,44 +338,24 @@ onMounted(() => {
         style="margin-top: 24px"
       >
         <a-form-item 
-          label="用户编号" 
-          name="userCode"
+          label="选择用户" 
+          name="userId"
           :rules="[
-            { required: true, message: '请输入用户编号', trigger: 'blur' }
+            { required: true, message: '请选择用户', trigger: 'change' }
           ]"
         >
-          <a-input 
-            v-model:value="formData.userCode" 
-            placeholder="请输入用户编号"
+          <a-select 
+            v-model:value="formData.userId" 
+            placeholder="请选择用户"
             allow-clear
-          />
-        </a-form-item>
-
-        <a-form-item 
-          label="用户姓名" 
-          name="userName"
-          :rules="[
-            { required: true, message: '请输入用户姓名', trigger: 'blur' }
-          ]"
-        >
-          <a-input 
-            v-model:value="formData.userName" 
-            placeholder="请输入用户姓名"
-            allow-clear
-          />
-        </a-form-item>
-
-        <a-form-item 
-          label="单位" 
-          name="organization"
-          :rules="[
-            { required: true, message: '请输入单位', trigger: 'blur' }
-          ]"
-        >
-          <a-input 
-            v-model:value="formData.organization" 
-            placeholder="请输入单位"
-            allow-clear
+            show-search
+            :filter-option="(input, option) => {
+              return option?.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+            }"
+            :options="allUsers.map(user => ({ 
+              label: `${user.userName} - ${user.userCode} - ${user.organization}`, 
+              value: user.id 
+            }))"
           />
         </a-form-item>
 
@@ -372,6 +371,10 @@ onMounted(() => {
             mode="multiple"
             placeholder="请选择角色"
             allow-clear
+            show-search
+            :filter-option="(input, option) => {
+              return option?.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0
+            }"
             :options="allRoles.map(role => ({ label: role.roleName, value: role.id }))"
           />
         </a-form-item>
