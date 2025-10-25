@@ -4,14 +4,14 @@ import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import type { RoleAssignmentModel, RoleAssignmentQueryParams } from '@/api/system/role-assignment'
 import { 
-  getRoleAssignmentListApi, 
-  createRoleAssignmentApi, 
+  getRoleUserListPagerApi, 
+  createRoleUserApi, 
   batchDeleteRoleAssignmentApi 
 } from '@/api/system/role-assignment'
-import { getRoleListApi } from '@/api/system/role'
-import type { RoleModel } from '@/api/system/role'
-import { getPersonnelListApi } from '@/api/system/personnel'
-import type { PersonnelModel } from '@/api/system/personnel'
+import { getRoleListPagerApi } from '@/api/system/role'
+import type { RolePagerItem } from '@/api/system/role'
+import { getAllUsersApi } from '@/api/system/personnel'
+import type { AllUserModel } from '@/api/system/personnel'
 
 defineOptions({
   name: 'RoleAssignment',
@@ -19,7 +19,7 @@ defineOptions({
 
 // 查询表单
 const queryForm = reactive<RoleAssignmentQueryParams>({
-  userName: '',
+  nickName: '',
   roleName: '',
   pageNum: 1,
   pageSize: 10,
@@ -36,48 +36,60 @@ const selectedRows = ref<RoleAssignmentModel[]>([])
 // 表格列定义
 const columns = [
   {
-    title: '用户编号',
-    dataIndex: 'userCode',
-    key: 'userCode',
+    title: '用户ID',
+    dataIndex: 'userId',
+    key: 'userId',
   },
   {
     title: '用户姓名',
-    dataIndex: 'userName',
-    key: 'userName',
+    dataIndex: 'nickName',
+    key: 'nickName',
   },
   {
     title: '单位',
-    dataIndex: 'organization',
-    key: 'organization',
+    dataIndex: 'orgName',
+    key: 'orgName',
     ellipsis: true,
   },
+  // {
+  //   title: '角色ID',
+  //   dataIndex: 'roleId',
+  //   key: 'roleId',
+  // },
   {
-    title: '授予角色',
-    dataIndex: 'roles',
-    key: 'roles',
+    title: '角色名称',
+    dataIndex: 'roleName',
+    key: 'roleName',
   },
 ]
 
 // 模态框相关
 const modalVisible = ref(false)
 const modalLoading = ref(false)
-const allRoles = ref<RoleModel[]>([])
-const allUsers = ref<PersonnelModel[]>([])
+const allRoles = ref<RolePagerItem[]>([])
+const allUsers = ref<AllUserModel[]>([])
 
 // 表单数据
 const formData = reactive({
   userId: undefined as string | number | undefined,
-  roleIds: [] as (string | number)[],
+  roleId: undefined as string | number | undefined,
 })
 
 // 获取角色分配列表
 const fetchAssignmentList = async () => {
   loading.value = true
   try {
-    const result = await getRoleAssignmentListApi(queryForm)
-    if (result.data) {
-      assignmentList.value = result.data.list
-      total.value = result.data.total
+    // 将 pageNum 和 pageSize 转换为 page 和 limit
+    const params = {
+      nickName: queryForm.nickName,
+      roleName: queryForm.roleName,
+      page: queryForm.pageNum,
+      limit: queryForm.pageSize,
+    }
+    const result = await getRoleUserListPagerApi(params)
+    if (result.data && result.data.list) {
+      assignmentList.value = result.data.list as any
+      total.value = result.data.count
     }
   } catch (error) {
     message.error('获取角色分配列表失败')
@@ -89,8 +101,12 @@ const fetchAssignmentList = async () => {
 // 获取所有角色列表
 const fetchAllRoles = async () => {
   try {
-    const result = await getRoleListApi({ pageNum: 1, pageSize: 1000 })
-    if (result.data) {
+    const result = await getRoleListPagerApi({ 
+      page: 1, 
+      limit: 1000,
+      startNum: 0
+    })
+    if (result.data && result.data.list) {
       allRoles.value = result.data.list
     }
   } catch (error) {
@@ -101,8 +117,12 @@ const fetchAllRoles = async () => {
 // 获取所有用户列表
 const fetchAllUsers = async () => {
   try {
-    const result = await getPersonnelListApi({ pageNum: 1, pageSize: 1000 })
-    if (result.data) {
+    const result = await getAllUsersApi({ 
+      page: 1, 
+      limit: 1000,
+      startNum: 0
+    })
+    if (result.data && result.data.list) {
       allUsers.value = result.data.list
     }
   } catch (error) {
@@ -120,7 +140,7 @@ const handleQuery = () => {
 
 // 重置
 const handleReset = () => {
-  queryForm.userName = ''
+  queryForm.nickName = ''
   queryForm.roleName = ''
   queryForm.pageNum = 1
   queryForm.pageSize = 10
@@ -138,37 +158,29 @@ const onSelectChange = (keys: (string | number)[], rows: any[]) => {
 // 打开新增模态框
 const handleCreate = () => {
   formData.userId = undefined
-  formData.roleIds = []
+  formData.roleId = undefined
   modalVisible.value = true
 }
 
 // 提交表单
 const handleSubmit = async () => {
-  if (!formData.userId || formData.roleIds.length === 0) {
+  if (!formData.userId || !formData.roleId) {
     message.error('请填写所有必填项')
-    return
-  }
-
-  // 根据选中的用户ID获取用户信息
-  const selectedUser = allUsers.value.find(user => user.id === formData.userId)
-  if (!selectedUser) {
-    message.error('未找到选中的用户信息')
     return
   }
 
   modalLoading.value = true
   try {
-    await createRoleAssignmentApi({
-      userCode: selectedUser.userCode,
-      userName: selectedUser.userName,
-      organization: selectedUser.organization,
-      roleIds: formData.roleIds,
+    await createRoleUserApi({
+      roleId: Number(formData.roleId),
+      userId: Number(formData.userId)
     })
-    message.success('创建成功')
+    
+    message.success('分配成功')
     modalVisible.value = false
     fetchAssignmentList()
   } catch (error) {
-    message.error('创建失败')
+    message.error('分配失败')
   } finally {
     modalLoading.value = false
   }
@@ -228,7 +240,7 @@ onMounted(() => {
           <a-form layout="inline">
             <a-form-item label="用户姓名">
               <a-input 
-                v-model:value="queryForm.userName" 
+                v-model:value="queryForm.nickName" 
                 placeholder="请输入" 
                 allow-clear
                 style="width: 200px"
@@ -307,15 +319,17 @@ onMounted(() => {
             @change="handleTableChange"
           >
             <template #bodyCell="{ column, record }">
-              <template v-if="column.key === 'userName'">
-                <a class="user-link">{{ record.userName }}</a>
+              <template v-if="column.key === 'nickName'">
+                <a class="user-link">{{ record.nickName || '-' }}</a>
               </template>
-              <template v-else-if="column.key === 'roles'">
-                <a-space wrap>
-                  <a-tag v-for="role in record.roles" :key="role" color="blue">
-                    {{ role }}
-                  </a-tag>
-                </a-space>
+              <template v-else-if="column.key === 'roleName'">
+                <a-tag v-if="record.roleName" color="blue">
+                  {{ record.roleName }}
+                </a-tag>
+                <span v-else>-</span>
+              </template>
+              <template v-else-if="column.key === 'orgName'">
+                {{ record.orgName || '-' }}
               </template>
             </template>
           </a-table>
@@ -353,29 +367,28 @@ onMounted(() => {
               return option?.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }"
             :options="allUsers.map(user => ({ 
-              label: `${user.userName} - ${user.userCode} - ${user.organization}`, 
-              value: user.id 
+              label: `${user.operatorName} - ${user.userID} - ${user.orgName}`, 
+              value: user.operatorID 
             }))"
           />
         </a-form-item>
 
         <a-form-item 
           label="授予角色" 
-          name="roleIds"
+          name="roleId"
           :rules="[
             { required: true, message: '请选择角色', trigger: 'change' }
           ]"
         >
           <a-select 
-            v-model:value="formData.roleIds"
-            mode="multiple"
+            v-model:value="formData.roleId"
             placeholder="请选择角色"
             allow-clear
             show-search
             :filter-option="(input, option) => {
               return option?.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }"
-            :options="allRoles.map(role => ({ label: role.roleName, value: role.id }))"
+            :options="allRoles.map(role => ({ label: role.name, value: role.roleId }))"
           />
         </a-form-item>
       </a-form>

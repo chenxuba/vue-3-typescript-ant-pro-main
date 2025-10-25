@@ -117,10 +117,39 @@ interface RolePagerQueryParams {
   userId?: number
 }
 
+/**
+ * 角色分页接口返回的角色数据模型
+ */
+interface RolePagerItem {
+  roleId: number
+  name: string
+  code: string
+  inner: number | null
+  authCode: string | null
+  createTime: number
+  updateTime: number
+  userId: number
+  isAdmin: number
+  authType: number
+  authTypeContent: string
+  remark: string
+  authMenus: string
+}
+
 interface RoleListResult {
   count: any
   list: RoleModel[]
   total: number
+}
+
+interface RolePagerListResult {
+  count: number
+  total: number
+  page: number
+  limit: number
+  totalPage: number
+  hasMore: number
+  list: RolePagerItem[]
 }
 
 interface CreateRoleParams {
@@ -253,7 +282,7 @@ export async function getRoleListApi(params?: RoleQueryParams) {
  * 获取角色分页列表
  */
 export async function getRoleListPagerApi(params?: RolePagerQueryParams) {
-  return usePost<RoleListResult>('/admin/api/role/getListPager', params,{
+  return usePost<RolePagerListResult>('/admin/api/role/getListPager', params, {
     customDev: true,
   })
 }
@@ -346,6 +375,8 @@ export type {
   RoleQueryParams,
   RolePagerQueryParams,
   RoleListResult,
+  RolePagerItem,
+  RolePagerListResult,
   CreateRoleParams,
   CreateRolePagerParams,
   UpdateRoleParams,
