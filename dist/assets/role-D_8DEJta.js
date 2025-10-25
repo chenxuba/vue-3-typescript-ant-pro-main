@@ -1,0 +1,1 @@
+import{n as t}from"./index-B9Jt25CP.js";async function r(e){return t("/admin/api/role/getListPager",e,{customDev:!0})}async function n(e){return t("/admin/api/role/create",e,{customDev:!0})}async function o(e){return t("/admin/api/role/update",e,{customDev:!0})}async function u(e){return t("/admin/api/role/del",{roleId:e},{customDev:!0})}export{n as c,u as d,r as g,o as u};

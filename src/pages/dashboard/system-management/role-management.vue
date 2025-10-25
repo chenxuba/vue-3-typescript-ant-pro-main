@@ -2,7 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
-import type { RoleModel, RolePagerQueryParams } from '@/api/system/role'
+import type { RolePagerQueryParams, RolePagerItem } from '@/api/system/role'
 import { 
   getRoleListPagerApi,
   createRolePagerApi,
@@ -42,12 +42,12 @@ const queryForm = reactive<RolePagerQueryParams>({
 })
 
 const loading = ref(false)
-const roleList = ref<RoleModel[]>([])
+const roleList = ref<RolePagerItem[]>([])
 const total = ref(0)
 
 // 表格选择
 const selectedRowKeys = ref<(string | number)[]>([])
-const selectedRows = ref<RoleModel[]>([])
+const selectedRows = ref<RolePagerItem[]>([])
 
 // 表格列定义
 const columns = [
@@ -168,7 +168,7 @@ const handleReset = () => {
 // 表格选择变化
 const onSelectChange = (keys: (string | number)[], rows: any[]) => {
   selectedRowKeys.value = keys
-  selectedRows.value = rows as RoleModel[]
+  selectedRows.value = rows as RolePagerItem[]
 }
 
 // 复选框属性配置
