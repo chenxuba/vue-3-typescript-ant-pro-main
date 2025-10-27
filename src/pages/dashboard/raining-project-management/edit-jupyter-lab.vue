@@ -74,7 +74,7 @@ interface FormData {
   tag: string
   fieldType?: number
   difficulty: number
-  environment?: number
+  environment?: number | string // 支持数字和字符串
   secondType?: number
   classHour: string
   topCover: string
@@ -170,8 +170,25 @@ const loadEnvironmentOptions = async () => {
     if (data && data.list) {
       environmentOptions.value = data.list.map(item => ({
         label: item.name,
-        value: item.value,
+        value: String(item.value), // 统一转换为 string
       }))
+      console.log('加载环境选项:', {
+        environmentOptions: environmentOptions.value,
+        currentEnvironment: formData.value.environment
+      })
+      // 如果第一步已经选择了实验环境，使用第一步的选择
+      if (formData.value.environment) {
+        selectedEnvironment.value = String(formData.value.environment)
+        environmentConfig.value.dockerImage = String(formData.value.environment)
+        console.log('使用第一步的环境:', formData.value.environment)
+      } 
+      // 如果还没有选中的环境，默认选中第一个
+      else if (!selectedEnvironment.value && environmentOptions.value.length > 0) {
+        selectedEnvironment.value = environmentOptions.value[0].value
+        environmentConfig.value.dockerImage = environmentOptions.value[0].value
+        formData.value.environment = environmentOptions.value[0].value // 直接使用字符串
+        console.log('默认选中第一个环境:', environmentOptions.value[0])
+      }
     }
   } catch (error) {
     console.error('加载实验环境选项失败：', error)
@@ -385,21 +402,8 @@ const handleTestValidateFilesSelect = (selectedFiles: any[]) => {
   showTestValidateFileSelectModal.value = false
 }
 
-// 实验环境列表
-const environmentList = [
-  { id: '1', name: 'Python3/JupyterLab', value: '1' },
-  { id: '2', name: 'R4.2/Jupyterlab', value: '2' },
-  { id: '3', name: 'Python3-tensorflow2.6/JupyterLab', value: '3' },
-  { id: '4', name: 'Python3.7/Jupyterlab', value: '4' },
-  { id: '5', name: 'Python3.7-TensorFlow1.13/JupyterLab', value: '5' },
-  { id: '6', name: 'Python3.8/JupyterLab', value: '6' },
-  { id: '7', name: 'Python3.10/Jupyterlab', value: '7' },
-  { id: '8', name: 'Python3.11/JupyterLab', value: '8' },
-  { id: '9', name: 'Python3.10-ultralytics/JupyterLab', value: '9' },
-]
-
 // 选中的实验环境
-const selectedEnvironment = ref('1')
+const selectedEnvironment = ref('')
 
 // 环境搜索关键词
 const environmentSearchKeyword = ref('')
@@ -407,11 +411,17 @@ const environmentSearchKeyword = ref('')
 // 过滤后的环境列表
 const filteredEnvironmentList = computed(() => {
   if (!environmentSearchKeyword.value) {
-    return environmentList
+    return environmentOptions.value
   }
-  return environmentList.filter(env => 
-    env.name.toLowerCase().includes(environmentSearchKeyword.value.toLowerCase())
+  return environmentOptions.value.filter(env => 
+    env.label.toLowerCase().includes(environmentSearchKeyword.value.toLowerCase())
   )
+})
+
+// 获取选中环境的名称
+const selectedEnvironmentLabel = computed(() => {
+  const selectedEnv = environmentOptions.value.find(env => env.value === selectedEnvironment.value)
+  return selectedEnv ? selectedEnv.label : '未选择'
 })
 
 // 实验环境配置
@@ -422,7 +432,7 @@ interface EnvironmentConfig {
 }
 
 const environmentConfig = ref<EnvironmentConfig>({
-  dockerImage: '1',
+  dockerImage: '',
   secondType: 'Css',
   timeLimitM: '',
 })
@@ -430,9 +440,10 @@ const environmentConfig = ref<EnvironmentConfig>({
 // 选择实验环境
 const handleSelectEnvironment = (envValue: string) => {
   selectedEnvironment.value = envValue
-  const selectedEnv = environmentList.find(env => env.value === envValue)
-  if (selectedEnv) {
-    environmentConfig.value.dockerImage = selectedEnv.id
+  environmentConfig.value.dockerImage = envValue
+  // 同步到第一步的实验环境选择
+  if (formData.value.environment !== envValue) {
+    formData.value.environment = envValue
   }
 }
 
@@ -478,6 +489,18 @@ const fetchProjectDetail = async () => {
     // 如果有仓库地址，自动打开开关并锁定输入框
     if (detail.gitUrl) {
       isRepositoryUrlLocked.value = true
+    }
+    
+    // 同步第一步选择的实验环境到第四步
+    if (detail.environment) {
+      await nextTick()
+      selectedEnvironment.value = String(detail.environment)
+      environmentConfig.value.dockerImage = String(detail.environment)
+      console.log('同步环境到第四步:', {
+        environment: detail.environment,
+        selectedEnvironment: selectedEnvironment.value,
+        environmentOptions: environmentOptions.value
+      })
     }
     
     // 获取任务数据
@@ -565,14 +588,8 @@ const fetchProjectTaskList = async () => {
           referenceAnswer: task.referenceAnswer || '',
         }
         
-        // 填充实验环境配置
-        if (task.dockerImage) {
-          const env = environmentList.find(e => e.id === String(task.dockerImage))
-          if (env) {
-            selectedEnvironment.value = env.value
-          }
-          environmentConfig.value.dockerImage = String(task.dockerImage)
-        }
+        // 填充实验环境配置（不再从任务中读取 dockerImage，因为应该从项目详情中读取）
+        // 只填充其他配置项
         if (task.secondType) {
           environmentConfig.value.secondType = task.secondType
         }
@@ -712,6 +729,21 @@ watch(() => formData.value.repositoryType, (newType) => {
       formData.value.repositoryType = '代码仓库'
     })
   }
+})
+
+// 监听第一步实验环境的变化，同步到第四步
+watch(() => formData.value.environment, (newEnvironment) => {
+  console.log('formData.environment 变化:', newEnvironment, '当前 selectedEnvironment:', selectedEnvironment.value)
+  if (newEnvironment && String(newEnvironment) !== selectedEnvironment.value) {
+    selectedEnvironment.value = String(newEnvironment)
+    environmentConfig.value.dockerImage = String(newEnvironment)
+    console.log('已同步到第四步:', selectedEnvironment.value)
+  }
+})
+
+// 监听 selectedEnvironment 的变化
+watch(() => selectedEnvironment.value, (newValue) => {
+  console.log('selectedEnvironment 变化为:', newValue)
 })
 
 // 仓库地址输入框失焦处理
@@ -1321,14 +1353,14 @@ const handleCompleteUpdate = async () => {
 
 // 页面加载时获取项目详情
 onMounted(async () => {
-  // 先加载环境选项
-  await loadEnvironmentOptions()
-  
   // 从路由参数获取项目ID
   const id = route.query.id
   if (id) {
     projectId.value = Number(id)
-    fetchProjectDetail()
+    // 先加载环境选项
+    await loadEnvironmentOptions()
+    // 再获取项目详情
+    await fetchProjectDetail()
   } else {
     message.error('缺少项目ID')
     router.back()
@@ -1813,12 +1845,12 @@ onMounted(async () => {
                 <div class="environment-list">
                   <div 
                     v-for="env in filteredEnvironmentList" 
-                    :key="env.id"
+                    :key="env.value"
                     class="environment-item"
                     :class="{ active: selectedEnvironment === env.value }"
                     @click="handleSelectEnvironment(env.value)"
                   >
-                    {{ env.name }}
+                    {{ env.label }}
                   </div>
                 </div>
               </div>
@@ -1826,7 +1858,7 @@ onMounted(async () => {
               <!-- 右侧：环境配置 -->
               <div class="environment-right">
                 <div class="environment-config-header">
-                  实验环境: {{ selectedEnvironment }}
+                  实验环境: {{ selectedEnvironmentLabel }}
                 </div>
                 
                 <a-form 
