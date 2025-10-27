@@ -30,6 +30,7 @@ import NewFileModal from './components/NewFileModal.vue'
 import NewFolderModal from './components/NewFolderModal.vue'
 import RepositoryModal from './components/RepositoryModal.vue'
 import QuestionModal from './components/QuestionModal.vue'
+import FileSelectModal from './components/FileSelectModal.vue'
 
 // Composables
 import { useFileTree } from './composables/useFileTree'
@@ -293,8 +294,8 @@ const {
   resetTaskLevel,
   handleLearningResourceCustomRequest,
   handleLearningResourceUpload,
-  handleUserFilesUpload,
-  handleTestValidateFilesUpload,
+  handleUserFilesSelect,
+  handleTestValidateFilesSelect,
   userFileList,
   testValidateFileList,
   addTestCase,
@@ -316,6 +317,8 @@ const showRepositoryModal = ref(false)
 const showNewFileModal = ref(false)
 const showNewFolderModal = ref(false)
 const showQuestionModal = ref(false)
+const showUserFileSelectModal = ref(false) // 学员任务文件选择器
+const showTestValidateFileSelectModal = ref(false) // 评测执行文件选择器
 const currentEditingQuestion = ref<any>(null) // 当前编辑的题目
 const currentParentPath = ref('/')
 const currentFolderParentPath = ref('/')
@@ -1510,7 +1513,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
             <div class="header-buttons">
               <a-button type="primary" @click="addTaskLevel('kernel')">添加内核链接任务</a-button>
               <a-button type="primary" @click="addTaskLevel('choice')">添加选择题任务</a-button>
-              <a-button type="primary" @click="addTaskLevel('programming')">添加编程任务</a-button>
+              <a-button v-if="formData.enableCodeRepository" type="primary" @click="addTaskLevel('programming')">添加编程任务</a-button>
             </div>
           </div>
 
@@ -1654,25 +1657,48 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                           </a-form-item>
 
                           <a-form-item label="学员任务文件" name="userFiles" required>
-                            <a-upload v-model:file-list="userFileList"
-                              :custom-request="handleLearningResourceCustomRequest" @change="handleUserFilesUpload"
-                              :max-count="10">
-                              <a-button type="primary">点击上传</a-button>
-                            </a-upload>
+                            <div class="file-select-wrapper">
+                              <a-button type="primary" @click="showUserFileSelectModal = true">点击选择</a-button>
+                              <div class="selected-files-list">
+                                <a-tag 
+                                  v-for="file in userFileList" 
+                                  :key="file.uid"
+                                  closable
+                                  @close="() => {
+                                    userFileList = userFileList.filter(f => f.uid !== file.uid)
+                                    evaluationFormData.userFiles = [...userFileList]
+                                  }"
+                                  style="margin: 4px;"
+                                >
+                                  {{ file.name }}
+                                </a-tag>
+                              </div>
+                            </div>
                             <div class="upload-hint">
-                              说明：支持上传多个文件，每个文件大小不能超过500M。（学员评测基本任务时名称，查看效果页上需要编辑的文件类型）
+                              说明：从代码仓库中选择文件。（学员评测基本任务时名称，查看效果页上需要编辑的文件类型）
                             </div>
                           </a-form-item>
 
                           <a-form-item label="评测执行文件" name="testValidateFiles" required>
-                            <a-upload v-model:file-list="testValidateFileList"
-                              :custom-request="handleLearningResourceCustomRequest"
-                              @change="handleTestValidateFilesUpload"
-                              :max-count="10">
-                              <a-button type="primary">点击上传</a-button>
-                            </a-upload>
+                            <div class="file-select-wrapper">
+                              <a-button type="primary" @click="showTestValidateFileSelectModal = true">点击选择</a-button>
+                              <div class="selected-files-list">
+                                <a-tag 
+                                  v-for="file in testValidateFileList" 
+                                  :key="file.uid"
+                                  closable
+                                  @close="() => {
+                                    testValidateFileList = testValidateFileList.filter(f => f.uid !== file.uid)
+                                    evaluationFormData.testValidateFiles = [...testValidateFileList]
+                                  }"
+                                  style="margin: 4px;"
+                                >
+                                  {{ file.name }}
+                                </a-tag>
+                              </div>
+                            </div>
                             <div class="upload-hint">
-                              说明：支持上传多个文件，每个文件大小不能超过500M。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确，可与"学员任务文件"一致）
+                              说明：从代码仓库中选择文件。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确，可与"学员任务文件"一致）
                             </div>
                           </a-form-item>
 
@@ -1933,6 +1959,22 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
     <QuestionModal v-model:open="showQuestionModal" :question="currentEditingQuestion"
       :project-id="projectId ?? undefined" :task-id="taskLevelFormData.taskId" :existing-questions="getCurrentQuestions"
       @confirm="handleConfirmQuestion" />
+    
+    <!-- 学员任务文件选择器 -->
+    <FileSelectModal 
+      v-model:open="showUserFileSelectModal" 
+      title="选择学员任务文件"
+      :git-url="formData.gitUrl"
+      @confirm="handleUserFilesSelect" 
+    />
+    
+    <!-- 评测执行文件选择器 -->
+    <FileSelectModal 
+      v-model:open="showTestValidateFileSelectModal" 
+      title="选择评测执行文件"
+      :git-url="formData.gitUrl"
+      @confirm="handleTestValidateFilesSelect" 
+    />
   </div>
 </template>
 
@@ -2456,6 +2498,20 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                 margin-top: 8px;
                 color: rgba(0, 0, 0, 0.45);
                 font-size: 12px;
+              }
+
+              .file-select-wrapper {
+                .selected-files-list {
+                  margin-top: 8px;
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 8px;
+                  min-height: 32px;
+                  padding: 8px;
+                  background: #fafafa;
+                  border-radius: 4px;
+                  border: 1px dashed #d9d9d9;
+                }
               }
 
               .case-type-row {

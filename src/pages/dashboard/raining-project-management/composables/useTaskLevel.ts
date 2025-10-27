@@ -572,7 +572,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     })
   }
 
-  // 学员任务文件上传处理
+  // 学员任务文件上传处理（已废弃，改为文件选择）
   const handleUserFilesUpload = (info: any) => {
     const { file, fileList } = info
     
@@ -597,7 +597,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     evaluationFormRef.value?.validateFields(['userFiles'])
   }
 
-  // 评测执行文件上传处理
+  // 评测执行文件上传处理（已废弃，改为文件选择）
   const handleTestValidateFilesUpload = (info: any) => {
     const { file, fileList } = info
     
@@ -620,6 +620,44 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     
     // 触发表单验证
     evaluationFormRef.value?.validateFields(['testValidateFiles'])
+  }
+
+  // 处理学员任务文件选择（从代码库选择）
+  const handleUserFilesSelect = (files: Array<{ name: string; path: string }>) => {
+    // 将选中的文件转换为文件列表格式
+    const newFiles = files.map((file, index) => ({
+      uid: `${Date.now()}-${index}`,
+      name: file.name,
+      status: 'done',
+      url: file.path,
+    }))
+    
+    userFileList.value = newFiles
+    evaluationFormData.value.userFiles = [...userFileList.value]
+    
+    // 触发表单验证
+    evaluationFormRef.value?.validateFields(['userFiles'])
+    
+    message.success(`已选择 ${files.length} 个文件`)
+  }
+
+  // 处理评测执行文件选择（从代码库选择）
+  const handleTestValidateFilesSelect = (files: Array<{ name: string; path: string }>) => {
+    // 将选中的文件转换为文件列表格式
+    const newFiles = files.map((file, index) => ({
+      uid: `${Date.now()}-${index}`,
+      name: file.name,
+      status: 'done',
+      url: file.path,
+    }))
+    
+    testValidateFileList.value = newFiles
+    evaluationFormData.value.testValidateFiles = [...testValidateFileList.value]
+    
+    // 触发表单验证
+    evaluationFormRef.value?.validateFields(['testValidateFiles'])
+    
+    message.success(`已选择 ${files.length} 个文件`)
   }
 
   // 新增测试集
@@ -846,6 +884,8 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     handleLearningResourceUpload,
     handleUserFilesUpload,
     handleTestValidateFilesUpload,
+    handleUserFilesSelect,
+    handleTestValidateFilesSelect,
     userFileList,
     testValidateFileList,
     addTestCase,
