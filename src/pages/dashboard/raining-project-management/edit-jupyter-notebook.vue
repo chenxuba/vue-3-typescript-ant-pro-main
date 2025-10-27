@@ -6,6 +6,7 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
 import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
+import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 import { getDicGroupApi } from '@/api/common/dictionary'
 import RichTextEditor from './components/RichTextEditor.vue'
 
@@ -250,12 +251,14 @@ const formRules: Record<string, Rule[]> = {
 }
 
 // 领域类别选项
-const domainCategoryOptions = [
-  { label: '人工智能', value: 1 },
-  { label: '大数据', value: 2 },
-  { label: '云计算', value: 3 },
-  { label: 'Web开发', value: 4 },
-]
+// 使用领域类别字典
+const fieldCategory = useFieldCategoryDictionary()
+
+// 使用难度字典
+const difficulty = useDifficultyDictionary()
+
+// 使用小类别字典
+const subcategory = useSubcategoryDictionary()
 
 // 实验环境选项（JupyterNotebook环境）- 从字典加载
 const environmentOptions = ref<Array<{ label: string; value: string }>>([])
@@ -280,12 +283,7 @@ const loadEnvironmentOptions = async () => {
   }
 }
 
-// 小类别选项
-const secondTypeOptions = [
-  { label: 'Bwapp', value: 1 },
-  { label: 'CSS', value: 2 },
-  { label: 'DataTurks', value: 3 },
-]
+// 小类别选项已改为使用字典 hooks (subcategory)
 
 // 步骤标题
 const steps = [
@@ -789,6 +787,11 @@ const handleCoverUpload = async (file: File) => {
 
 // 页面加载时获取项目详情
 onMounted(async () => {
+  // 加载领域类别字典、难度字典和小类别字典
+  fieldCategory.load()
+  difficulty.load()
+  subcategory.load()
+  
   // 加载实验环境选项
   await loadEnvironmentOptions()
   
@@ -851,7 +854,8 @@ onMounted(async () => {
                     <a-select 
                       v-model:value="formData.fieldType" 
                       placeholder="请选择领域类别"
-                      :options="domainCategoryOptions" 
+                      :options="fieldCategory.options.value"
+                      :loading="fieldCategory.loading.value" 
                     />
                   </a-form-item>
                 </a-col>
@@ -859,9 +863,13 @@ onMounted(async () => {
 
               <a-form-item label="难度" name="difficulty" required>
                 <a-radio-group v-model:value="formData.difficulty" class="custom-radio">
-                  <a-radio :value="1">简单</a-radio>
-                  <a-radio :value="2">适中</a-radio>
-                  <a-radio :value="3">困难</a-radio>
+                  <a-radio 
+                    v-for="item in difficulty.data.value" 
+                    :key="item.value" 
+                    :value="Number(item.value)"
+                  >
+                    {{ item.name }}
+                  </a-radio>
                 </a-radio-group>
               </a-form-item>
 
@@ -881,7 +889,8 @@ onMounted(async () => {
                     <a-select 
                       v-model:value="formData.secondType" 
                       placeholder="请选择小类别"
-                      :options="secondTypeOptions"
+                      :options="subcategory.options.value"
+                      :loading="subcategory.loading.value"
                       
                     />
                   </a-form-item>

@@ -6,6 +6,7 @@ import RichTextEditor from './components/RichTextEditor.vue'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 import type { DictionaryItem } from '@/api/common/dictionary'
 import { getProjectDetailApi, updateProjectApi } from '@/api/project'
+import { useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 
 defineOptions({
   name: 'EditRainingProject',
@@ -76,12 +77,11 @@ const formRules: any = {
   secondType: [{ required: true, message: '请选择小类别', trigger: 'change' }],
 }
 
-// 难度选项
-const difficultyOptions = [
-  { label: '简单', value: 1 },
-  { label: '适中', value: 2 },
-  { label: '困难', value: 3 },
-]
+// 使用难度字典
+const difficulty = useDifficultyDictionary()
+
+// 使用小类别字典
+const subcategory = useSubcategoryDictionary()
 
 // 实验环境选项数据
 const environmentOptionsMap = ref<Record<number, DictionaryItem[]>>({
@@ -123,16 +123,12 @@ const loadEnvironmentOptions = async (type: number) => {
   }
 }
 
-// 小类别选项（固定选项，不做联动）
+// 小类别选项（使用字典 hooks）
 const getSecondTypeOptions = () => {
   // 如果不是JupyterNotebook环境或JupyterLab环境，返回空数组
   if (projectType.value !== 2 && projectType.value !== 3) return []
   
-  return [
-    { label: 'Bwapp', value: 1 },
-    { label: 'CSS', value: 2 },
-    { label: 'DataTurks', value: 3 },
-  ]
+  return subcategory.options.value
 }
 
 // 获取项目详情
@@ -300,6 +296,10 @@ const getEnvironmentName = computed(() => {
 
 // 页面加载时获取项目详情
 onMounted(() => {
+  // 加载难度字典和小类别字典
+  difficulty.load()
+  subcategory.load()
+  
   // 从路由参数获取项目ID
   const id = route.query.id
   if (id) {
@@ -383,7 +383,8 @@ onMounted(() => {
               <a-select
                 v-model:value="editForm.difficulty"
                 placeholder="请选择难度"
-                :options="difficultyOptions"
+                :options="difficulty.options.value"
+                :loading="difficulty.loading.value"
               />
             </a-form-item>
 

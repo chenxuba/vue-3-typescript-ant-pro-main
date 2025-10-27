@@ -6,6 +6,7 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi } from '@/api/project'
+import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
@@ -110,6 +111,11 @@ const formData = ref<FormData>({
 
 // 从路由接收数据并填充表单
 onMounted(async () => {
+  // 加载领域类别字典、难度字典和小类别字典
+  fieldCategory.load()
+  difficulty.load()
+  subcategory.load()
+  
   // 先加载环境选项
   await loadEnvironmentOptions()
   
@@ -185,12 +191,14 @@ const formRules: Record<string, Rule[]> = {
 }
 
 // 领域类别选项
-const domainCategoryOptions = [
-  { label: '人工智能', value: 1 },
-  { label: '大数据', value: 2 },
-  { label: '云计算', value: 3 },
-  { label: 'Web开发', value: 4 },
-]
+// 使用领域类别字典
+const fieldCategory = useFieldCategoryDictionary()
+
+// 使用难度字典
+const difficulty = useDifficultyDictionary()
+
+// 使用小类别字典
+const subcategory = useSubcategoryDictionary()
 
 // 实验环境选项（从字典API加载）
 const environmentOptions = ref<Array<{ label: string; value: string }>>([])
@@ -236,12 +244,7 @@ const loadEnvironmentOptions = async () => {
   }
 }
 
-// 小类别选项
-const secondTypeOptions = [
-  { label: 'Bwapp', value: 1 },
-  { label: 'CSS', value: 2 },
-  { label: 'DataTurks', value: 3 },
-]
+// 小类别选项已改为使用字典 hooks (subcategory)
 
 // 仓库类型选项
 const repositoryTypeOptions = [
@@ -1348,7 +1351,8 @@ const scrollToTop = () => {
                   <a-select 
                     v-model:value="formData.fieldType" 
                     placeholder="请选择领域类别"
-                    :options="domainCategoryOptions" 
+                    :options="fieldCategory.options.value"
+                    :loading="fieldCategory.loading.value" 
                   />
                 </a-form-item>
               </a-col>
@@ -1356,9 +1360,13 @@ const scrollToTop = () => {
 
             <a-form-item label="难度" name="difficulty" required>
               <a-radio-group v-model:value="formData.difficulty" class="custom-radio">
-                <a-radio :value="1">简单</a-radio>
-                <a-radio :value="2">适中</a-radio>
-                <a-radio :value="3">困难</a-radio>
+                <a-radio 
+                  v-for="item in difficulty.data.value" 
+                  :key="item.value" 
+                  :value="Number(item.value)"
+                >
+                  {{ item.name }}
+                </a-radio>
               </a-radio-group>
             </a-form-item>
 
@@ -1378,7 +1386,8 @@ const scrollToTop = () => {
                   <a-select 
                     v-model:value="formData.secondType" 
                     placeholder="请选择小类别"
-                    :options="secondTypeOptions"
+                    :options="subcategory.options.value"
+                    :loading="subcategory.loading.value"
                   />
                 </a-form-item>
               </a-col>
@@ -1804,11 +1813,9 @@ const scrollToTop = () => {
                   <a-select 
                     v-model:value="environmentConfig.secondType"
                     placeholder="请选择附带环境"
-                  >
-                    <a-select-option :value="1">Bwapp</a-select-option>
-                    <a-select-option :value="2">Css</a-select-option>
-                    <a-select-option :value="3">DataTurks</a-select-option>
-                  </a-select>
+                    :options="subcategory.options.value"
+                    :loading="subcategory.loading.value"
+                  />
                 </a-form-item>
 
                 <a-form-item label="实验环境使用时长">

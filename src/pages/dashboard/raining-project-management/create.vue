@@ -3,8 +3,7 @@ import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import RichTextEditor from './components/RichTextEditor.vue'
-import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
-import type { DictionaryItem } from '@/api/common/dictionary'
+import { useDifficultyDictionary, useEnvironmentDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 
 defineOptions({
   name: 'CreateRainingProject',
@@ -22,7 +21,7 @@ const projectType = ref(1)
 const createForm = ref<{
   name: string
   description: string
-  difficulty: number | undefined
+  difficulty: string | undefined
   environment: string | undefined
   secondType: number | undefined
   classHour: string
@@ -63,70 +62,28 @@ const formRules: any = {
   secondType: [{ required: true, message: '请选择小类别', trigger: 'change' }],
 }
 
-// 难度选项
-const difficultyOptions = [
-  { label: '简单', value: 1 },
-  { label: '适中', value: 2 },
-  { label: '困难', value: 3 },
-]
+// 使用难度字典
+const difficulty = useDifficultyDictionary()
 
-// 实验环境选项数据
-const environmentOptionsMap = ref<Record<number, DictionaryItem[]>>({
-  1: [], // 全栈环境
-  2: [], // JupyterNotebook环境
-  3: [], // JupyterLab环境
-})
+// 使用小类别字典
+const subcategory = useSubcategoryDictionary()
 
-// 加载状态
-const loadingEnvironment = ref(false)
+// 使用实验环境字典（根据项目类型动态获取）
+const environment = computed(() => useEnvironmentDictionary(projectType.value))
 
-// 获取实验环境选项（根据项目类型不同而不同）
-const getEnvironmentOptions = () => {
-  const options = environmentOptionsMap.value[projectType.value] || []
-  return options.map(item => ({
-    label: item.name,
-    value: item.value,
-  }))
-}
-
-// 加载实验环境字典数据
-const loadEnvironmentOptions = async (type: number) => {
-  if (environmentOptionsMap.value[type].length > 0) {
-    // 如果已经加载过，直接返回
-    return
-  }
-  
-  try {
-    loadingEnvironment.value = true
-    const code = getEnvironmentDicCode(type)
-    if (!code) return
-    
-    const data = await getDicGroupApi({ code })
-    if (data && data.list) {
-      environmentOptionsMap.value[type] = data.list
-    }
-  } catch (error) {
-    message.error('加载实验环境选项失败')
-  } finally {
-    loadingEnvironment.value = false
-  }
-}
-
-// 页面加载时，加载当前项目类型的环境选项
+// 页面加载时，加载难度和当前项目类型的环境选项
 onMounted(() => {
-  loadEnvironmentOptions(projectType.value)
+  difficulty.load()
+  subcategory.load()
+  environment.value.load()
 })
 
-// 小类别选项（固定选项，不做联动）
+// 小类别选项（使用字典 hooks）
 const getSecondTypeOptions = () => {
   // 如果不是JupyterNotebook环境或JupyterLab环境，返回空数组
   if (projectType.value !== 2 && projectType.value !== 3) return []
   
-  return [
-    { label: 'Bwapp', value: 1 },
-    { label: 'CSS', value: 2 },
-    { label: 'DataTurks', value: 3 },
-  ]
+  return subcategory.options.value
 }
 
 // 返回
@@ -203,12 +160,12 @@ const handleNext = async () => {
 }
 
 // 监听项目类型变化，清空实验环境和小类别选择，并加载对应的环境选项
-watch(projectType, (newType) => {
+watch(projectType, () => {
   createForm.value.environment = undefined
   createForm.value.secondType = undefined
   createForm.value.showTaskRequire = false
   // 加载新类型的环境选项
-  loadEnvironmentOptions(newType)
+  environment.value.load()
 })
 
 // 获取项目类型名称
@@ -224,9 +181,7 @@ const getProjectTypeName = computed(() => {
 // 获取实验环境名称
 const getEnvironmentName = computed(() => {
   if (!createForm.value.environment) return ''
-  const items = environmentOptionsMap.value[projectType.value] || []
-  const item = items.find(opt => opt.value === createForm.value.environment)
-  return item?.name || ''
+  return environment.value.getNameByValue(createForm.value.environment)
 })
 
 </script>
@@ -300,7 +255,8 @@ const getEnvironmentName = computed(() => {
             <a-select
               v-model:value="createForm.difficulty"
               placeholder="请选择难度"
-              :options="difficultyOptions"
+              :options="difficulty.options.value"
+              :loading="difficulty.loading.value"
             />
           </a-form-item>
 
@@ -308,8 +264,8 @@ const getEnvironmentName = computed(() => {
             <a-select
               v-model:value="createForm.environment"
               placeholder="请选择实验环境"
-              :options="getEnvironmentOptions()"
-              :loading="loadingEnvironment"
+              :options="environment.options.value"
+              :loading="environment.loading.value"
             />
           </a-form-item>
 

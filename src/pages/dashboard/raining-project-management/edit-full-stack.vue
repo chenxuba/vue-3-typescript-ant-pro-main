@@ -6,6 +6,7 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
 import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectEnvironmentApi, type ProjectTaskItem } from '@/api/project'
+import { useFieldCategoryDictionary, useDifficultyDictionary, useCollateralEnvironmentDictionary, useProgrammingLanguageDictionary } from '@/composables/dictionary'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -167,13 +168,17 @@ const formRules: Record<string, Rule[]> = {
   ],
 }
 
-// 领域类别选项
-const domainCategoryOptions = [
-  { label: '人工智能', value: 1 },
-  { label: '大数据', value: 2 },
-  { label: '云计算', value: 3 },
-  { label: 'Web开发', value: 4 },
-]
+// 使用领域类别字典
+const fieldCategory = useFieldCategoryDictionary()
+
+// 使用难度字典
+const difficulty = useDifficultyDictionary()
+
+// 使用附带环境字典
+const collateralEnvironment = useCollateralEnvironmentDictionary()
+
+// 使用编程语言字典
+const programmingLanguage = useProgrammingLanguageDictionary()
 
 // 仓库类型选项
 const repositoryTypeOptions = [
@@ -483,7 +488,7 @@ const fetchProjectDetail = async () => {
     formData.value = {
       name: detail.name || '',
       tag: detail.tag || '',
-      fieldType: detail.fieldType,
+      fieldType: detail.fieldType ? (detail.fieldType) : undefined,
       difficulty: detail.difficulty || 1,
       classHour: detail.classHour || '',
       topCover: detail.topCover || '',
@@ -1516,6 +1521,12 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
 // 页面加载时获取项目详情
 onMounted(() => {
+  // 加载领域类别字典、难度字典、附带环境字典和编程语言字典
+  fieldCategory.load()
+  difficulty.load()
+  collateralEnvironment.load()
+  programmingLanguage.load()
+  
   // 从路由参数获取项目ID
   const id = route.query.id
   if (id) {
@@ -1570,16 +1581,25 @@ onMounted(() => {
                 <a-col :span="12">
                   <a-form-item label="领域类别" name="fieldType" required :label-col="{ span: 4 }"
                     :wrapper-col="{ span: 12 }">
-                    <a-select v-model:value="formData.fieldType" placeholder="请选择领域类别" :options="domainCategoryOptions" />
+                    <a-select 
+                      v-model:value="formData.fieldType" 
+                      placeholder="请选择领域类别" 
+                      :options="fieldCategory.options.value"
+                      :loading="fieldCategory.loading.value"
+                    />
                   </a-form-item>
                 </a-col>
               </a-row>
 
               <a-form-item label="难度" name="difficulty" required>
                 <a-radio-group v-model:value="formData.difficulty" class="custom-radio">
-                  <a-radio :value="1">简单</a-radio>
-                  <a-radio :value="2">适中</a-radio>
-                  <a-radio :value="3">困难</a-radio>
+                  <a-radio 
+                    v-for="item in difficulty.data.value" 
+                    :key="item.value" 
+                    :value="Number(item.value)"
+                  >
+                    {{ item.name }}
+                  </a-radio>
                 </a-radio-group>
               </a-form-item>
 
@@ -1807,9 +1827,13 @@ onMounted(() => {
 
                         <a-form-item label="难度系数" name="difficulty" required>
                           <a-radio-group v-model:value="taskLevelFormData.difficulty" class="custom-radio">
-                            <a-radio :value="1">简单</a-radio>
-                            <a-radio :value="2">适中</a-radio>
-                            <a-radio :value="3">困难</a-radio>
+                            <a-radio 
+                              v-for="item in difficulty.data.value" 
+                              :key="item.value" 
+                              :value="Number(item.value)"
+                            >
+                              {{ item.name }}
+                            </a-radio>
                           </a-radio-group>
                         </a-form-item>
 
@@ -2103,10 +2127,13 @@ onMounted(() => {
                   </a-form-item>
 
                   <a-form-item label="附带环境" name="secondType" required>
-                    <a-select v-model:value="env.config.secondType" placeholder="请选择附带环境" allowClear>
-                      <a-select-option :value="1">环境1</a-select-option>
-                      <a-select-option :value="2">环境2</a-select-option>
-                    </a-select>
+                    <a-select 
+                      v-model:value="env.config.secondType" 
+                      placeholder="请选择附带环境" 
+                      :options="collateralEnvironment.options.value"
+                      :loading="collateralEnvironment.loading.value"
+                      allowClear
+                    />
                   </a-form-item>
 
                   <a-form-item label="任务关卡" name="taskId" required>
@@ -2123,12 +2150,13 @@ onMounted(() => {
 
                   <!-- 选择代码编辑器时显示编程语言 -->
                   <a-form-item v-if="env.config.viewTypes.includes(1)" label="编程语言" name="codeType" required>
-                    <a-select v-model:value="env.config.codeType" placeholder="请选择编程语言" allowClear>
-                      <a-select-option value="1">Python</a-select-option>
-                      <a-select-option value="2">JavaScript</a-select-option>
-                      <a-select-option value="3">Java</a-select-option>
-                      <a-select-option value="4">C++</a-select-option>
-                    </a-select>
+                    <a-select 
+                      v-model:value="env.config.codeType" 
+                      placeholder="请选择编程语言" 
+                      :options="programmingLanguage.options.value"
+                      :loading="programmingLanguage.loading.value"
+                      allowClear
+                    />
                   </a-form-item>
 
                   <!-- 选择命令行终端时显示开启时触发命令 -->
