@@ -737,7 +737,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     const newFiles = files.map((file, index) => ({
       uid: `${Date.now()}-${index}`,
       name: file.name,
-      status: 'done',
+      status: 'done' as const,
       url: file.path,
     }))
     
@@ -756,7 +756,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     const newFiles = files.map((file, index) => ({
       uid: `${Date.now()}-${index}`,
       name: file.name,
-      status: 'done',
+      status: 'done' as const,
       url: file.path,
     }))
     
