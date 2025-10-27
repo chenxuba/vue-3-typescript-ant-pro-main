@@ -16,7 +16,7 @@ function handleClick({ key }: any) {
   <a-dropdown>
     <span hover="bg-[var(--hover-color)]" flex items-center h-48px px-12px cursor-pointer class="transition-all-300">
       <a-avatar src="https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fci.xiaohongshu.com%2Fc34b7b74-ba38-0456-982a-43c0f97522fe%3FimageView2%2F2%2Fw%2F1080%2Fformat%2Fjpg&refer=http%3A%2F%2Fci.xiaohongshu.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1763909761&t=4523fa0150b88276f226cef96220c618" mr-8px size="small" />
-      <span class="anticon">{{ nickname }}</span>
+      <span class="anticon text-#fff">{{ nickname }}</span>
     </span>
     <template #overlay>
       <a-menu @click="handleClick">
