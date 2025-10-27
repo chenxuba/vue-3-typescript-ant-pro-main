@@ -30,6 +30,7 @@ import RichTextEditor from './components/RichTextEditor.vue'
 import NewFileModal from './components/NewFileModal.vue'
 import NewFolderModal from './components/NewFolderModal.vue'
 import RepositoryModal from './components/RepositoryModal.vue'
+import FileSelectModal from './components/FileSelectModal.vue'
 
 // Composables
 import { useFileTree } from './composables/useFileTree'
@@ -230,6 +231,7 @@ const {
 const showRepositoryModal = ref(false)
 const showNewFileModal = ref(false)
 const showNewFolderModal = ref(false)
+const showTestValidateFileSelectModal = ref(false) // 评测文件选择器
 const currentParentPath = ref('/')
 const currentFolderParentPath = ref('/')
 
@@ -364,6 +366,23 @@ const handleTestValidateFilesUpload = async (info: any) => {
       message.success(`成功上传 ${successUrls.length} 个文件`)
     }
   }
+}
+
+// 处理评测文件选择（从代码仓库）
+const handleTestValidateFilesSelect = (selectedFiles: any[]) => {
+  testValidateFileList.value = selectedFiles.map((file: any) => ({
+    uid: file.uid,
+    name: file.name,
+    status: 'done',
+    url: file.path, // 使用文件路径作为url
+  }))
+  
+  // 将选中的文件路径拼接成字符串
+  const filePaths = selectedFiles.map((file: any) => file.path).join(',')
+  evaluationData.value.testValidateFiles = filePaths
+  
+  message.success(`已选择 ${selectedFiles.length} 个文件`)
+  showTestValidateFileSelectModal.value = false
 }
 
 // 实验环境列表
@@ -1597,17 +1616,44 @@ onMounted(async () => {
 
                       <template v-if="evaluationData.openTestValidate === 1">
                         <a-form-item label="评测文件" required>
-                          <a-upload 
-                            v-model:file-list="testValidateFileList"
-                            :custom-request="handleLearningResourceCustomRequest"
-                            @change="handleTestValidateFilesUpload"
-                            :max-count="10"
-                          >
-                            <a-button type="primary">点击上传</a-button>
-                          </a-upload>
-                          <div class="upload-hint">
-                            说明：支持上传多个文件，每个文件大小不能超过500M。
-                          </div>
+                          <!-- 未开启代码仓库：上传文件 -->
+                          <template v-if="!formData.enableCodeRepository">
+                            <a-upload 
+                              v-model:file-list="testValidateFileList"
+                              :custom-request="handleLearningResourceCustomRequest"
+                              @change="handleTestValidateFilesUpload"
+                              :max-count="10"
+                            >
+                              <a-button type="primary">点击上传</a-button>
+                            </a-upload>
+                            <div class="upload-hint">
+                              说明：支持上传多个文件，每个文件大小不能超过500M。
+                            </div>
+                          </template>
+                          
+                          <!-- 已开启代码仓库：从仓库选择文件 -->
+                          <template v-else>
+                            <div class="file-select-wrapper">
+                              <a-button type="primary" @click="showTestValidateFileSelectModal = true">点击选择</a-button>
+                              <div class="selected-files-list">
+                                <a-tag 
+                                  v-for="file in testValidateFileList" 
+                                  :key="file.uid"
+                                  closable
+                                  @close="() => {
+                                    testValidateFileList = testValidateFileList.filter(f => f.uid !== file.uid)
+                                    evaluationData.testValidateFiles = testValidateFileList.map(f => f.url).join(',')
+                                  }"
+                                  style="margin: 4px;"
+                                >
+                                  {{ file.name }}
+                                </a-tag>
+                              </div>
+                            </div>
+                            <div class="upload-hint">
+                              说明：从代码仓库中选择文件。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确）
+                            </div>
+                          </template>
                         </a-form-item>
 
                         <a-form-item label="评测执行命令" required>
@@ -1852,6 +1898,14 @@ onMounted(async () => {
       v-model:open="showNewFolderModal"
       :parent-path="currentFolderParentPath"
       @confirm="handleConfirmNewFolder"
+    />
+    
+    <!-- 评测文件选择器 -->
+    <FileSelectModal 
+      v-model:open="showTestValidateFileSelectModal" 
+      title="选择评测文件"
+      :git-url="formData.gitUrl"
+      @confirm="handleTestValidateFilesSelect" 
     />
   </div>
 </template>
@@ -2213,6 +2267,20 @@ onMounted(async () => {
 
         &:last-child {
           margin-bottom: 0;
+        }
+      }
+      
+      .file-select-wrapper {
+        .selected-files-list {
+          margin-top: 8px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-height: 32px;
+          padding: 8px;
+          background: #fafafa;
+          border-radius: 4px;
+          border: 1px dashed #d9d9d9;
         }
       }
     }
