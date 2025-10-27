@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { uploadFileApi } from '@/api/common/file'
+import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi } from '@/api/project'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 // @ts-ignore
@@ -30,6 +30,7 @@ import RichTextEditor from './components/RichTextEditor.vue'
 import NewFileModal from './components/NewFileModal.vue'
 import NewFolderModal from './components/NewFolderModal.vue'
 import RepositoryModal from './components/RepositoryModal.vue'
+import FileSelectModal from './components/FileSelectModal.vue'
 
 // Composables
 import { useFileTree } from './composables/useFileTree'
@@ -76,7 +77,7 @@ interface FormData {
   tag: string
   fieldType?: number
   difficulty: number
-  environment?: number
+  environment?: number | string // 支持数字和字符串
   secondType?: number
   classHour: string
   topCover: string
@@ -207,8 +208,25 @@ const loadEnvironmentOptions = async () => {
     if (data && data.list) {
       environmentOptions.value = data.list.map(item => ({
         label: item.name,
-        value: item.value,
+        value: String(item.value), // 统一转换为 string
       }))
+      console.log('加载环境选项:', {
+        environmentOptions: environmentOptions.value,
+        currentEnvironment: formData.value.environment
+      })
+      // 如果第一步已经选择了实验环境，使用第一步的选择
+      if (formData.value.environment) {
+        selectedEnvironment.value = String(formData.value.environment)
+        environmentConfig.value.dockerImage = String(formData.value.environment)
+        console.log('使用第一步的环境:', formData.value.environment)
+      } 
+      // 如果还没有选中的环境，默认选中第一个
+      else if (!selectedEnvironment.value && environmentOptions.value.length > 0) {
+        selectedEnvironment.value = environmentOptions.value[0].value
+        environmentConfig.value.dockerImage = environmentOptions.value[0].value
+        formData.value.environment = environmentOptions.value[0].value // 直接使用字符串
+        console.log('默认选中第一个环境:', environmentOptions.value[0])
+      }
     }
   } catch (error) {
     console.error('加载实验环境选项失败：', error)
@@ -235,6 +253,9 @@ const repositoryTypeOptions = [
 // 仓库地址是否锁定
 const isRepositoryUrlLocked = ref(false)
 
+// 已加载的文件夹节点（避免重复加载）
+const loadedFolderKeys = ref<Set<string>>(new Set())
+
 // 步骤标题
 const steps = [
   { title: '基本信息' },
@@ -249,21 +270,29 @@ const {
   expandedKeys,
   selectedFile,
   highlightedCode,
+  dynamicFileContents,
   handleSelectFile,
   getNodePath,
   addFileToTree,
   addFolderToTree,
   handleRenameNode,
   handleCopyPath,
-  handleDeleteNode,
+  loadRemoteFileTree,
+  loadChildrenData,
+  getNodePathFromMap,
 } = useFileTree()
 
 // 弹窗状态
 const showRepositoryModal = ref(false)
 const showNewFileModal = ref(false)
 const showNewFolderModal = ref(false)
+const showTestValidateFileSelectModal = ref(false) // 评测文件选择器
 const currentParentPath = ref('/')
 const currentFolderParentPath = ref('/')
+
+// 文件上传相关
+const fileUploadInput = ref<HTMLInputElement | null>(null)
+const currentUploadPath = ref('/')
 
 // 文件上传处理
 const handleBackgroundUpload = async (file: File) => {
@@ -338,16 +367,27 @@ const handleRepositorySwitchChange = (checked: boolean | string | number) => {
   }
 }
 
-// 模拟请求仓库文件
+// 请求仓库文件
 const fetchRepositoryFiles = async () => {
   try {
-    message.loading('正在查询仓库文件...', 1)
-    // 模拟请求延迟
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const loadingMsg = message.loading('正在查询仓库文件...', 0)
+    
+    // 调用API获取文件列表
+    const fileList = await getGitFileListApi(formData.value.gitUrl, '')
+    
+    // 加载文件树
+    loadRemoteFileTree(fileList)
+    
+    // 清空已加载文件夹记录
+    loadedFolderKeys.value.clear()
+    
+    loadingMsg()
     message.success('仓库文件查询成功')
-    console.log('模拟请求仓库地址：', formData.value.gitUrl)
-  } catch (error) {
-    message.error('仓库文件查询失败')
+    console.log('查询仓库地址：', formData.value.gitUrl)
+    console.log('获取到的文件列表：', fileList)
+  } catch (error: any) {
+    message.error(error.message || '仓库文件查询失败')
+    console.error('仓库文件查询失败：', error)
   }
 }
 
@@ -402,6 +442,45 @@ const handleRepositoryUrlBlur = () => {
   }
 }
 
+// 处理文件树展开事件
+const handleTreeExpand = async (_expandedKeys: (string | number)[], info: any) => {
+  const { expanded, node } = info
+  
+  // 只处理展开事件，且是文件夹节点
+  if (expanded && !node.isLeaf) {
+    const nodeKey = String(node.key)
+    
+    // 如果该文件夹已经加载过，则不再重复加载
+    if (loadedFolderKeys.value.has(nodeKey)) {
+      console.log('文件夹已加载，跳过：', nodeKey)
+      return
+    }
+    
+    try {
+      // 获取该节点的路径
+      const nodePath = getNodePathFromMap(nodeKey)
+      console.log('加载文件夹：', nodePath, '节点key:', nodeKey)
+      
+      const loadingMsg = message.loading(`正在加载 ${node.title}...`, 0)
+      
+      // 调用API获取子文件列表
+      const fileList = await getGitFileListApi(formData.value.gitUrl, nodePath)
+      
+      // 加载子文件到树中
+      loadChildrenData(nodeKey, fileList)
+      
+      // 标记该文件夹已加载
+      loadedFolderKeys.value.add(nodeKey)
+      
+      loadingMsg()
+      console.log('文件夹加载成功：', nodePath, fileList)
+    } catch (error: any) {
+      message.error(error.message || '加载文件夹失败')
+      console.error('加载文件夹失败：', error)
+    }
+  }
+}
+
 // 处理菜单点击
 const handleMenuClick = (info: any) => {
   const key = String(info.key)
@@ -413,7 +492,7 @@ const handleMenuClick = (info: any) => {
       handleNewFolder()
       break
     case 'upload':
-      message.info('上传功能开发中...')
+      triggerFileUpload('/')
       break
   }
 }
@@ -421,8 +500,9 @@ const handleMenuClick = (info: any) => {
 // 处理树节点菜单点击
 const handleTreeNodeMenuClick = (info: any, nodeData: any) => {
   const menuKey = String(info.key)
-  const nodePath = getNodePath(nodeData.key)
-  
+  // 优先使用路径映射，如果没有则使用遍历方式
+  const nodePath = getNodePathFromMap(nodeData.key) || getNodePath(nodeData.key)
+
   switch (menuKey) {
     case 'newFile':
       handleNewFile(nodePath)
@@ -431,7 +511,7 @@ const handleTreeNodeMenuClick = (info: any, nodeData: any) => {
       handleNewFolder(nodePath)
       break
     case 'upload':
-      message.info('上传功能开发中...')
+      triggerFileUpload(nodePath)
       break
     case 'rename':
       handleRenameNode(nodeData)
@@ -440,8 +520,119 @@ const handleTreeNodeMenuClick = (info: any, nodeData: any) => {
       handleCopyPath(nodeData)
       break
     case 'delete':
-      handleDeleteNode(nodeData)
+      handleDeleteWithApi(nodeData)
       break
+  }
+}
+
+// 从文件树中删除节点（不显示确认对话框）
+const removeNodeFromTree = (nodeKey: string) => {
+  const deleteNode = (nodes: any[]): boolean => {
+    const index = nodes.findIndex((node: any) => node.key === nodeKey)
+    if (index !== -1) {
+      nodes.splice(index, 1)
+      return true
+    }
+    
+    for (const node of nodes) {
+      if (node.children && deleteNode(node.children)) {
+        return true
+      }
+    }
+    return false
+  }
+  
+  deleteNode(fileTreeData.value)
+}
+
+// 删除文件/文件夹（调用API）
+const handleDeleteWithApi = async (nodeData: any) => {
+  const isFolder = nodeData.children !== undefined || nodeData.isLeaf === false
+  const fileName = nodeData.title
+  
+  // 获取节点路径
+  const fullPath = getNodePathFromMap(nodeData.key) || getNodePath(nodeData.key)
+  
+  // 计算 path 参数（去除文件名，只保留父路径）
+  const pathParts = fullPath.split('/')
+  pathParts.pop() // 移除最后一个元素（文件/文件夹名）
+  const path = pathParts.join('/') || '' // 如果是根目录，则为空字符串
+  
+  const { Modal } = await import('ant-design-vue')
+  Modal.confirm({
+    title: '确认删除',
+    content: `确定要删除${isFolder ? '文件夹' : '文件'} "${fileName}" 吗？${isFolder ? '文件夹下的所有内容也会被删除。' : ''}`,
+    okText: '确定',
+    cancelText: '取消',
+    okType: 'danger',
+    onOk: async () => {
+      let loadingMsg: any = null
+      try {
+        loadingMsg = message.loading('正在删除...', 0)
+        
+        // 调用API删除文件/文件夹
+        await deleteGitFileApi({
+          fileName: fileName,
+          gitUrl: formData.value.gitUrl,
+          path: path,
+        })
+        
+        // API删除成功后，从本地树中移除节点
+        removeNodeFromTree(nodeData.key)
+        
+        loadingMsg()
+        message.success('删除成功')
+        console.log('删除成功：', { fileName, path })
+      } catch (error: any) {
+        if (loadingMsg) loadingMsg() // 确保关闭 loading 提示
+        message.error(error.message || '删除失败')
+        console.error('删除失败：', error)
+      }
+    },
+  })
+}
+
+// 触发文件选择
+const triggerFileUpload = (path: string) => {
+  currentUploadPath.value = path
+  fileUploadInput.value?.click()
+}
+
+// 处理文件选择
+const handleFileUploadChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (!file) return
+  
+  try {
+    // 计算上传路径：如果在根目录，path为空；否则去掉前缀斜杠
+    let uploadPath = currentUploadPath.value === '/' ? '' : currentUploadPath.value.replace(/^\//, '')
+    
+    const loadingMsg = message.loading(`正在上传 ${file.name}...`, 0)
+    
+    // 调用API上传文件到Git仓库
+    await uploadFileToGitApi(file, formData.value.gitUrl, uploadPath)
+    
+    // 读取文件内容并添加到本地文件树（用于预览）
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const content = e.target?.result as string
+      addFileToTree(file.name, content, currentUploadPath.value)
+    }
+    reader.readAsText(file)
+    
+    loadingMsg()
+    message.success(`文件 ${file.name} 上传成功`)
+    console.log('文件上传成功：', { fileName: file.name, path: uploadPath })
+  } catch (error: any) {
+    message.error(error.message || '文件上传失败')
+    console.error('文件上传失败：', error)
+  } finally {
+    // 清空文件选择器，允许重复上传同一文件
+    if (target) {
+      target.value = ''
+    }
   }
 }
 
@@ -455,12 +646,37 @@ const handleNewFile = (parentPath: string = '/') => {
 interface NewFileForm {
   fileName: string
   fileContent: string
+  commitMessage: string
 }
 
-const handleConfirmNewFile = (formData: NewFileForm) => {
-  addFileToTree(formData.fileName, formData.fileContent, currentParentPath.value)
-  message.success('文件创建成功')
-  showNewFileModal.value = false
+const handleConfirmNewFile = async (newFileData: NewFileForm) => {
+  try {
+    // 计算文件路径：如果在根目录，path为空；否则去掉前缀斜杠
+    let filePath = currentParentPath.value === '/' ? '' : currentParentPath.value.replace(/^\//, '')
+    
+    const loadingMsg = message.loading('正在保存文件...', 0)
+    
+    // 调用API保存文件
+    await saveGitFileContentApi({
+      fileContent: newFileData.fileContent,
+      fileName: newFileData.fileName,
+      gitUrl: formData.value.gitUrl, // 从主表单获取仓库地址
+      path: filePath,
+      commit: newFileData.commitMessage,
+    })
+    
+    // 添加到本地文件树
+    addFileToTree(newFileData.fileName, newFileData.fileContent, currentParentPath.value)
+    
+    loadingMsg()
+    message.success('文件创建成功')
+    showNewFileModal.value = false
+    
+    console.log('文件保存成功：', { fileName: newFileData.fileName, path: filePath })
+  } catch (error: any) {
+    message.error(error.message || '文件创建失败')
+    console.error('文件创建失败：', error)
+  }
 }
 
 // 打开新建文件夹弹窗
@@ -472,12 +688,37 @@ const handleNewFolder = (parentPath: string = '/') => {
 // 确认新建文件夹
 interface NewFolderForm {
   folderName: string
+  commitMessage: string
 }
 
-const handleConfirmNewFolder = (formData: NewFolderForm) => {
-  addFolderToTree(formData.folderName, currentFolderParentPath.value)
-  message.success('文件夹创建成功')
-  showNewFolderModal.value = false
+const handleConfirmNewFolder = async (newFolderData: NewFolderForm) => {
+  try {
+    // 计算文件夹路径：如果在根目录，path为文件夹名；否则拼接路径
+    let folderPath = currentFolderParentPath.value === '/' 
+      ? newFolderData.folderName 
+      : `${currentFolderParentPath.value.replace(/^\//, '')}/${newFolderData.folderName}`
+    
+    const loadingMsg = message.loading('正在创建文件夹...', 0)
+    
+    // 调用API创建文件夹
+    await createGitDirApi({
+      commit: newFolderData.commitMessage,
+      gitUrl: formData.value.gitUrl,
+      path: folderPath,
+    })
+    
+    // 添加到本地文件树
+    addFolderToTree(newFolderData.folderName, currentFolderParentPath.value)
+    
+    loadingMsg()
+    message.success('文件夹创建成功')
+    showNewFolderModal.value = false
+    
+    console.log('文件夹创建成功：', { folderName: newFolderData.folderName, path: folderPath })
+  } catch (error: any) {
+    message.error(error.message || '文件夹创建失败')
+    console.error('文件夹创建失败：', error)
+  }
 }
 
 // 评测设置 - 当前标签页
@@ -487,9 +728,10 @@ const evaluationActiveTab = ref('settings')
 interface EvaluationData {
   openTestValidate: number // 1开 2不开
   testValidateFiles: string // 评测文件URL
+  testValidateSh: string // 评测执行命令
   timeLimitM: string | number // 评测时长限制（分钟）
   scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
-  evaluationSetting: string
+  evaluationSetting: number // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: TestSet[]
 }
 
@@ -503,9 +745,10 @@ interface TestSet {
 const evaluationData = ref<EvaluationData>({
   openTestValidate: 1, // 默认开启
   testValidateFiles: '', // 评测文件
+  testValidateSh: '', // 评测执行命令
   timeLimitM: '', // 评测时长限制
   scoreRule: 1, // 默认通过全部测试集
-  evaluationSetting: '通过所有代码块评测',
+  evaluationSetting: 1, // 默认通过所有代码块评测
   testSets: [
     { id: 1, arg: '', answer: '', select: 1 },
     { id: 2, arg: '', answer: '', select: 1 },
@@ -573,7 +816,6 @@ const handleLearningResourceCustomRequest = (options: any) => {
 const handleTestValidateFilesUpload = async (info: any) => {
   const { fileList } = info
   
-  // 过滤掉正在上传和失败的文件
   const validFiles = fileList.filter((file: any) => {
     if (file.status === 'uploading') return true
     if (file.status === 'done' || !file.status) return true
@@ -582,7 +824,6 @@ const handleTestValidateFilesUpload = async (info: any) => {
   
   testValidateFileList.value = validFiles
   
-  // 上传所有文件
   const uploadPromises = validFiles
     .filter((file: any) => file.originFileObj && !file.url)
     .map(async (file: any) => {
@@ -602,7 +843,6 @@ const handleTestValidateFilesUpload = async (info: any) => {
     const successUrls = urls.filter(url => url !== null)
     
     if (successUrls.length > 0) {
-      // 获取所有已上传文件的URL，用逗号拼接
       const allUrls = validFiles
         .filter((file: any) => file.url)
         .map((file: any) => file.url)
@@ -612,6 +852,23 @@ const handleTestValidateFilesUpload = async (info: any) => {
       message.success(`成功上传 ${successUrls.length} 个文件`)
     }
   }
+}
+
+// 处理评测文件选择（从代码仓库）
+const handleTestValidateFilesSelect = (selectedFiles: any[]) => {
+  testValidateFileList.value = selectedFiles.map((file: any) => ({
+    uid: file.uid,
+    name: file.name,
+    status: 'done',
+    url: file.path, // 使用文件路径作为url
+  }))
+  
+  // 将选中的文件路径拼接成字符串
+  const filePaths = selectedFiles.map((file: any) => file.path).join(',')
+  evaluationData.value.testValidateFiles = filePaths
+  
+  message.success(`已选择 ${selectedFiles.length} 个文件`)
+  showTestValidateFileSelectModal.value = false
 }
 
 // 返回
@@ -782,6 +1039,12 @@ const handleSaveEvaluation = async () => {
         return
       }
       
+      // 校验评测执行命令
+      if (!evaluationData.value.testValidateSh || evaluationData.value.testValidateSh.trim() === '') {
+        message.error('请输入评测执行命令')
+        return
+      }
+      
       // 校验评测时长限制
       if (!evaluationData.value.timeLimitM) {
         message.error('请输入评测时长限制')
@@ -828,8 +1091,10 @@ const handleSaveEvaluation = async () => {
       projectId: projectId.value,
       openTestValidate: evaluationData.value.openTestValidate,
       testValidateFiles: evaluationData.value.testValidateFiles,
+      testValidateSh: evaluationData.value.testValidateSh,
       timeLimitM: evaluationData.value.timeLimitM,
       scoreRule: evaluationData.value.scoreRule,
+      evaluationSetting: evaluationData.value.evaluationSetting,
       testContent: JSON.stringify(testContentArray),
     }
     
@@ -950,21 +1215,8 @@ const handleSave = async () => {
   }
 }
 
-// 实验环境列表
-const environmentList = [
-  { id: '1', name: 'Python3/JupyterLab', value: 'Python3/JupyterLab' },
-  { id: '2', name: 'R4.2/Jupyterlab', value: 'R4.2/Jupyterlab' },
-  { id: '3', name: 'Python3-tensorflow2.6/JupyterLab', value: 'Python3-tensorflow2.6/JupyterLab' },
-  { id: '4', name: 'Python3.7/Jupyterlab', value: 'Python3.7/Jupyterlab' },
-  { id: '5', name: 'Python3.7-TensorFlow1.13/JupyterLab', value: 'Python3.7-TensorFlow1.13/JupyterLab' },
-  { id: '6', name: 'Python3.8/JupyterLab', value: 'Python3.8/JupyterLab' },
-  { id: '7', name: 'Python3.10/Jupyterlab', value: 'Python3.10/Jupyterlab' },
-  { id: '8', name: 'Python3.11/JupyterLab', value: 'Python3.11/JupyterLab' },
-  { id: '9', name: 'Python3.10-ultralytics/JupyterLab', value: 'Python3.10-ultralytics/JupyterLab' },
-]
-
 // 选中的实验环境
-const selectedEnvironment = ref('Python3/JupyterLab')
+const selectedEnvironment = ref('')
 
 // 环境搜索关键词
 const environmentSearchKeyword = ref('')
@@ -972,22 +1224,28 @@ const environmentSearchKeyword = ref('')
 // 过滤后的环境列表
 const filteredEnvironmentList = computed(() => {
   if (!environmentSearchKeyword.value) {
-    return environmentList
+    return environmentOptions.value
   }
-  return environmentList.filter(env => 
-    env.name.toLowerCase().includes(environmentSearchKeyword.value.toLowerCase())
+  return environmentOptions.value.filter(env => 
+    env.label.toLowerCase().includes(environmentSearchKeyword.value.toLowerCase())
   )
+})
+
+// 获取选中环境的名称
+const selectedEnvironmentLabel = computed(() => {
+  const selectedEnv = environmentOptions.value.find(env => env.value === selectedEnvironment.value)
+  return selectedEnv ? selectedEnv.label : '未选择'
 })
 
 // 实验环境配置
 interface EnvironmentConfig {
-  dockerImage: string // 实验环境ID
-  secondType: string // 附带环境
-  timeLimitM: string | number // 实验环境使用时长
+  dockerImage: string
+  secondType: string
+  timeLimitM: string | number
 }
 
 const environmentConfig = ref<EnvironmentConfig>({
-  dockerImage: '1', // 默认选中第一个环境的id
+  dockerImage: '',
   secondType: 'Css',
   timeLimitM: '',
 })
@@ -995,12 +1253,27 @@ const environmentConfig = ref<EnvironmentConfig>({
 // 选择实验环境
 const handleSelectEnvironment = (envValue: string) => {
   selectedEnvironment.value = envValue
-  // 找到对应的环境ID并保存
-  const selectedEnv = environmentList.find(env => env.value === envValue)
-  if (selectedEnv) {
-    environmentConfig.value.dockerImage = selectedEnv.id
+  environmentConfig.value.dockerImage = envValue
+  // 同步到第一步的实验环境选择
+  if (formData.value.environment !== envValue) {
+    formData.value.environment = envValue
   }
 }
+
+// 监听第一步实验环境的变化，同步到第四步
+watch(() => formData.value.environment, (newEnvironment) => {
+  console.log('formData.environment 变化:', newEnvironment, '当前 selectedEnvironment:', selectedEnvironment.value)
+  if (newEnvironment && String(newEnvironment) !== selectedEnvironment.value) {
+    selectedEnvironment.value = String(newEnvironment)
+    environmentConfig.value.dockerImage = String(newEnvironment)
+    console.log('已同步到第四步:', selectedEnvironment.value)
+  }
+})
+
+// 监听 selectedEnvironment 的变化
+watch(() => selectedEnvironment.value, (newValue) => {
+  console.log('selectedEnvironment 变化为:', newValue)
+})
 
 // 滚动到顶部
 const scrollToTop = () => {
@@ -1255,6 +1528,7 @@ const scrollToTop = () => {
                 v-model:expanded-keys="expandedKeys"
                 @select="handleSelectFile"
                 @menu-click="handleTreeNodeMenuClick"
+                @expand="handleTreeExpand"
               />
 
               <div v-if="formData.enableCodeRepository" class="repository-tips">
@@ -1277,6 +1551,7 @@ const scrollToTop = () => {
                 v-if="formData.enableCodeRepository"
                 :selected-file="selectedFile"
                 :highlighted-code="highlightedCode"
+                :dynamic-file-contents="dynamicFileContents"
               />
               <div v-else class="empty-area">
                 在左侧代码仓库区域点击目录打开文件
@@ -1306,16 +1581,53 @@ const scrollToTop = () => {
 
                     <template v-if="evaluationData.openTestValidate === 1">
                       <a-form-item label="评测文件" required>
-                        <a-upload 
-                          v-model:file-list="testValidateFileList"
-                          :custom-request="handleLearningResourceCustomRequest"
-                          @change="handleTestValidateFilesUpload"
-                          :max-count="10"
-                        >
-                          <a-button type="primary">点击上传</a-button>
-                        </a-upload>
+                        <!-- 未开启代码仓库：上传文件 -->
+                        <template v-if="!formData.enableCodeRepository">
+                          <a-upload 
+                            v-model:file-list="testValidateFileList"
+                            :custom-request="handleLearningResourceCustomRequest"
+                            @change="handleTestValidateFilesUpload"
+                            :max-count="10"
+                          >
+                            <a-button type="primary">点击上传</a-button>
+                          </a-upload>
+                          <div class="upload-hint">
+                            说明：支持上传多个文件，每个文件大小不能超过500M。
+                          </div>
+                        </template>
+                        
+                        <!-- 已开启代码仓库：从仓库选择文件 -->
+                        <template v-else>
+                          <div class="file-select-wrapper">
+                            <a-button type="primary" @click="showTestValidateFileSelectModal = true">点击选择</a-button>
+                            <div class="selected-files-list">
+                              <a-tag 
+                                v-for="file in testValidateFileList" 
+                                :key="file.uid"
+                                closable
+                                @close="() => {
+                                  testValidateFileList = testValidateFileList.filter(f => f.uid !== file.uid)
+                                  evaluationData.testValidateFiles = testValidateFileList.map(f => f.url).join(',')
+                                }"
+                                style="margin: 4px;"
+                              >
+                                {{ file.name }}
+                              </a-tag>
+                            </div>
+                          </div>
+                          <div class="upload-hint">
+                            说明：从代码仓库中选择文件。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确）
+                          </div>
+                        </template>
+                      </a-form-item>
+
+                      <a-form-item label="评测执行命令" required>
+                        <a-input 
+                          v-model:value="evaluationData.testValidateSh"
+                          placeholder="请输入评测执行命令，例如：python main.py" 
+                        />
                         <div class="upload-hint">
-                          说明：支持上传多个文件，每个文件大小不能超过500M。
+                          （执行评测文件的命令，如：python main.py、node index.js、java Main 等）
                         </div>
                       </a-form-item>
 
@@ -1344,10 +1656,10 @@ const scrollToTop = () => {
 
                       <a-form-item label="评测设置" required>
                         <a-radio-group v-model:value="evaluationData.evaluationSetting" class="custom-radio">
-                          <a-radio value="通过所有代码块评测">
+                          <a-radio :value="1">
                             通过所有代码块评测（对学员任务文件的所有非空代码块进行评测）
                           </a-radio>
-                          <a-radio value="通过指定代码块评测">
+                          <a-radio :value="2">
                             通过指定代码块评测（对学员任务文件的指定非空代码块进行评测）
                           </a-radio>
                         </a-radio-group>
@@ -1466,12 +1778,12 @@ const scrollToTop = () => {
               <div class="environment-list">
                 <div 
                   v-for="env in filteredEnvironmentList" 
-                  :key="env.id"
+                  :key="env.value"
                   class="environment-item"
                   :class="{ active: selectedEnvironment === env.value }"
                   @click="handleSelectEnvironment(env.value)"
                 >
-                  {{ env.name }}
+                  {{ env.label }}
                 </div>
               </div>
             </div>
@@ -1479,7 +1791,7 @@ const scrollToTop = () => {
             <!-- 右侧：环境配置 -->
             <div class="environment-right">
               <div class="environment-config-header">
-                实验环境: {{ selectedEnvironment }}
+                实验环境: {{ selectedEnvironmentLabel }}
               </div>
               
               <a-form 
@@ -1493,9 +1805,9 @@ const scrollToTop = () => {
                     v-model:value="environmentConfig.secondType"
                     placeholder="请选择附带环境"
                   >
-                    <a-select-option value="Bwapp">Bwapp</a-select-option>
-                    <a-select-option value="Css">Css</a-select-option>
-                    <a-select-option value="DataTurks">DataTurks</a-select-option>
+                    <a-select-option :value="1">Bwapp</a-select-option>
+                    <a-select-option :value="2">Css</a-select-option>
+                    <a-select-option :value="3">DataTurks</a-select-option>
                   </a-select>
                 </a-form-item>
 
@@ -1525,6 +1837,14 @@ const scrollToTop = () => {
       </div>
     </div>
 
+    <!-- 隐藏的文件上传选择器 -->
+    <input 
+      ref="fileUploadInput" 
+      type="file" 
+      style="display: none" 
+      @change="handleFileUploadChange"
+    />
+
     <!-- 弹窗组件 -->
     <RepositoryModal 
       v-model:open="showRepositoryModal"
@@ -1542,6 +1862,14 @@ const scrollToTop = () => {
       v-model:open="showNewFolderModal"
       :parent-path="currentFolderParentPath"
       @confirm="handleConfirmNewFolder"
+    />
+    
+    <!-- 评测文件选择器 -->
+    <FileSelectModal 
+      v-model:open="showTestValidateFileSelectModal" 
+      title="选择评测文件"
+      :git-url="formData.gitUrl"
+      @confirm="handleTestValidateFilesSelect" 
     />
   </div>
 </template>
@@ -1902,6 +2230,20 @@ const scrollToTop = () => {
           margin-bottom: 0;
         }
       }
+      
+      .file-select-wrapper {
+        .selected-files-list {
+          margin-top: 8px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-height: 32px;
+          padding: 8px;
+          background: #fafafa;
+          border-radius: 4px;
+          border: 1px dashed #d9d9d9;
+        }
+      }
     }
   }
 
@@ -2039,4 +2381,5 @@ const scrollToTop = () => {
   }
 }
 </style>
+
 
