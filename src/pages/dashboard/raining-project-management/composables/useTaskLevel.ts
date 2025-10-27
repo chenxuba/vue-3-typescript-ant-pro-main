@@ -417,7 +417,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         // 只在更新时验证用例类型为文本时必须有至少一条测试集
         if (taskLevelFormData.value.taskId && evaluationFormData.value.testValidateType === 1 && evaluationFormData.value.testContent.length === 0) {
           message.error('用例类型为文本时，必须至少创建一条测试集')
-          return
+          throw new Error('用例类型为文本时，必须至少创建一条测试集')
         }
         
         // 只在更新时且用例类型为文本时，验证测试集的输入内容和期望输出不能为空
@@ -425,7 +425,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
           const emptyTestCase = evaluationFormData.value.testContent.find(tc => !tc.arg.trim() || !tc.answer.trim())
           if (emptyTestCase) {
             message.error('测试集的输入内容和期望输出不能为空')
-            return
+            throw new Error('测试集的输入内容和期望输出不能为空')
           }
         }
       }
@@ -504,6 +504,115 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     } catch (error) {
       console.error('保存任务关卡失败:', error)
       message.error('请完善必填信息')
+      // 重新抛出错误，让调用方知道保存失败
+      throw error
+    }
+  }
+
+  // 批量保存所有任务关卡
+  const saveAllTaskLevels = async () => {
+    // 先把当前选中关卡的表单数据同步到本地状态
+    if (selectedTaskLevelId.value) {
+      saveTaskLevelFormData(selectedTaskLevelId.value)
+      console.log('已同步当前选中关卡的表单数据到本地状态')
+    }
+    
+    // 过滤出所有已保存的关卡（有taskId的）
+    const savedLevels = taskLevels.value.filter(level => level.taskId)
+    
+    if (savedLevels.length === 0) {
+      console.log('没有需要更新的任务关卡')
+      return
+    }
+    
+    console.log(`开始批量更新 ${savedLevels.length} 个任务关卡`)
+    
+    // 保存错误信息
+    const errors: string[] = []
+    
+    // 遍历所有已保存的关卡
+    for (const level of savedLevels) {
+      try {
+        // 准备提交的数据
+        let submitData: any = {
+          taskId: level.taskId,
+          name: level.name,
+          source: level.source,
+          require: level.require,
+          referenceAnswer: level.referenceAnswer,
+          difficulty: level.difficulty,
+          tag: level.tag,
+          classHour: level.classHour,
+          jumpUrl: level.jumpUrl,
+          projectId: projectId?.value || undefined,
+        }
+        
+        // 根据任务类型设置type字段
+        if (level.type === 'kernel') {
+          submitData.type = 4
+        } else if (level.type === 'choice') {
+          submitData.type = 2
+        } else if (level.type === 'programming') {
+          submitData.type = 1
+          
+          // 如果是编程任务且有评测设置，添加评测设置数据
+          if (level.evaluationSettings) {
+            const evalSettings = level.evaluationSettings
+            
+            // 将测试集数据转换为符合后端格式的数组
+            const testContentArray = evalSettings.testContent.map(tc => ({
+              arg: tc.arg,
+              answer: tc.answer,
+              select: tc.select,
+            }))
+            
+            // 将学员任务文件转换为逗号隔开的字符串
+            const userFilesStr = evalSettings.userFiles
+              .filter(f => f.url)
+              .map(f => f.url!)
+              .join(',')
+            
+            // 将评测执行文件转换为逗号隔开的字符串
+            const testValidateFilesStr = evalSettings.testValidateFiles
+              .filter(f => f.url)
+              .map(f => f.url!)
+              .join(',')
+            
+            submitData = {
+              ...submitData,
+              timeLimitM: evalSettings.timeLimitM,
+              userFiles: userFilesStr,
+              testValidateFiles: testValidateFilesStr,
+              passType: evalSettings.passType,
+              passTypeRule: evalSettings.passTypeRule,
+              blankCode: evalSettings.blankCode,
+              scoreRule: evalSettings.scoreRule,
+              testValidateSh: evalSettings.testValidateSh,
+              testValidateType: evalSettings.testValidateType,
+              testContent: JSON.stringify(testContentArray),
+            }
+          }
+        }
+        
+        // 调用更新API
+        await updateProjectTaskApi(submitData)
+        console.log(`任务关卡 "${level.name}" 更新成功`)
+      } catch (error: any) {
+        const errorMsg = `任务关卡 "${level.name}" 更新失败: ${error.message || '未知错误'}`
+        console.error(errorMsg, error)
+        errors.push(errorMsg)
+      }
+    }
+    
+    // 根据结果显示提示
+    if (errors.length === 0) {
+      message.success(`成功更新 ${savedLevels.length} 个任务关卡`)
+    } else if (errors.length < savedLevels.length) {
+      message.warning(`部分任务关卡更新失败：${errors.join('; ')}`)
+      throw new Error(`部分任务关卡更新失败`)
+    } else {
+      message.error('所有任务关卡更新失败')
+      throw new Error('所有任务关卡更新失败')
     }
   }
 
@@ -879,6 +988,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     deleteTaskLevel,
     selectTaskLevel,
     saveTaskLevel,
+    saveAllTaskLevels,
     resetTaskLevel,
     handleLearningResourceCustomRequest,
     handleLearningResourceUpload,

@@ -225,6 +225,7 @@ const {
   deleteTaskLevel,
   selectTaskLevel,
   saveTaskLevel,
+  saveAllTaskLevels,
   resetTaskLevel,
   handleLearningResourceCustomRequest,
   handleLearningResourceUpload,
@@ -1021,10 +1022,21 @@ const handleNext = async () => {
       message.error('请至少添加一个任务关卡')
       return
     }
+    
     // 检查是否所有关卡都已保存
     const hasUnsavedLevel = taskLevels.value.some(level => !level.taskId)
     if (hasUnsavedLevel) {
       message.error('请先保存所有任务关卡后再进行下一步')
+      return
+    }
+    
+    // 批量保存所有任务关卡的修改
+    try {
+      // saveAllTaskLevels 会自动同步当前表单数据到本地状态，然后批量更新所有关卡
+      await saveAllTaskLevels()
+    } catch (error) {
+      // 如果保存失败，阻止跳转到下一步
+      console.error('批量保存任务关卡失败:', error)
       return
     }
     
@@ -1037,6 +1049,16 @@ const handleNext = async () => {
       message.error('请先保存所有实验环境配置')
       return
     }
+    
+    // 批量保存所有实验环境的修改
+    try {
+      await saveAllEnvironments()
+    } catch (error) {
+      // 如果保存失败，阻止完成
+      console.error('批量保存实验环境失败:', error)
+      return
+    }
+    
     // 完成更新
     await handleUpdateProject(true)
   }
@@ -1153,6 +1175,103 @@ const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0)
   } catch (error) {
     console.error('保存失败：', error)
     message.error(envisDel === 1 ? '删除失败' : '请完善必填信息')
+    throw error
+  }
+}
+
+// 批量保存所有实验环境
+const saveAllEnvironments = async () => {
+  // 先验证当前激活的实验环境的表单
+  const currentEnv = experimentEnvironments.value.find(e => e.id === activeEnvironmentKey.value)
+  
+  if (currentEnv) {
+    // 验证当前环境的表单
+    const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'secondType', 'taskId']
+    const fieldsToClear: string[] = []
+
+    if (currentEnv.config.viewTypes.includes(1)) {
+      fieldsToValidate.push('codeType')
+    } else {
+      fieldsToClear.push('codeType')
+    }
+
+    if (currentEnv.config.viewTypes.includes(2)) {
+      fieldsToValidate.push('shellBegin')
+    } else {
+      fieldsToClear.push('shellBegin')
+    }
+
+    if (currentEnv.config.viewTypes.includes(3)) {
+      fieldsToValidate.push('containerPort')
+    } else {
+      fieldsToClear.push('containerPort')
+    }
+
+    if (fieldsToClear.length > 0) {
+      experimentFormRef.value?.clearValidate(fieldsToClear)
+    }
+
+    try {
+      await experimentFormRef.value?.validate(fieldsToValidate)
+      console.log('当前实验环境表单验证通过')
+    } catch (error) {
+      message.error('请完善当前实验环境的必填信息')
+      throw new Error('当前实验环境表单验证失败')
+    }
+  }
+  
+  // 过滤出所有已保存的实验环境（isSaved 为 true 的）
+  const savedEnvironments = experimentEnvironments.value.filter(env => env.isSaved)
+  
+  if (savedEnvironments.length === 0) {
+    console.log('没有需要更新的实验环境')
+    return
+  }
+  
+  console.log(`开始批量更新 ${savedEnvironments.length} 个实验环境`)
+  
+  // 保存错误信息
+  const errors: string[] = []
+  
+  // 遍历所有已保存的实验环境
+  for (const env of savedEnvironments) {
+    try {
+      if (!projectId.value) {
+        throw new Error('项目ID不存在，无法保存')
+      }
+      
+      const updateData = {
+        title: env.name,
+        dockerImage: env.config.dockerImage,
+        viewTypes: env.config.viewTypes.join(','),
+        secondType: env.config.secondType,
+        taskId: env.config.taskId ? Number(env.config.taskId) : undefined,
+        codeType: env.config.codeType,
+        shellBegin: env.config.shellBegin,
+        containerPort: env.config.containerPort,
+        containerPath: env.config.containerPath,
+        projectId: projectId.value,
+        envisDel: 0,
+      }
+      
+      await updateProjectEnvironmentApi(updateData)
+      console.log(`实验环境 "${env.name}" 更新成功`)
+    } catch (error: any) {
+      const errorMsg = `实验环境 "${env.name}" 更新失败: ${error.message || '未知错误'}`
+      console.error(errorMsg, error)
+      errors.push(errorMsg)
+    }
+  }
+  
+  // 根据结果显示提示
+  if (errors.length === 0) {
+    message.success(`成功更新 ${savedEnvironments.length} 个实验环境`)
+  } else if (errors.length < savedEnvironments.length) {
+    message.warning(`部分实验环境更新失败：${errors.join('; ')}`)
+    throw new Error(`部分实验环境更新失败`)
+  } else {
+    message.error('所有实验环境更新失败')
+    throw new Error('所有实验环境更新失败')
   }
 }
 
