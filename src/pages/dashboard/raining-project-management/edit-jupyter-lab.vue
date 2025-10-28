@@ -1154,6 +1154,11 @@ const handleUpdateProject = async (isComplete: boolean = false) => {
       secondType: formData.value.secondType,
     }
 
+    // 如果是完成操作，传递 status=10
+    if (isComplete) {
+      submitData.status = 10
+    }
+
     if (formData.value.enableCodeRepository) {
       submitData.repositoryType = formData.value.repositoryType
       submitData.gitUrl = formData.value.gitUrl

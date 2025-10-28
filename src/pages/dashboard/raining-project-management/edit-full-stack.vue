@@ -1092,6 +1092,11 @@ const handleUpdateProject = async (isComplete: boolean = false) => {
       enableCodeRepository: formData.value.enableCodeRepository,
     }
 
+    // 如果是完成操作，传递 status=10
+    if (isComplete) {
+      submitData.status = 10
+    }
+
     // 如果开启了代码仓库，才传递仓库相关信息
     if (formData.value.enableCodeRepository) {
       submitData.repositoryType = formData.value.repositoryType

@@ -689,6 +689,17 @@ const handleCompleteUpdate = async () => {
     return
   }
   
+  // 更新项目状态为完成
+  try {
+    await updateProjectApi({
+      id: projectId.value,
+      status: 10, // 设置状态为10（完成）
+    } as any)
+  } catch (error) {
+    message.error('项目更新失败，请重试')
+    return
+  }
+  
   message.success('项目更新成功！')
   
   setTimeout(() => {

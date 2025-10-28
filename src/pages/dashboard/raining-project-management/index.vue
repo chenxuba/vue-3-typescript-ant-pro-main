@@ -247,9 +247,9 @@ const handleStatistics = (record: any) => {
 
 // 发布/取消发布
 const handlePublish = (record: any) => {
-  const isPublished = record.status === 1
+  const isPublished = record.status === 10
   const actionText = isPublished ? '取消发布' : '发布'
-  const newStatus = isPublished ? 0 : 1
+  const newStatus = isPublished ? 2 : 10
 
   Modal.confirm({
     title: `确认${actionText}`,
@@ -399,10 +399,10 @@ const handleDelete = (record: any) => {
           <template v-else-if="column.key === 'publicScope'">
             <div class="public-scope-cell">
               <div class="status-badge" :class="{
-                'status-published': record.status === 1,
-                'status-unpublished': record.status !== 1
+                'status-published': record.status === 10,
+                'status-unpublished': record.status !== 10
               }">
-                {{ record.status === 1 ? '已发布' : '未发布' }}
+                {{ record.status === 10 ? '已发布' : record.status === 2 ? '已取消发布' : record.status === 1 ? '已中断' : '未发布' }}
               </div>
               <div class="scope-badge" :class="{
                 'scope-full': record.authType === 1,
@@ -421,19 +421,41 @@ const handleDelete = (record: any) => {
           </template>
           <template v-else-if="column.key === 'action'">
             <div class="action-links">
-              <a @click="handleStatistics(record)">统计</a>
+              <!-- status === 1 中断的任务：删除、编辑 -->
               <template v-if="record.status === 1">
+                <a @click="handleEdit(record)">编辑</a>
+                <a-divider type="vertical" />
+                <a class="danger-link" @click="handleDelete(record)">删除</a>
+              </template>
+              
+              <!-- status === 10 已创建完成的任务：统计、取消发布、删除 -->
+              <template v-else-if="record.status === 10">
+                <a @click="handleStatistics(record)">统计</a>
                 <a-divider type="vertical" />
                 <a @click="handlePublish(record)">取消发布</a>
                 <a-divider type="vertical" />
-                <a @click="handleEdit(record)">编辑</a>
+                <a class="danger-link" @click="handleDelete(record)">删除</a>
               </template>
+              
+              <!-- status === 2 取消发布的任务：发布、统计、删除 -->
+              <template v-else-if="record.status === 2">
+                <a @click="handlePublish(record)">发布</a>
+                <a-divider type="vertical" />
+                <a @click="handleStatistics(record)">统计</a>
+                <a-divider type="vertical" />
+                <a class="danger-link" @click="handleDelete(record)">删除</a>
+              </template>
+              
+              <!-- 其他状态：默认显示所有操作 -->
               <template v-else>
+                <a @click="handleStatistics(record)">统计</a>
                 <a-divider type="vertical" />
                 <a @click="handlePublish(record)">发布</a>
+                <a-divider type="vertical" />
+                <a @click="handleEdit(record)">编辑</a>
+                <a-divider type="vertical" />
+                <a class="danger-link" @click="handleDelete(record)">删除</a>
               </template>
-              <a-divider type="vertical" />
-              <a class="danger-link" @click="handleDelete(record)">删除</a>
             </div>
           </template>
         </template>

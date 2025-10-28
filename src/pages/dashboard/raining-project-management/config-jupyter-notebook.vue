@@ -688,10 +688,10 @@ const handleSave = async () => {
       return
     }
     
-    // 更新项目状态为已发布
+    // 更新项目状态为已完成
     await updateProjectApi({
       id: projectId.value,
-      status: 1, // 设置状态为1（已发布）
+      status: 10, // 设置状态为10（已完成）
     } as any)
     
     message.success('项目创建成功！')
