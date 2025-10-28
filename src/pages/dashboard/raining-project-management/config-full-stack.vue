@@ -1789,8 +1789,8 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                               <div v-if="evaluationFormData.testValidateType === 1" class="test-case-buttons">
                                 <a-button type="primary" @click="addTestCase">新增测试集</a-button>
                                 <a-button @click="clearAllTestCases">一键删除测试用例</a-button>
-                                <a-button @click="downloadTemplate">下载测试用例模板</a-button>
-                                <a-button @click="batchUploadTestCases">批量上传测试用例</a-button>
+                                <!-- <a-button @click="downloadTemplate">下载测试用例模板</a-button>
+                                <a-button @click="batchUploadTestCases">批量上传测试用例</a-button> -->
                               </div>
                             </div>
                           </a-form-item>
