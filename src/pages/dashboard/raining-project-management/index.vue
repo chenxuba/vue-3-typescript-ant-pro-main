@@ -402,7 +402,7 @@ const handleDelete = (record: any) => {
                 'status-published': record.status === 10,
                 'status-unpublished': record.status !== 10
               }">
-                {{ record.status === 10 ? '已发布' : record.status === 2 ? '已取消发布' : record.status === 1 ? '已中断' : '未发布' }}
+                {{ record.status === 10 ? '已发布' : record.status === 2 ? '已取消发布' : record.status === 1 ? '已中断' : '已中断' }}
               </div>
               <div class="scope-badge" :class="{
                 'scope-full': record.authType === 1,
@@ -421,27 +421,27 @@ const handleDelete = (record: any) => {
           </template>
           <template v-else-if="column.key === 'action'">
             <div class="action-links">
-              <!-- status === 1 中断的任务：删除、编辑 -->
+              <!-- status === 1 已中断的项目：编辑、删除 -->
               <template v-if="record.status === 1">
                 <a @click="handleEdit(record)">编辑</a>
                 <a-divider type="vertical" />
                 <a class="danger-link" @click="handleDelete(record)">删除</a>
               </template>
               
-              <!-- status === 10 已创建完成的任务：统计、取消发布、删除 -->
+              <!-- status === 10 已发布项目：统计、取消发布 -->
               <template v-else-if="record.status === 10">
                 <a @click="handleStatistics(record)">统计</a>
                 <a-divider type="vertical" />
                 <a @click="handlePublish(record)">取消发布</a>
-                <a-divider type="vertical" />
-                <a class="danger-link" @click="handleDelete(record)">删除</a>
               </template>
               
-              <!-- status === 2 取消发布的任务：发布、统计、删除 -->
+              <!-- status === 2 已取消发布项目：统计、发布、编辑、删除 -->
               <template v-else-if="record.status === 2">
+                <a @click="handleStatistics(record)">统计</a>
+                <a-divider type="vertical" />
                 <a @click="handlePublish(record)">发布</a>
                 <a-divider type="vertical" />
-                <a @click="handleStatistics(record)">统计</a>
+                <a @click="handleEdit(record)">编辑</a>
                 <a-divider type="vertical" />
                 <a class="danger-link" @click="handleDelete(record)">删除</a>
               </template>

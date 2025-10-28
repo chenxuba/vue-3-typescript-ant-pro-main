@@ -180,7 +180,7 @@ export default [
         component: () => import('~/pages/dashboard/system-management/dictionary-management.vue'),
         meta: {
           title: '字典管理',
-          // access: [AccessEnum.SYSTEM_DICTIONARY_VIEW],
+          access: [AccessEnum.SYSTEM_DICTIONARY_VIEW],
         },
       },
     ],
