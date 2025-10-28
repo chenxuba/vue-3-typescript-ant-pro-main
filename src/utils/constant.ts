@@ -36,6 +36,12 @@ export enum AccessEnum {
   // SYSTEM_DICTIONARY_CREATE = 'system:dictionary:create',
   // SYSTEM_DICTIONARY_EDIT = 'system:dictionary:edit',
   // SYSTEM_DICTIONARY_DELETE = 'system:dictionary:delete',
+  
+  // 隐私管理权限
+  PRIVACY_VIEW = 'privacy:view',
+  PRIVACY_DISCLAIMER_VIEW = 'privacy:disclaimer:view',
+  PRIVACY_COPYRIGHT_VIEW = 'privacy:copyright:view',
+  PRIVACY_TEST_VIEW = 'privacy:test:view',
 }
 
 export enum DynamicLoadEnum {

@@ -185,7 +185,46 @@ export default [
       },
     ],
   },
- 
- 
- 
+  {
+    path: '/privacy-management',
+    redirect: '/privacy-management/disclaimer',
+    name: 'Privacy-management',
+    meta: {
+      title: '隐私管理',
+      icon: 'SafetyOutlined',
+      access: [AccessEnum.PRIVACY_VIEW],
+    },
+    component: basicRouteMap.RouteView,
+    children: [
+      {
+        path: '/privacy-management/disclaimer',
+        name: 'Privacy-management-disclaimer',
+        component: () => import('~/pages/dashboard/privacy-management/disclaimer.vue'),
+        meta: {
+          title: '免责声明',
+          access: [AccessEnum.PRIVACY_DISCLAIMER_VIEW],
+        },
+      },
+      {
+        path: '/privacy-management/copyright',
+        name: 'Privacy-management-copyright',
+        component: () => import('~/pages/dashboard/privacy-management/copyright.vue'),
+        meta: {
+          title: '版权声明',
+          access: [AccessEnum.PRIVACY_COPYRIGHT_VIEW],
+        },
+      },
+      {
+        path: '/privacy-management/test-page',
+        name: 'Privacy-management-test-page',
+        component: () => import('~/pages/dashboard/privacy-management/test-page.vue'),
+        meta: {
+          title: '测试页面',
+          access: [AccessEnum.PRIVACY_TEST_VIEW],
+        },
+      },
+    ],
+  },
+
+
 ] as RouteRecordRaw[]
