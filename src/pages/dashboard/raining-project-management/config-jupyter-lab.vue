@@ -1710,7 +1710,7 @@ const scrollToTop = () => {
                             <a-button type="primary">点击上传</a-button>
                           </a-upload>
                           <div class="upload-hint">
-                            说明：支持上传多个文件，每个文件大小不能超过500M。
+                            说明：支持上传多个文件，每个文件大小不能超过300M。
                           </div>
                         </template>
                         

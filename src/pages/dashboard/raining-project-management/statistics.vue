@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { ClockCircleOutlined ,CheckCircleFilled} from '@ant-design/icons-vue'
 import { 
   getProjectUserListPagerApi, 
   type GetProjectUserListParams,
@@ -478,8 +479,8 @@ onMounted(async () => {
                       class="status-icon"
                       :class="record.currentTask >= totalTaskCount ? 'completed' : 'inProgress'"
                     >
-                      <template v-if="record.currentTask >= totalTaskCount">✓</template>
-                      <template v-else>⟳</template>
+                      <template v-if="record.currentTask >= totalTaskCount"><CheckCircleFilled /></template>
+                      <template v-else><ClockCircleOutlined /></template>
                     </span>
                   </div>
                 </template>
@@ -733,14 +734,15 @@ onMounted(async () => {
         font-weight: bold;
 
         &.completed {
-          background: #52c41a;
-          color: #fff;
+          // background: #52c41a;
+          color: #52c41a;
         }
 
         &.inProgress {
-          background: #1890ff;
-          color: #fff;
-          animation: rotate 1s linear infinite;
+          // background: #1890ff;
+          color: #1890ff;
+          // animation: rotate 1s linear infinite;
+          font-size: 16px;
         }
       }
     }

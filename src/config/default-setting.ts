@@ -1,7 +1,7 @@
 import type { LayoutSetting } from '~@/stores/app'
 
 export default {
-  "title": "中国科学院-实训项目学习平台",
+  "title": "中国科学院-仿真实验平台",
   "theme": "light", 
   "logo": "/logo.png", 
   "collapsed": false, 

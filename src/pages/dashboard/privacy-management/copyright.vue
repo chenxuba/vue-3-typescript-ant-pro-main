@@ -177,6 +177,7 @@ const handleSave = async () => {
   .content {
     font-size: 14px;
     line-height: 1.8;
+    white-space: pre-wrap;
     
     :deep(h3) {
       margin-top: 24px;
@@ -184,22 +185,38 @@ const handleSave = async () => {
       font-size: 16px;
       font-weight: 600;
       color: #1890ff;
+      white-space: pre-wrap;
     }
     
     :deep(p) {
       margin-bottom: 16px;
       text-align: justify;
       color: #595959;
+      white-space: pre-wrap;
     }
     
     :deep(ul) {
       padding-left: 24px;
       margin-bottom: 16px;
+      white-space: pre-wrap;
       
       li {
         margin-bottom: 8px;
         color: #595959;
+        white-space: pre-wrap;
       }
+    }
+    
+    :deep(span),
+    :deep(strong),
+    :deep(em),
+    :deep(div),
+    :deep(h1),
+    :deep(h2),
+    :deep(h4),
+    :deep(h5),
+    :deep(h6) {
+      white-space: pre-wrap;
     }
     
     .copyright-info {

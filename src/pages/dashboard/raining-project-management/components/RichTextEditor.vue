@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { shallowRef, onBeforeUnmount, watch, ref } from 'vue'
+import { shallowRef, onBeforeUnmount, watch, ref, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 // @ts-ignore
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
@@ -34,20 +34,26 @@ const editorRef = shallowRef()
 
 const toolbarConfig: Partial<IToolbarConfig> = {
   toolbarKeys: [
+    'headerSelect',
+    '|',
     'bold',
     'italic',
     'underline',
     'through',
     '|',
+    'color',
+    'bgColor',
+    '|',
+    'fontSize',
+    'fontFamily',
+    '|',
     'bulletedList',
     'numberedList',
     '|',
-    'justifyLeft',
-    'justifyCenter',
-    'justifyRight',
-    '|',
     'insertLink',
     'insertImage',
+    '|',
+    'clearStyle',
     '|',
     'undo',
     'redo',
@@ -57,6 +63,23 @@ const toolbarConfig: Partial<IToolbarConfig> = {
 const editorConfig: Partial<IEditorConfig> = {
   placeholder: props.placeholder,
   autoFocus: false,
+  // 保留空格和换行
+  customPaste: (_editor: any, _event: ClipboardEvent) => {
+    // 默认粘贴行为
+    return true
+  },
+  hoverbarKeys: {
+    // 禁用悬浮工具栏
+    text: {
+      menuKeys: [],
+    },
+    link: {
+      menuKeys: ['editLink', 'unLink', 'viewLink'],
+    },
+    image: {
+      menuKeys: ['imageWidth30', 'imageWidth50', 'imageWidth100', 'deleteImage'],
+    },
+  },
   MENU_CONF: {
     // 配置上传图片
     uploadImage: {
@@ -91,7 +114,13 @@ const handleCreated = (editor: any) => {
   }
 }
 
+// 添加一个标志位，防止循环更新
+let isInternalUpdate = false
+
 const handleChange = (editor: any) => {
+  if (isInternalUpdate) {
+    return
+  }
   const html = editor.getHtml()
   emit('update:modelValue', html)
   emit('change', html)
@@ -102,9 +131,18 @@ watch(() => props.modelValue, (newValue) => {
   const editor = editorRef.value
   if (editor == null) return
   
+  const currentHtml = editor.getHtml()
   // 只有当编辑器内容与新值不同时才更新，避免循环更新
-  if (editor.getHtml() !== newValue) {
-    editor.setHtml(newValue || '')
+  if (currentHtml !== newValue) {
+    isInternalUpdate = true
+    try {
+      editor.setHtml(newValue || '')
+    } finally {
+      // 使用 nextTick 确保在下一个事件循环中重置标志
+      nextTick(() => {
+        isInternalUpdate = false
+      })
+    }
   }
 })
 
@@ -162,7 +200,6 @@ const handleAIEmbellish = async () => {
     <div class="editor-container">
       <Toolbar :editor="editorRef" :defaultConfig="toolbarConfig" :mode="'default'" class="editor-toolbar" />
       <Editor 
-        :modelValue="modelValue" 
         :defaultConfig="editorConfig" 
         :mode="'default'" 
         class="editor-content"
@@ -207,7 +244,7 @@ const handleAIEmbellish = async () => {
     background: #fafafa;
     width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    // overflow: hidden;
   }
 
   .editor-content {
@@ -250,6 +287,7 @@ const handleAIEmbellish = async () => {
       overflow-wrap: break-word !important;
       word-wrap: break-word !important;
       word-break: break-word !important;
+      white-space: pre-wrap !important;
       max-width: 100%;
     }
 
@@ -271,10 +309,18 @@ const handleAIEmbellish = async () => {
 
     :deep(.w-e-text-container span),
     :deep(.w-e-text-container strong),
-    :deep(.w-e-text-container em) {
+    :deep(.w-e-text-container em),
+    :deep(.w-e-text-container li),
+    :deep(.w-e-text-container h1),
+    :deep(.w-e-text-container h2),
+    :deep(.w-e-text-container h3),
+    :deep(.w-e-text-container h4),
+    :deep(.w-e-text-container h5),
+    :deep(.w-e-text-container h6) {
       overflow-wrap: break-word !important;
       word-wrap: break-word !important;
       word-break: break-word !important;
+      white-space: pre-wrap !important;
     }
   }
 }

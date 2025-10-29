@@ -1816,7 +1816,7 @@ onMounted(() => {
                             <a-button type="primary">点击上传</a-button>
                           </a-upload>
                           <div class="upload-hint">
-                            说明：支持上传word、pdf、ppt、mp4等格式文件，每个文件大小不能超过500M。
+                            说明：支持上传word、pdf、ppt、mp4等格式文件，每个文件大小不能超过300M。
                           </div>
                         </a-form-item>
 

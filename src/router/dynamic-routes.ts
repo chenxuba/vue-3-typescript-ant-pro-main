@@ -214,15 +214,15 @@ export default [
           access: [AccessEnum.PRIVACY_COPYRIGHT_VIEW],
         },
       },
-      {
-        path: '/privacy-management/test-page',
-        name: 'Privacy-management-test-page',
-        component: () => import('~/pages/dashboard/privacy-management/test-page.vue'),
-        meta: {
-          title: '测试页面',
-          access: [AccessEnum.PRIVACY_TEST_VIEW],
-        },
-      },
+      // {
+      //   path: '/privacy-management/test-page',
+      //   name: 'Privacy-management-test-page',
+      //   component: () => import('~/pages/dashboard/privacy-management/test-page.vue'),
+      //   meta: {
+      //     title: '测试页面',
+      //     access: [AccessEnum.PRIVACY_TEST_VIEW],
+      //   },
+      // },
     ],
   },
 
