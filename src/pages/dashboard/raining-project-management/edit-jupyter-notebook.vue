@@ -53,7 +53,7 @@ interface EvaluationData {
   testValidateSh: string // 评测执行命令
   timeLimitM: string // 评测时长限制（分钟）
   scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
-  evaluationSetting: string
+  evaluationSetting: number // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: TestSet[]
 }
 
@@ -70,7 +70,7 @@ const evaluationData = ref<EvaluationData>({
   testValidateSh: '', // 评测执行命令
   timeLimitM: '', // 评测时长限制
   scoreRule: 1, // 默认通过全部测试集
-  evaluationSetting: '通过所有代码块评测',
+  evaluationSetting: 1, // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: [
     { id: 1, arg: '', answer: '', select: 1 },
     { id: 2, arg: '', answer: '', select: 1 },
@@ -367,7 +367,7 @@ const fetchProjectTaskList = async () => {
         evaluationData.value.testValidateSh = task.testValidateSh || ''
         evaluationData.value.timeLimitM = task.timeLimitM ? String(task.timeLimitM) : ''
         evaluationData.value.scoreRule = task.scoreRule || 1
-        evaluationData.value.evaluationSetting = task.evaluationSetting || '通过所有代码块评测'
+        evaluationData.value.evaluationSetting = task.evaluationSetting || 1
         
         // 回填评测文件
         if (task.testValidateFiles) {
@@ -548,18 +548,6 @@ const handleSaveEvaluation = async () => {
   
   // 如果启用了评测功能，进行非空校验
   if (evaluationData.value.openTestValidate === 1) {
-    // 校验评测文件
-    if (!evaluationData.value.testValidateFiles || evaluationData.value.testValidateFiles.trim() === '') {
-      message.error('请上传评测文件')
-      throw new Error('请上传评测文件')
-    }
-    
-    // 校验评测执行命令
-    if (!evaluationData.value.testValidateSh || evaluationData.value.testValidateSh.trim() === '') {
-      message.error('请输入评测执行命令')
-      throw new Error('请输入评测执行命令')
-    }
-    
     // 校验评测时长限制
     if (!evaluationData.value.timeLimitM || evaluationData.value.timeLimitM.trim() === '') {
       message.error('请输入评测时长限制')
@@ -1049,32 +1037,9 @@ onMounted(async () => {
                       </a-form-item>
 
                       <template v-if="evaluationData.openTestValidate === 1">
-                        <a-form-item label="评测文件" required>
-                          <a-upload 
-                            v-model:file-list="testValidateFileList"
-                            :custom-request="handleLearningResourceCustomRequest"
-                            @change="handleTestValidateFilesUpload"
-                            :max-count="10"
-                          >
-                            <a-button type="primary">点击上传</a-button>
-                          </a-upload>
-                          <div class="upload-hint">
-                            说明：支持上传多个文件，每个文件大小不能超过300M。
-                          </div>
-                        </a-form-item>
-
-                        <a-form-item label="评测执行命令" required>
-                          <a-input 
-                            v-model:value="evaluationData.testValidateSh"
-                            placeholder="请输入评测执行命令，例如：python main.py" 
-                          />
-                          <div class="upload-hint">
-                            （执行评测文件的命令，如：python main.py、node index.js、java Main 等）
-                          </div>
-                        </a-form-item>
-
                         <a-form-item label="评测时长限制" required>
-                          <a-input 
+                          <a-input-number 
+                            :min="0"
                             v-model:value="evaluationData.timeLimitM" 
                             placeholder="请输入评测时长（分钟）" 
                             style="width: 600px"
@@ -1127,15 +1092,17 @@ onMounted(async () => {
                         class="test-set-checkbox" 
                       />
                       <span class="test-set-label">测试集{{ index + 1 }}</span>
-                      <a-input 
+                      <a-textarea 
                         v-model:value="testSet.arg" 
                         placeholder="请输入输入内容"
                         class="test-set-input"
+                        :auto-size="{ minRows: 3 }"
                       />
-                      <a-input 
+                      <a-textarea 
                         v-model:value="testSet.answer" 
                         placeholder="请输入期望输出"
                         class="test-set-input"
+                        :auto-size="{ minRows: 3 }"
                       />
                       <DeleteOutlined 
                         class="delete-test-set-icon" 

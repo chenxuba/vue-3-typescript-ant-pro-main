@@ -1805,8 +1805,18 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                                 @change="(e) => handleTestCaseSelectChange(testCase, e.target.checked)"
                                 class="test-case-checkbox" />
                               <span class="test-case-label">测试集{{ index + 1 }}</span>
-                              <a-input v-model:value="testCase.arg" placeholder="请输入输入内容" class="test-case-input" />
-                              <a-input v-model:value="testCase.answer" placeholder="请输入期望输出" class="test-case-output" />
+                              <a-textarea 
+                                v-model:value="testCase.arg" 
+                                placeholder="请输入输入内容" 
+                                class="test-case-input"
+                                :auto-size="{ minRows: 3 }"
+                              />
+                              <a-textarea 
+                                v-model:value="testCase.answer" 
+                                placeholder="请输入期望输出" 
+                                class="test-case-output"
+                                :auto-size="{ minRows: 3 }"
+                              />
                               <DeleteOutlined class="delete-test-case" @click="removeTestCase(testCase.id)" />
                             </div>
                           </div>

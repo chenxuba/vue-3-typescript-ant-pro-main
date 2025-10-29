@@ -3,8 +3,8 @@ import { ref, nextTick, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
+import { DeleteOutlined } from '@ant-design/icons-vue'
+import { uploadFileApi } from '@/api/common/file'
 import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
@@ -25,16 +25,16 @@ import markdown from 'highlight.js/lib/languages/markdown'
 import 'highlight.js/styles/github.css'
 
 // 组件导入
-import FileTreeComponent from './components/FileTreeComponent.vue'
-import FilePreview from './components/FilePreview.vue'
+// import FileTreeComponent from './components/FileTreeComponent.vue'
+// import FilePreview from './components/FilePreview.vue'
 import RichTextEditor from './components/RichTextEditor.vue'
-import NewFileModal from './components/NewFileModal.vue'
-import NewFolderModal from './components/NewFolderModal.vue'
-import RepositoryModal from './components/RepositoryModal.vue'
+// import NewFileModal from './components/NewFileModal.vue'
+// import NewFolderModal from './components/NewFolderModal.vue'
+// import RepositoryModal from './components/RepositoryModal.vue'
 import FileSelectModal from './components/FileSelectModal.vue'
 
 // Composables
-import { useFileTree } from './composables/useFileTree'
+// import { useFileTree } from './composables/useFileTree'
 
 // 注册语言
 hljs.registerLanguage('javascript', javascript)
@@ -215,56 +215,55 @@ const loadEnvironmentOptions = async () => {
 // 小类别选项已改为使用字典 hooks (subcategory)
 
 // 仓库类型选项
-const repositoryTypeOptions = [
-  { label: '切换仓库', value: '切换仓库' },
-  { label: '代码仓库', value: '代码仓库' },
-  { label: '私密代码仓库', value: '私密代码仓库' },
-]
+// const repositoryTypeOptions = [
+//   { label: '切换仓库', value: '切换仓库' },
+//   { label: '代码仓库', value: '代码仓库' },
+//   { label: '私密代码仓库', value: '私密代码仓库' },
+// ]
 
 // 仓库地址是否锁定
-const isRepositoryUrlLocked = ref(false)
+// const isRepositoryUrlLocked = ref(false)
 
 // 已加载的文件夹节点（避免重复加载）
-const loadedFolderKeys = ref<Set<string>>(new Set())
+// const loadedFolderKeys = ref<Set<string>>(new Set())
 
 // 步骤标题
 const steps = [
   { title: '基本信息' },
-  { title: '代码仓库' },
   { title: '实验内容' },
   { title: '评测设置' },
   { title: '实验环境' },
 ]
 
 // 使用文件树composable
-const {
-  fileTreeData,
-  expandedKeys,
-  selectedFile,
-  highlightedCode,
-  dynamicFileContents,
-  handleSelectFile,
-  getNodePath,
-  addFileToTree,
-  addFolderToTree,
-  handleRenameNode,
-  handleCopyPath,
-  loadRemoteFileTree,
-  loadChildrenData,
-  getNodePathFromMap,
-} = useFileTree()
+// const {
+//   fileTreeData,
+//   expandedKeys,
+//   selectedFile,
+//   highlightedCode,
+//   dynamicFileContents,
+//   handleSelectFile,
+//   getNodePath,
+//   addFileToTree,
+//   addFolderToTree,
+//   handleRenameNode,
+//   handleCopyPath,
+//   loadRemoteFileTree,
+//   loadChildrenData,
+//   getNodePathFromMap,
+// } = useFileTree()
 
 // 弹窗状态
-const showRepositoryModal = ref(false)
-const showNewFileModal = ref(false)
-const showNewFolderModal = ref(false)
+// const showRepositoryModal = ref(false)
+// const showNewFileModal = ref(false)
+// const showNewFolderModal = ref(false)
 const showTestValidateFileSelectModal = ref(false) // 评测文件选择器
-const currentParentPath = ref('/')
-const currentFolderParentPath = ref('/')
+// const currentParentPath = ref('/')
+// const currentFolderParentPath = ref('/')
 
 // 文件上传相关
-const fileUploadInput = ref<HTMLInputElement | null>(null)
-const currentUploadPath = ref('/')
+// const fileUploadInput = ref<HTMLInputElement | null>(null)
+// const currentUploadPath = ref('/')
 
 // 评测设置 - 当前标签页
 const evaluationActiveTab = ref('settings')
@@ -497,9 +496,9 @@ const fetchProjectDetail = async () => {
     }
     
     // 如果有仓库地址，自动打开开关并锁定输入框
-    if (detail.gitUrl) {
-      isRepositoryUrlLocked.value = true
-    }
+    // if (detail.gitUrl) {
+    //   isRepositoryUrlLocked.value = true
+    // }
     
     // 同步第一步选择的实验环境到第四步
     if (detail.environment) {
@@ -677,69 +676,69 @@ const handleCoverUpload = async (file: File) => {
 }
 
 // 代码仓库开关变化
-const handleRepositorySwitchChange = (checked: boolean | string | number) => {
-  const isChecked = typeof checked === 'boolean' ? checked : Boolean(checked)
-  if (isChecked) {
-    showRepositoryModal.value = true
-  } else {
-    formData.value.enableCodeRepository = false
-  }
-}
+// const handleRepositorySwitchChange = (checked: boolean | string | number) => {
+//   const isChecked = typeof checked === 'boolean' ? checked : Boolean(checked)
+//   if (isChecked) {
+//     showRepositoryModal.value = true
+//   } else {
+//     formData.value.enableCodeRepository = false
+//   }
+// }
 
 // 请求仓库文件
-const fetchRepositoryFiles = async () => {
-  try {
-    const loadingMsg = message.loading('正在查询仓库文件...', 0)
-    
-    // 调用API获取文件列表
-    const fileList = await getGitFileListApi(formData.value.gitUrl, '')
-    
-    // 加载文件树
-    loadRemoteFileTree(fileList)
-    
-    // 清空已加载文件夹记录
-    loadedFolderKeys.value.clear()
-    
-    loadingMsg()
-    message.success('仓库文件查询成功')
-    console.log('查询仓库地址：', formData.value.gitUrl)
-    console.log('获取到的文件列表：', fileList)
-  } catch (error: any) {
-    message.error(error.message || '仓库文件查询失败')
-    console.error('仓库文件查询失败：', error)
-  }
-}
+// const fetchRepositoryFiles = async () => {
+//   try {
+//     const loadingMsg = message.loading('正在查询仓库文件...', 0)
+//     
+//     // 调用API获取文件列表
+//     const fileList = await getGitFileListApi(formData.value.gitUrl, '')
+//     
+//     // 加载文件树
+//     loadRemoteFileTree(fileList)
+//     
+//     // 清空已加载文件夹记录
+//     loadedFolderKeys.value.clear()
+//     
+//     loadingMsg()
+//     message.success('仓库文件查询成功')
+//     console.log('查询仓库地址：', formData.value.gitUrl)
+//     console.log('获取到的文件列表：', fileList)
+//   } catch (error: any) {
+//     message.error(error.message || '仓库文件查询失败')
+//     console.error('仓库文件查询失败：', error)
+//   }
+// }
 
 // 确认开启代码库
-const handleConfirmRepository = async () => {
-  if (!formData.value.gitUrl || !formData.value.gitUrl.trim()) {
-    message.error('请先配置仓库地址')
-    handleCancelRepository()
-    return
-  }
-  
-  formData.value.enableCodeRepository = true
-  showRepositoryModal.value = false
-  isRepositoryUrlLocked.value = true
-  await fetchRepositoryFiles()
-}
+// const handleConfirmRepository = async () => {
+//   if (!formData.value.gitUrl || !formData.value.gitUrl.trim()) {
+//     message.error('请先配置仓库地址')
+//     handleCancelRepository()
+//     return
+//   }
+//   
+//   formData.value.enableCodeRepository = true
+//   showRepositoryModal.value = false
+//   isRepositoryUrlLocked.value = true
+//   await fetchRepositoryFiles()
+// }
 
 // 取消开启代码库
-const handleCancelRepository = () => {
-  formData.value.enableCodeRepository = false
-  showRepositoryModal.value = false
-}
+// const handleCancelRepository = () => {
+//   formData.value.enableCodeRepository = false
+//   showRepositoryModal.value = false
+// }
 
 // 监听仓库类型变化
-watch(() => formData.value.repositoryType, (newType) => {
-  if (newType === '切换仓库' && formData.value.enableCodeRepository) {
-    isRepositoryUrlLocked.value = false
-    message.info('已解锁仓库地址，请重新输入')
-    nextTick(() => {
-      formData.value.repositoryType = '代码仓库'
-    })
-  }
-})
+// watch(() => formData.value.repositoryType, (newType) => {
+//   if (newType === '切换仓库' && formData.value.enableCodeRepository) {
+//     isRepositoryUrlLocked.value = false
+//     message.info('已解锁仓库地址，请重新输入')
+//     nextTick(() => {
+//       formData.value.repositoryType = '代码仓库'
+//     })
+//   }
+// })
 
 // 监听第一步实验环境的变化，同步到第四步
 watch(() => formData.value.environment, (newEnvironment) => {
@@ -757,294 +756,294 @@ watch(() => selectedEnvironment.value, (newValue) => {
 })
 
 // 仓库地址输入框失焦处理
-const handleRepositoryUrlBlur = () => {
-  if (formData.value.enableCodeRepository && !isRepositoryUrlLocked.value) {
-    const url = formData.value.gitUrl?.trim()
-    if (url) {
-      isRepositoryUrlLocked.value = true
-      fetchRepositoryFiles()
-    }
-  }
-}
+// const handleRepositoryUrlBlur = () => {
+//   if (formData.value.enableCodeRepository && !isRepositoryUrlLocked.value) {
+//     const url = formData.value.gitUrl?.trim()
+//     if (url) {
+//       isRepositoryUrlLocked.value = true
+//       fetchRepositoryFiles()
+//     }
+//   }
+// }
 
 // 处理文件树展开事件
-const handleTreeExpand = async (_expandedKeys: (string | number)[], info: any) => {
-  const { expanded, node } = info
-  
-  // 只处理展开事件，且是文件夹节点
-  if (expanded && !node.isLeaf) {
-    const nodeKey = String(node.key)
-    
-    // 如果该文件夹已经加载过，则不再重复加载
-    if (loadedFolderKeys.value.has(nodeKey)) {
-      console.log('文件夹已加载，跳过：', nodeKey)
-      return
-    }
-    
-    try {
-      // 获取该节点的路径
-      const nodePath = getNodePathFromMap(nodeKey)
-      console.log('加载文件夹：', nodePath, '节点key:', nodeKey)
-      
-      const loadingMsg = message.loading(`正在加载 ${node.title}...`, 0)
-      
-      // 调用API获取子文件列表
-      const fileList = await getGitFileListApi(formData.value.gitUrl, nodePath)
-      
-      // 加载子文件到树中
-      loadChildrenData(nodeKey, fileList)
-      
-      // 标记该文件夹已加载
-      loadedFolderKeys.value.add(nodeKey)
-      
-      loadingMsg()
-      console.log('文件夹加载成功：', nodePath, fileList)
-    } catch (error: any) {
-      message.error(error.message || '加载文件夹失败')
-      console.error('加载文件夹失败：', error)
-    }
-  }
-}
+// const handleTreeExpand = async (_expandedKeys: (string | number)[], info: any) => {
+//   const { expanded, node } = info
+//   
+//   // 只处理展开事件，且是文件夹节点
+//   if (expanded && !node.isLeaf) {
+//     const nodeKey = String(node.key)
+//     
+//     // 如果该文件夹已经加载过，则不再重复加载
+//     if (loadedFolderKeys.value.has(nodeKey)) {
+//       console.log('文件夹已加载，跳过：', nodeKey)
+//       return
+//     }
+//     
+//     try {
+//       // 获取该节点的路径
+//       const nodePath = getNodePathFromMap(nodeKey)
+//       console.log('加载文件夹：', nodePath, '节点key:', nodeKey)
+//       
+//       const loadingMsg = message.loading(`正在加载 ${node.title}...`, 0)
+//       
+//       // 调用API获取子文件列表
+//       const fileList = await getGitFileListApi(formData.value.gitUrl, nodePath)
+//       
+//       // 加载子文件到树中
+//       loadChildrenData(nodeKey, fileList)
+//       
+//       // 标记该文件夹已加载
+//       loadedFolderKeys.value.add(nodeKey)
+//       
+//       loadingMsg()
+//       console.log('文件夹加载成功：', nodePath, fileList)
+//     } catch (error: any) {
+//       message.error(error.message || '加载文件夹失败')
+//       console.error('加载文件夹失败：', error)
+//     }
+//   }
+// }
 
 // 处理菜单点击
-const handleMenuClick = (info: any) => {
-  const key = String(info.key)
-  switch (key) {
-    case 'newFile':
-      handleNewFile()
-      break
-    case 'newFolder':
-      handleNewFolder()
-      break
-    case 'upload':
-      triggerFileUpload('/')
-      break
-  }
-}
+// const handleMenuClick = (info: any) => {
+//   const key = String(info.key)
+//   switch (key) {
+//     case 'newFile':
+//       handleNewFile()
+//       break
+//     case 'newFolder':
+//       handleNewFolder()
+//       break
+//     case 'upload':
+//       triggerFileUpload('/')
+//       break
+//   }
+// }
 
 // 处理树节点菜单点击
-const handleTreeNodeMenuClick = (info: any, nodeData: any) => {
-  const menuKey = String(info.key)
-  // 优先使用路径映射，如果没有则使用遍历方式
-  const nodePath = getNodePathFromMap(nodeData.key) || getNodePath(nodeData.key)
+// const handleTreeNodeMenuClick = (info: any, nodeData: any) => {
+//   const menuKey = String(info.key)
+//   // 优先使用路径映射，如果没有则使用遍历方式
+//   const nodePath = getNodePathFromMap(nodeData.key) || getNodePath(nodeData.key)
 
-  switch (menuKey) {
-    case 'newFile':
-      handleNewFile(nodePath)
-      break
-    case 'newFolder':
-      handleNewFolder(nodePath)
-      break
-    case 'upload':
-      triggerFileUpload(nodePath)
-      break
-    case 'rename':
-      handleRenameNode(nodeData)
-      break
-    case 'copyPath':
-      handleCopyPath(nodeData)
-      break
-    case 'delete':
-      handleDeleteWithApi(nodeData)
-      break
-  }
-}
+//   switch (menuKey) {
+//     case 'newFile':
+//       handleNewFile(nodePath)
+//       break
+//     case 'newFolder':
+//       handleNewFolder(nodePath)
+//       break
+//     case 'upload':
+//       triggerFileUpload(nodePath)
+//       break
+//     case 'rename':
+//       handleRenameNode(nodeData)
+//       break
+//     case 'copyPath':
+//       handleCopyPath(nodeData)
+//       break
+//     case 'delete':
+//       handleDeleteWithApi(nodeData)
+//       break
+//   }
+// }
 
 // 触发文件选择
-const triggerFileUpload = (path: string) => {
-  currentUploadPath.value = path
-  fileUploadInput.value?.click()
-}
+// const triggerFileUpload = (path: string) => {
+//   currentUploadPath.value = path
+//   fileUploadInput.value?.click()
+// }
 
 // 处理文件选择
-const handleFileUploadChange = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  
-  if (!file) return
-  
-  try {
-    // 计算上传路径：如果在根目录，path为空；否则去掉前缀斜杠
-    let uploadPath = currentUploadPath.value === '/' ? '' : currentUploadPath.value.replace(/^\//, '')
-    
-    const loadingMsg = message.loading(`正在上传 ${file.name}...`, 0)
-    
-    // 调用API上传文件到Git仓库
-    await uploadFileToGitApi(file, formData.value.gitUrl, uploadPath)
-    
-    // 读取文件内容并添加到本地文件树（用于预览）
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const content = e.target?.result as string
-      addFileToTree(file.name, content, currentUploadPath.value)
-    }
-    reader.readAsText(file)
-    
-    loadingMsg()
-    message.success(`文件 ${file.name} 上传成功`)
-    console.log('文件上传成功：', { fileName: file.name, path: uploadPath })
-  } catch (error: any) {
-    message.error(error.message || '文件上传失败')
-    console.error('文件上传失败：', error)
-  } finally {
-    // 清空文件选择器，允许重复上传同一文件
-    if (target) {
-      target.value = ''
-    }
-  }
-}
+// const handleFileUploadChange = async (event: Event) => {
+//   const target = event.target as HTMLInputElement
+//   const file = target.files?.[0]
+//   
+//   if (!file) return
+//   
+//   try {
+//     // 计算上传路径：如果在根目录，path为空；否则去掉前缀斜杠
+//     let uploadPath = currentUploadPath.value === '/' ? '' : currentUploadPath.value.replace(/^\//, '')
+//     
+//     const loadingMsg = message.loading(`正在上传 ${file.name}...`, 0)
+//     
+//     // 调用API上传文件到Git仓库
+//     await uploadFileToGitApi(file, formData.value.gitUrl, uploadPath)
+//     
+//     // 读取文件内容并添加到本地文件树（用于预览）
+//     const reader = new FileReader()
+//     reader.onload = (e) => {
+//       const content = e.target?.result as string
+//       addFileToTree(file.name, content, currentUploadPath.value)
+//     }
+//     reader.readAsText(file)
+//     
+//     loadingMsg()
+//     message.success(`文件 ${file.name} 上传成功`)
+//     console.log('文件上传成功：', { fileName: file.name, path: uploadPath })
+//   } catch (error: any) {
+//     message.error(error.message || '文件上传失败')
+//     console.error('文件上传失败：', error)
+//   } finally {
+//     // 清空文件选择器，允许重复上传同一文件
+//     if (target) {
+//       target.value = ''
+//     }
+//   }
+// }
 
 // 打开新建文件弹窗
-const handleNewFile = (parentPath: string = '/') => {
-  showNewFileModal.value = true
-  currentParentPath.value = parentPath
-}
+// const handleNewFile = (parentPath: string = '/') => {
+//   showNewFileModal.value = true
+//   currentParentPath.value = parentPath
+// }
 
 // 确认新建文件
-interface NewFileForm {
-  fileName: string
-  fileContent: string
-  commitMessage: string
-}
+// interface NewFileForm {
+//   fileName: string
+//   fileContent: string
+//   commitMessage: string
+// }
 
-const handleConfirmNewFile = async (newFileData: NewFileForm) => {
-  try {
-    // 计算文件路径：如果在根目录，path为空；否则去掉前缀斜杠
-    let filePath = currentParentPath.value === '/' ? '' : currentParentPath.value.replace(/^\//, '')
-    
-    const loadingMsg = message.loading('正在保存文件...', 0)
-    
-    // 调用API保存文件
-    await saveGitFileContentApi({
-      fileContent: newFileData.fileContent,
-      fileName: newFileData.fileName,
-      gitUrl: formData.value.gitUrl, // 从主表单获取仓库地址
-      path: filePath,
-      commit: newFileData.commitMessage,
-    })
-    
-    // 添加到本地文件树
-    addFileToTree(newFileData.fileName, newFileData.fileContent, currentParentPath.value)
-    
-    loadingMsg()
-    message.success('文件创建成功')
-    showNewFileModal.value = false
-    
-    console.log('文件保存成功：', { fileName: newFileData.fileName, path: filePath })
-  } catch (error: any) {
-    message.error(error.message || '文件创建失败')
-    console.error('文件创建失败：', error)
-  }
-}
+// const handleConfirmNewFile = async (newFileData: NewFileForm) => {
+//   try {
+//     // 计算文件路径：如果在根目录，path为空；否则去掉前缀斜杠
+//     let filePath = currentParentPath.value === '/' ? '' : currentParentPath.value.replace(/^\//, '')
+//     
+//     const loadingMsg = message.loading('正在保存文件...', 0)
+//     
+//     // 调用API保存文件
+//     await saveGitFileContentApi({
+//       fileContent: newFileData.fileContent,
+//       fileName: newFileData.fileName,
+//       gitUrl: formData.value.gitUrl, // 从主表单获取仓库地址
+//       path: filePath,
+//       commit: newFileData.commitMessage,
+//     })
+//     
+//     // 添加到本地文件树
+//     addFileToTree(newFileData.fileName, newFileData.fileContent, currentParentPath.value)
+//     
+//     loadingMsg()
+//     message.success('文件创建成功')
+//     showNewFileModal.value = false
+//     
+//     console.log('文件保存成功：', { fileName: newFileData.fileName, path: filePath })
+//   } catch (error: any) {
+//     message.error(error.message || '文件创建失败')
+//     console.error('文件创建失败：', error)
+//   }
+// }
 
 // 打开新建文件夹弹窗
-const handleNewFolder = (parentPath: string = '/') => {
-  showNewFolderModal.value = true
-  currentFolderParentPath.value = parentPath
-}
+// const handleNewFolder = (parentPath: string = '/') => {
+//   showNewFolderModal.value = true
+//   currentFolderParentPath.value = parentPath
+// }
 
 // 确认新建文件夹
-interface NewFolderForm {
-  folderName: string
-  commitMessage: string
-}
+// interface NewFolderForm {
+//   folderName: string
+//   commitMessage: string
+// }
 
-const handleConfirmNewFolder = async (newFolderData: NewFolderForm) => {
-  try {
-    // 计算文件夹路径：如果在根目录，path为文件夹名；否则拼接路径
-    let folderPath = currentFolderParentPath.value === '/' 
-      ? newFolderData.folderName 
-      : `${currentFolderParentPath.value.replace(/^\//, '')}/${newFolderData.folderName}`
-    
-    const loadingMsg = message.loading('正在创建文件夹...', 0)
-    
-    // 调用API创建文件夹
-    await createGitDirApi({
-      commit: newFolderData.commitMessage,
-      gitUrl: formData.value.gitUrl,
-      path: folderPath,
-    })
-    
-    // 添加到本地文件树
-    addFolderToTree(newFolderData.folderName, currentFolderParentPath.value)
-    
-    loadingMsg()
-    message.success('文件夹创建成功')
-    showNewFolderModal.value = false
-    
-    console.log('文件夹创建成功：', { folderName: newFolderData.folderName, path: folderPath })
-  } catch (error: any) {
-    message.error(error.message || '文件夹创建失败')
-    console.error('文件夹创建失败：', error)
-  }
-}
+// const handleConfirmNewFolder = async (newFolderData: NewFolderForm) => {
+//   try {
+//     // 计算文件夹路径：如果在根目录，path为文件夹名；否则拼接路径
+//     let folderPath = currentFolderParentPath.value === '/' 
+//       ? newFolderData.folderName 
+//       : `${currentFolderParentPath.value.replace(/^\//, '')}/${newFolderData.folderName}`
+//     
+//     const loadingMsg = message.loading('正在创建文件夹...', 0)
+//     
+//     // 调用API创建文件夹
+//     await createGitDirApi({
+//       commit: newFolderData.commitMessage,
+//       gitUrl: formData.value.gitUrl,
+//       path: folderPath,
+//     })
+//     
+//     // 添加到本地文件树
+//     addFolderToTree(newFolderData.folderName, currentFolderParentPath.value)
+//     
+//     loadingMsg()
+//     message.success('文件夹创建成功')
+//     showNewFolderModal.value = false
+//     
+//     console.log('文件夹创建成功：', { folderName: newFolderData.folderName, path: folderPath })
+//   } catch (error: any) {
+//     message.error(error.message || '文件夹创建失败')
+//     console.error('文件夹创建失败：', error)
+//   }
+// }
 
 // 从文件树中删除节点（不显示确认对话框）
-const removeNodeFromTree = (nodeKey: string) => {
-  const deleteNode = (nodes: any[]): boolean => {
-    const index = nodes.findIndex((node: any) => node.key === nodeKey)
-    if (index !== -1) {
-      nodes.splice(index, 1)
-      return true
-    }
-    
-    for (const node of nodes) {
-      if (node.children && deleteNode(node.children)) {
-        return true
-      }
-    }
-    return false
-  }
-  
-  deleteNode(fileTreeData.value)
-}
+// const removeNodeFromTree = (nodeKey: string) => {
+//   const deleteNode = (nodes: any[]): boolean => {
+//     const index = nodes.findIndex((node: any) => node.key === nodeKey)
+//     if (index !== -1) {
+//       nodes.splice(index, 1)
+//       return true
+//     }
+//     
+//     for (const node of nodes) {
+//       if (node.children && deleteNode(node.children)) {
+//         return true
+//       }
+//     }
+//     return false
+//   }
+//   
+//   deleteNode(fileTreeData.value)
+// }
 
 // 删除文件/文件夹（调用API）
-const handleDeleteWithApi = async (nodeData: any) => {
-  const isFolder = nodeData.children !== undefined || nodeData.isLeaf === false
-  const fileName = nodeData.title
-  
-  // 获取节点路径
-  const fullPath = getNodePathFromMap(nodeData.key) || getNodePath(nodeData.key)
-  
-  // 计算 path 参数（去除文件名，只保留父路径）
-  const pathParts = fullPath.split('/')
-  pathParts.pop() // 移除最后一个元素（文件/文件夹名）
-  const path = pathParts.join('/') || '' // 如果是根目录，则为空字符串
-  
-  const { Modal } = await import('ant-design-vue')
-  Modal.confirm({
-    title: '确认删除',
-    content: `确定要删除${isFolder ? '文件夹' : '文件'} "${fileName}" 吗？${isFolder ? '文件夹下的所有内容也会被删除。' : ''}`,
-    okText: '确定',
-    cancelText: '取消',
-    okType: 'danger',
-    onOk: async () => {
-      let loadingMsg: any = null
-      try {
-        loadingMsg = message.loading('正在删除...', 0)
-        
-        // 调用API删除文件/文件夹
-        await deleteGitFileApi({
-          fileName: fileName,
-          gitUrl: formData.value.gitUrl,
-          path: path,
-        })
-        
-        // API删除成功后，从本地树中移除节点
-        removeNodeFromTree(nodeData.key)
-        
-        loadingMsg()
-        message.success('删除成功')
-        console.log('删除成功：', { fileName, path })
-      } catch (error: any) {
-        if (loadingMsg) loadingMsg() // 确保关闭 loading 提示
-        message.error(error.message || '删除失败')
-        console.error('删除失败：', error)
-      }
-    },
-  })
-}
+// const handleDeleteWithApi = async (nodeData: any) => {
+//   const isFolder = nodeData.children !== undefined || nodeData.isLeaf === false
+//   const fileName = nodeData.title
+//   
+//   // 获取节点路径
+//   const fullPath = getNodePathFromMap(nodeData.key) || getNodePath(nodeData.key)
+//   
+//   // 计算 path 参数（去除文件名，只保留父路径）
+//   const pathParts = fullPath.split('/')
+//   pathParts.pop() // 移除最后一个元素（文件/文件夹名）
+//   const path = pathParts.join('/') || '' // 如果是根目录，则为空字符串
+//   
+//   const { Modal } = await import('ant-design-vue')
+//   Modal.confirm({
+//     title: '确认删除',
+//     content: `确定要删除${isFolder ? '文件夹' : '文件'} "${fileName}" 吗？${isFolder ? '文件夹下的所有内容也会被删除。' : ''}`,
+//     okText: '确定',
+//     cancelText: '取消',
+//     okType: 'danger',
+//     onOk: async () => {
+//       let loadingMsg: any = null
+//       try {
+//         loadingMsg = message.loading('正在删除...', 0)
+//         
+//         // 调用API删除文件/文件夹
+//         await deleteGitFileApi({
+//           fileName: fileName,
+//           gitUrl: formData.value.gitUrl,
+//           path: path,
+//         })
+//         
+//         // API删除成功后，从本地树中移除节点
+//         removeNodeFromTree(nodeData.key)
+//         
+//         loadingMsg()
+//         message.success('删除成功')
+//         console.log('删除成功：', { fileName, path })
+//       } catch (error: any) {
+//         if (loadingMsg) loadingMsg() // 确保关闭 loading 提示
+//         message.error(error.message || '删除失败')
+//         console.error('删除失败：', error)
+//       }
+//     },
+//   })
+// }
 
 // 滚动到顶部
 const scrollToTop = () => {
@@ -1078,13 +1077,8 @@ const handleBack = async () => {
     currentStep.value--
     scrollToTop()
     
-    // 如果返回到第二步（代码仓库），且有仓库地址且文件树为空，自动加载文件树
-    if (currentStep.value === 1 && formData.value.gitUrl && formData.value.enableCodeRepository && fileTreeData.value.length === 0) {
-      await fetchRepositoryFiles()
-    }
-    
-    // 如果返回到第三步（实验内容），获取Pod配置
-    if (currentStep.value === 2 && taskId.value) {
+    // 如果返回到第二步（实验内容），获取Pod配置
+    if (currentStep.value === 1 && taskId.value) {
       await fetchPodConfig()
     }
   } else {
@@ -1100,44 +1094,29 @@ const handleNext = async () => {
         formRef.value?.validate(),
         trainingScopeFormRef.value?.validate()
       ])
+      // 更新项目基本信息
+      await handleUpdateProject(false)
       currentStep.value = 1
       scrollToTop()
       
-      // 如果有仓库地址且文件树为空，自动加载文件树
-      if (formData.value.gitUrl && formData.value.enableCodeRepository && fileTreeData.value.length === 0) {
-        await fetchRepositoryFiles()
+      // 进入第二步（实验内容），获取Pod配置
+      if (taskId.value) {
+        await fetchPodConfig()
       }
     } catch (error) {
       message.error('请完善必填信息')
       scrollToTop()
     }
   } else if (currentStep.value === 1) {
-    // 第二步：代码仓库验证
-    if (formData.value.enableCodeRepository) {
-      if (!formData.value.gitUrl || formData.value.gitUrl.trim() === '') {
-        message.error('请输入仓库地址')
-        return
-      }
-    }
-    // 更新项目基本信息
-    await handleUpdateProject(false)
-    currentStep.value = 2
-    scrollToTop()
-    
-    // 进入第三步（实验内容），获取Pod配置
-    if (taskId.value) {
-      await fetchPodConfig()
-    }
-  } else if (currentStep.value === 2) {
-    // 第三步：实验内容，停止Pod后进入下一步
+    // 第二步：实验内容，停止Pod后进入下一步
     if (taskId.value) {
       await handleStopPod()
     }
     
-    currentStep.value = 3
+    currentStep.value = 2
     scrollToTop()
-  } else if (currentStep.value === 3) {
-    // 第四步：评测设置，自动保存评测设置和参考答案
+  } else if (currentStep.value === 2) {
+    // 第三步：评测设置，自动保存评测设置和参考答案
     try {
       await handleSaveEvaluation()
     } catch (error) {
@@ -1152,10 +1131,10 @@ const handleNext = async () => {
       return
     }
     
-    currentStep.value = 4
+    currentStep.value = 3
     scrollToTop()
-  } else if (currentStep.value === 4) {
-    // 第五步：实验环境验证并完成更新
+  } else if (currentStep.value === 3) {
+    // 第四步：实验环境验证并完成更新
     await handleCompleteUpdate()
   }
 }
@@ -1222,18 +1201,6 @@ const handleSaveEvaluation = async () => {
   
   // 如果启用了评测功能，进行非空校验
   if (evaluationData.value.openTestValidate === 1) {
-    // 校验评测文件
-    if (!evaluationData.value.testValidateFiles || evaluationData.value.testValidateFiles.trim() === '') {
-      message.error('请上传评测文件')
-      throw new Error('请上传评测文件')
-    }
-    
-    // 校验评测执行命令
-    if (!evaluationData.value.testValidateSh || evaluationData.value.testValidateSh.trim() === '') {
-      message.error('请输入评测执行命令')
-      throw new Error('请输入评测执行命令')
-    }
-    
     // 校验评测时长限制
     if (!evaluationData.value.timeLimitM) {
       message.error('请输入评测时长限制')
@@ -1635,95 +1602,8 @@ onMounted(async () => {
           </div>
         </div>
 
-      <!-- 第二步：代码仓库 -->
-      <div v-if="currentStep === 1">
-        <div class="form-section repository-section">
-          <!-- 顶部：下拉菜单 + 仓库地址 -->
-          <div class="repository-top-bar flex items-center gap-16px justify-between">
-            <a-select v-model:value="formData.repositoryType" :options="repositoryTypeOptions"
-              class="repository-type-select" />
-            <div class="repository-url-group">
-              <span class="url-label">仓库地址：</span>
-              <a-input 
-                v-model:value="formData.gitUrl" 
-                placeholder="请输入仓库地址" 
-                class="url-input"
-                :disabled="isRepositoryUrlLocked"
-                @blur="handleRepositoryUrlBlur"
-              />
-            </div>
-          </div>
-
-          <!-- 下方：左右布局 -->
-          <div class="repository-main-area">
-            <!-- 左侧：开关 + 提示 -->
-            <div class="repository-left">
-              <div class="repository-switch-box flex items-center justify-between">
-                <div class="flex items-center gap-12px">
-                  <span class="switch-label">代码仓库</span>
-                  <a-switch 
-                    :checked="formData.enableCodeRepository" 
-                    :disabled="formData.enableCodeRepository"
-                    @change="handleRepositorySwitchChange" 
-                  />
-                </div>
-                <a-dropdown v-if="formData.enableCodeRepository">
-                  <template #overlay>
-                    <a-menu @click="handleMenuClick">
-                      <a-menu-item key="newFile">新建文件</a-menu-item>
-                      <a-menu-item key="newFolder">新建文件夹</a-menu-item>
-                      <a-menu-item key="upload">上传</a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button type="primary" size="small">
-                    <PlusOutlined />
-                    新建
-                  </a-button>
-                </a-dropdown>
-              </div>
-
-              <!-- 文件树 -->
-              <FileTreeComponent 
-                v-if="formData.enableCodeRepository"
-                :file-tree-data="fileTreeData"
-                v-model:expanded-keys="expandedKeys"
-                @select="handleSelectFile"
-                @menu-click="handleTreeNodeMenuClick"
-                @expand="handleTreeExpand"
-              />
-
-              <div v-if="formData.enableCodeRepository" class="repository-tips">
-                <div class="tips-title">提示：</div>
-                <div class="tips-content">
-                  此处存放本实训所需的所有代码等相关文件，你可以通过以下：
-                </div>
-                <div class="tips-list">
-                  1、<a href="#" class="tips-link">Gitee客户端</a> 上传已有文件来开始使用。
-                </div>
-                <div class="tips-list">
-                  2、直接在平台上创建文件目录以及相关代码文件。
-                </div>
-              </div>
-            </div>
-
-            <!-- 右侧：文件预览区域 -->
-            <div class="repository-right">
-              <FilePreview 
-                v-if="formData.enableCodeRepository"
-                :selected-file="selectedFile"
-                :highlighted-code="highlightedCode"
-                :dynamic-file-contents="dynamicFileContents"
-              />
-              <div v-else class="empty-area">
-                在左侧代码仓库区域点击目录打开文件
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 第三步：实验内容 -->
-      <div v-if="currentStep === 2" class="step-content">
+      <!-- 第二步：实验内容 -->
+      <div v-if="currentStep === 1" class="step-content">
         <div class="jupyter-container" :class="{ 'fullscreen': isFullscreen }">
           <div class="jupyter-header">
             <h3>Jupyter Lab 编辑器</h3>
@@ -1754,8 +1634,8 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- 第四步：评测设置 -->
-      <div v-if="currentStep === 3" class="step-content evaluation-step">
+      <!-- 第三步：评测设置 -->
+      <div v-if="currentStep === 2" class="step-content evaluation-step">
           <a-tabs v-model:activeKey="evaluationActiveTab" class="evaluation-tabs">
             <!-- 评测设置标签页 -->
             <a-tab-pane key="settings" tab="评测设置">
@@ -1773,57 +1653,6 @@ onMounted(async () => {
                       </a-form-item>
 
                       <template v-if="evaluationData.openTestValidate === 1">
-                        <a-form-item label="评测文件" required>
-                          <!-- 未开启代码仓库：上传文件 -->
-                          <template v-if="!formData.enableCodeRepository">
-                            <a-upload 
-                              v-model:file-list="testValidateFileList"
-                              :custom-request="handleLearningResourceCustomRequest"
-                              @change="handleTestValidateFilesUpload"
-                              :max-count="10"
-                            >
-                              <a-button type="primary">点击上传</a-button>
-                            </a-upload>
-                            <div class="upload-hint">
-                              说明：支持上传多个文件，每个文件大小不能超过300M。
-                            </div>
-                          </template>
-                          
-                          <!-- 已开启代码仓库：从仓库选择文件 -->
-                          <template v-else>
-                            <div class="file-select-wrapper">
-                              <a-button type="primary" @click="showTestValidateFileSelectModal = true">点击选择</a-button>
-                              <div class="selected-files-list">
-                                <a-tag 
-                                  v-for="file in testValidateFileList" 
-                                  :key="file.uid"
-                                  closable
-                                  @close="() => {
-                                    testValidateFileList = testValidateFileList.filter(f => f.uid !== file.uid)
-                                    evaluationData.testValidateFiles = testValidateFileList.map(f => f.url).join(',')
-                                  }"
-                                  style="margin: 4px;"
-                                >
-                                  {{ file.name }}
-                                </a-tag>
-                              </div>
-                            </div>
-                            <div class="upload-hint">
-                              说明：从代码仓库中选择文件。（点击评测按钮时调用的文件，用于检验学员任务结果是否正确）
-                            </div>
-                          </template>
-                        </a-form-item>
-
-                        <a-form-item label="评测执行命令" required>
-                          <a-input 
-                            v-model:value="evaluationData.testValidateSh"
-                            placeholder="请输入评测执行命令，例如：python main.py" 
-                          />
-                          <div class="upload-hint">
-                            （执行评测文件的命令，如：python main.py、node index.js、java Main 等）
-                          </div>
-                        </a-form-item>
-
                         <a-form-item label="评测时长限制" required>
                           <div style="display: flex; align-items: center; gap: 8px;">
                             <a-input-number 
@@ -1882,15 +1711,17 @@ onMounted(async () => {
                         class="test-set-checkbox" 
                       />
                       <span class="test-set-label">测试集{{ index + 1 }}</span>
-                      <a-input 
+                      <a-textarea 
                         v-model:value="testSet.arg" 
                         placeholder="请输入输入内容"
                         class="test-set-input"
+                        :auto-size="{ minRows: 3 }"
                       />
-                      <a-input 
+                      <a-textarea 
                         v-model:value="testSet.answer" 
                         placeholder="请输入期望输出"
                         class="test-set-input"
+                        :auto-size="{ minRows: 3 }"
                       />
                       <DeleteOutlined 
                         class="delete-test-set-icon" 
@@ -1948,8 +1779,8 @@ onMounted(async () => {
           </a-tabs>
         </div>
 
-        <!-- 第五步：实验环境 -->
-        <div v-if="currentStep === 4" class="step-content environment-step">
+        <!-- 第四步：实验环境 -->
+        <div v-if="currentStep === 3" class="step-content environment-step">
           <div class="environment-section">
             <h3 class="section-main-title">实验环境</h3>
             
@@ -2023,22 +1854,22 @@ onMounted(async () => {
         <div class="page-footer">
           <a-button @click="handleBack">{{ currentStep === 0 ? '返回' : '上一步' }}</a-button>
           <a-button type="primary" :loading="loading" @click="handleNext">
-            {{ currentStep === 4 ? '完成' : '下一步' }}
+            {{ currentStep === 3 ? '完成' : '下一步' }}
           </a-button>
         </div>
       </div>
     </a-spin>
 
     <!-- 隐藏的文件上传选择器 -->
-    <input 
+    <!-- <input 
       ref="fileUploadInput" 
       type="file" 
       style="display: none" 
       @change="handleFileUploadChange"
-    />
+    /> -->
 
     <!-- 弹窗组件 -->
-    <RepositoryModal 
+    <!-- <RepositoryModal 
       v-model:open="showRepositoryModal"
       @confirm="handleConfirmRepository"
       @cancel="handleCancelRepository"
@@ -2054,7 +1885,7 @@ onMounted(async () => {
       v-model:open="showNewFolderModal"
       :parent-path="currentFolderParentPath"
       @confirm="handleConfirmNewFolder"
-    />
+    /> -->
     
     <!-- 评测文件选择器 -->
     <FileSelectModal 
