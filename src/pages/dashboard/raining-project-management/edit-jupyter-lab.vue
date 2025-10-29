@@ -5,12 +5,12 @@ import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
-import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectTaskApi } from '@/api/project'
+import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
-// @ts-ignore
+// @ts-ignore 
 import javascript from 'highlight.js/lib/languages/javascript'
 // @ts-ignore
 import typescript from 'highlight.js/lib/languages/typescript'
@@ -112,6 +112,16 @@ const coverUrl = ref<string>('')
 const uploadingTopCover = ref(false)
 const uploadingCover = ref(false)
 const imageUrlPrefix = 'http://101.200.13.193'
+
+// Jupyter编辑器
+const jupyterUrl = ref<string>('')
+const isFullscreen = ref(false)
+const loadingPodUrl = ref(false) // 加载Pod URL状态
+
+// 全屏切换
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value
+}
 
 // 表单验证规则
 const formRules: Record<string, Rule[]> = {
@@ -221,6 +231,7 @@ const loadedFolderKeys = ref<Set<string>>(new Set())
 const steps = [
   { title: '基本信息' },
   { title: '代码仓库' },
+  { title: '实验内容' },
   { title: '评测设置' },
   { title: '实验环境' },
 ]
@@ -1071,6 +1082,11 @@ const handleBack = async () => {
     if (currentStep.value === 1 && formData.value.gitUrl && formData.value.enableCodeRepository && fileTreeData.value.length === 0) {
       await fetchRepositoryFiles()
     }
+    
+    // 如果返回到第三步（实验内容），获取Pod配置
+    if (currentStep.value === 2 && taskId.value) {
+      await fetchPodConfig()
+    }
   } else {
     router.back()
   }
@@ -1107,8 +1123,21 @@ const handleNext = async () => {
     await handleUpdateProject(false)
     currentStep.value = 2
     scrollToTop()
+    
+    // 进入第三步（实验内容），获取Pod配置
+    if (taskId.value) {
+      await fetchPodConfig()
+    }
   } else if (currentStep.value === 2) {
-    // 第三步：评测设置，自动保存评测设置和参考答案
+    // 第三步：实验内容，停止Pod后进入下一步
+    if (taskId.value) {
+      await handleStopPod()
+    }
+    
+    currentStep.value = 3
+    scrollToTop()
+  } else if (currentStep.value === 3) {
+    // 第四步：评测设置，自动保存评测设置和参考答案
     try {
       await handleSaveEvaluation()
     } catch (error) {
@@ -1123,10 +1152,10 @@ const handleNext = async () => {
       return
     }
     
-    currentStep.value = 3
+    currentStep.value = 4
     scrollToTop()
-  } else if (currentStep.value === 3) {
-    // 第四步：实验环境验证并完成更新
+  } else if (currentStep.value === 4) {
+    // 第五步：实验环境验证并完成更新
     await handleCompleteUpdate()
   }
 }
@@ -1355,6 +1384,56 @@ const handleCompleteUpdate = async () => {
   }
 }
 
+// 获取Pod配置
+const fetchPodConfig = async () => {
+  if (!taskId.value) {
+    console.log('taskId不存在，无法获取Pod配置')
+    return
+  }
+  
+  try {
+    loadingPodUrl.value = true
+    console.log('正在获取Pod配置，taskId:', taskId.value)
+    
+    const podData = await getPodApi({ taskId: taskId.value })
+    console.log('获取到Pod数据：', podData)
+    
+    if (podData && podData.config && podData.config.url) {
+      jupyterUrl.value = podData.config.url
+      console.log('更新Jupyter URL为：', jupyterUrl.value)
+      message.success('实验环境加载成功！')
+    } else {
+      console.error('Pod配置中没有url字段')
+      message.warning('未获取到实验环境URL')
+    }
+  } catch (error) {
+    console.error('获取Pod配置失败：', error)
+    message.error('获取实验环境失败，请稍后重试')
+  } finally {
+    loadingPodUrl.value = false
+  }
+}
+
+// 停止Pod
+const handleStopPod = async () => {
+  if (!taskId.value) {
+    console.log('taskId不存在，无法停止Pod')
+    return
+  }
+  
+  try {
+    console.log('正在停止Pod，taskId:', taskId.value)
+    
+    await stopPodApi({ taskId: taskId.value })
+    console.log('Pod停止成功')
+    message.success('实验环境已停止')
+  } catch (error) {
+    console.error('停止Pod失败：', error)
+    message.error('停止实验环境失败，请稍后重试')
+    // 即使停止失败，也允许继续流程
+  }
+}
+
 // 页面加载时获取项目详情
 onMounted(async () => {
   // 加载领域类别字典、难度字典和小类别字典
@@ -1556,95 +1635,127 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- 第二步：代码仓库 -->
-        <div v-if="currentStep === 1">
-          <div class="form-section repository-section">
-            <!-- 顶部：下拉菜单 + 仓库地址 -->
-            <div class="repository-top-bar flex items-center gap-16px justify-between">
-              <a-select v-model:value="formData.repositoryType" :options="repositoryTypeOptions"
-                class="repository-type-select" />
-              <div class="repository-url-group">
-                <span class="url-label">仓库地址：</span>
-                <a-input 
-                  v-model:value="formData.gitUrl" 
-                  placeholder="请输入仓库地址" 
-                  class="url-input"
-                  :disabled="isRepositoryUrlLocked"
-                  @blur="handleRepositoryUrlBlur"
-                />
+      <!-- 第二步：代码仓库 -->
+      <div v-if="currentStep === 1">
+        <div class="form-section repository-section">
+          <!-- 顶部：下拉菜单 + 仓库地址 -->
+          <div class="repository-top-bar flex items-center gap-16px justify-between">
+            <a-select v-model:value="formData.repositoryType" :options="repositoryTypeOptions"
+              class="repository-type-select" />
+            <div class="repository-url-group">
+              <span class="url-label">仓库地址：</span>
+              <a-input 
+                v-model:value="formData.gitUrl" 
+                placeholder="请输入仓库地址" 
+                class="url-input"
+                :disabled="isRepositoryUrlLocked"
+                @blur="handleRepositoryUrlBlur"
+              />
+            </div>
+          </div>
+
+          <!-- 下方：左右布局 -->
+          <div class="repository-main-area">
+            <!-- 左侧：开关 + 提示 -->
+            <div class="repository-left">
+              <div class="repository-switch-box flex items-center justify-between">
+                <div class="flex items-center gap-12px">
+                  <span class="switch-label">代码仓库</span>
+                  <a-switch 
+                    :checked="formData.enableCodeRepository" 
+                    :disabled="formData.enableCodeRepository"
+                    @change="handleRepositorySwitchChange" 
+                  />
+                </div>
+                <a-dropdown v-if="formData.enableCodeRepository">
+                  <template #overlay>
+                    <a-menu @click="handleMenuClick">
+                      <a-menu-item key="newFile">新建文件</a-menu-item>
+                      <a-menu-item key="newFolder">新建文件夹</a-menu-item>
+                      <a-menu-item key="upload">上传</a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button type="primary" size="small">
+                    <PlusOutlined />
+                    新建
+                  </a-button>
+                </a-dropdown>
+              </div>
+
+              <!-- 文件树 -->
+              <FileTreeComponent 
+                v-if="formData.enableCodeRepository"
+                :file-tree-data="fileTreeData"
+                v-model:expanded-keys="expandedKeys"
+                @select="handleSelectFile"
+                @menu-click="handleTreeNodeMenuClick"
+                @expand="handleTreeExpand"
+              />
+
+              <div v-if="formData.enableCodeRepository" class="repository-tips">
+                <div class="tips-title">提示：</div>
+                <div class="tips-content">
+                  此处存放本实训所需的所有代码等相关文件，你可以通过以下：
+                </div>
+                <div class="tips-list">
+                  1、<a href="#" class="tips-link">Gitee客户端</a> 上传已有文件来开始使用。
+                </div>
+                <div class="tips-list">
+                  2、直接在平台上创建文件目录以及相关代码文件。
+                </div>
               </div>
             </div>
 
-            <!-- 下方：左右布局 -->
-            <div class="repository-main-area">
-              <!-- 左侧：开关 + 提示 -->
-              <div class="repository-left">
-                <div class="repository-switch-box flex items-center justify-between">
-                  <div class="flex items-center gap-12px">
-                    <span class="switch-label">代码仓库</span>
-                    <a-switch 
-                      :checked="formData.enableCodeRepository" 
-                      :disabled="formData.enableCodeRepository"
-                      @change="handleRepositorySwitchChange" 
-                    />
-                  </div>
-                  <a-dropdown v-if="formData.enableCodeRepository">
-                    <template #overlay>
-                      <a-menu @click="handleMenuClick">
-                        <a-menu-item key="newFile">新建文件</a-menu-item>
-                        <a-menu-item key="newFolder">新建文件夹</a-menu-item>
-                        <a-menu-item key="upload">上传</a-menu-item>
-                      </a-menu>
-                    </template>
-                    <a-button type="primary" size="small">
-                      <PlusOutlined />
-                      新建
-                    </a-button>
-                  </a-dropdown>
-                </div>
-
-                <!-- 文件树 -->
-                <FileTreeComponent 
-                  v-if="formData.enableCodeRepository"
-                  :file-tree-data="fileTreeData"
-                  v-model:expanded-keys="expandedKeys"
-                  @select="handleSelectFile"
-                  @menu-click="handleTreeNodeMenuClick"
-                  @expand="handleTreeExpand"
-                />
-
-                <div v-if="formData.enableCodeRepository" class="repository-tips">
-                  <div class="tips-title">提示：</div>
-                  <div class="tips-content">
-                    此处存放本实训所需的所有代码等相关文件，你可以通过以下：
-                  </div>
-                  <div class="tips-list">
-                    1、<a href="#" class="tips-link">Gitee客户端</a> 上传已有文件来开始使用。
-                  </div>
-                  <div class="tips-list">
-                    2、直接在平台上创建文件目录以及相关代码文件。
-                  </div>
-                </div>
-              </div>
-
-              <!-- 右侧：文件预览区域 -->
-              <div class="repository-right">
-                <FilePreview 
-                  v-if="formData.enableCodeRepository"
-                  :selected-file="selectedFile"
-                  :highlighted-code="highlightedCode"
-                  :dynamic-file-contents="dynamicFileContents"
-                />
-                <div v-else class="empty-area">
-                  在左侧代码仓库区域点击目录打开文件
-                </div>
+            <!-- 右侧：文件预览区域 -->
+            <div class="repository-right">
+              <FilePreview 
+                v-if="formData.enableCodeRepository"
+                :selected-file="selectedFile"
+                :highlighted-code="highlightedCode"
+                :dynamic-file-contents="dynamicFileContents"
+              />
+              <div v-else class="empty-area">
+                在左侧代码仓库区域点击目录打开文件
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- 第三步：评测设置 -->
-        <div v-if="currentStep === 2" class="step-content evaluation-step">
+      <!-- 第三步：实验内容 -->
+      <div v-if="currentStep === 2" class="step-content">
+        <div class="jupyter-container" :class="{ 'fullscreen': isFullscreen }">
+          <div class="jupyter-header">
+            <h3>Jupyter Lab 编辑器</h3>
+            <div class="jupyter-actions">
+              <a-tooltip :title="isFullscreen ? '退出全屏' : '全屏'">
+                <a-button 
+                  type="text" 
+                  :icon="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+                  @click="toggleFullscreen"
+                >
+                  {{ isFullscreen ? '退出全屏' : '全屏' }}
+                </a-button>
+              </a-tooltip>
+            </div>
+          </div>
+          <div class="jupyter-iframe-wrapper">
+            <div v-if="loadingPodUrl" class="loading-container">
+              <a-spin size="large" tip="正在加载实验环境..." />
+            </div>
+            <iframe 
+              v-else
+              :src="jupyterUrl" 
+              class="jupyter-iframe"
+              frameborder="0"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- 第四步：评测设置 -->
+      <div v-if="currentStep === 3" class="step-content evaluation-step">
           <a-tabs v-model:activeKey="evaluationActiveTab" class="evaluation-tabs">
             <!-- 评测设置标签页 -->
             <a-tab-pane key="settings" tab="评测设置">
@@ -1837,8 +1948,8 @@ onMounted(async () => {
           </a-tabs>
         </div>
 
-        <!-- 第四步：实验环境 -->
-        <div v-if="currentStep === 3" class="step-content environment-step">
+        <!-- 第五步：实验环境 -->
+        <div v-if="currentStep === 4" class="step-content environment-step">
           <div class="environment-section">
             <h3 class="section-main-title">实验环境</h3>
             
@@ -1912,7 +2023,7 @@ onMounted(async () => {
         <div class="page-footer">
           <a-button @click="handleBack">{{ currentStep === 0 ? '返回' : '上一步' }}</a-button>
           <a-button type="primary" :loading="loading" @click="handleNext">
-            {{ currentStep === 3 ? '完成' : '下一步' }}
+            {{ currentStep === 4 ? '完成' : '下一步' }}
           </a-button>
         </div>
       </div>
@@ -2235,6 +2346,72 @@ onMounted(async () => {
 .custom-radio ::v-deep(.ant-radio-inner::after) {
   background-color: var(--pro-ant-color-primary);
   transform: scale(0.5);
+}
+
+/* Jupyter编辑器样式 */
+.jupyter-container {
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+  transition: all 0.3s;
+  
+  &.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    border-radius: 0;
+    
+    .jupyter-iframe-wrapper {
+      height: calc(100vh - 64px);
+    }
+  }
+  
+  .jupyter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.85);
+    }
+    
+    .jupyter-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+  
+  .jupyter-iframe-wrapper {
+    width: 100%;
+    height: 700px;
+    position: relative;
+    
+    .loading-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+    }
+    
+    .jupyter-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+  }
 }
 
 /* 评测设置样式 */
