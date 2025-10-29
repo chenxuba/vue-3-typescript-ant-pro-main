@@ -69,6 +69,9 @@ const modalLoading = ref(false)
 const allRoles = ref<RolePagerItem[]>([])
 const allUsers = ref<AllUserModel[]>([])
 
+// 用户搜索加载状态
+const fetchingUsers = ref(false)
+
 // 表单数据
 const formData = reactive({
   userId: undefined as string | number | undefined,
@@ -114,20 +117,41 @@ const fetchAllRoles = async () => {
   }
 }
 
-// 获取所有用户列表
-const fetchAllUsers = async () => {
+// 获取所有用户列表（支持按 operatorName 搜索）
+const fetchAllUsers = async (searchValue: string = '') => {
+  fetchingUsers.value = true
   try {
     const result = await getAllUsersApi({ 
       page: 1, 
-      limit: 1000,
-      startNum: 0
+      limit: 50, // 限制返回数量
+      startNum: 0,
+      operatorName: searchValue || undefined, // 传递搜索关键词
     })
     if (result.data && result.data.list) {
       allUsers.value = result.data.list
     }
   } catch (error) {
     console.error('获取用户列表失败:', error)
+    allUsers.value = []
+  } finally {
+    fetchingUsers.value = false
   }
+}
+
+// 防抖定时器
+let userSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 远程搜索用户（带防抖）
+ */
+const handleSearchUsers = (searchValue: string) => {
+  if (userSearchTimer) {
+    clearTimeout(userSearchTimer)
+  }
+  
+  userSearchTimer = setTimeout(() => {
+    fetchAllUsers(searchValue)
+  }, 300) // 300ms 防抖
 }
 
 // 查询
@@ -160,6 +184,8 @@ const handleCreate = () => {
   formData.userId = undefined
   formData.roleId = undefined
   modalVisible.value = true
+  // 打开弹窗时加载初始用户数据
+  fetchAllUsers()
 }
 
 // 提交表单
@@ -223,7 +249,7 @@ const handleTableChange = (pagination: any) => {
 onMounted(() => {
   fetchAssignmentList()
   fetchAllRoles()
-  fetchAllUsers()
+  // 移除初始加载用户列表，改为打开弹窗时按需加载
 })
 </script>
 
@@ -360,12 +386,13 @@ onMounted(() => {
         >
           <a-select 
             v-model:value="formData.userId" 
-            placeholder="请选择用户"
+            placeholder="请输入用户姓名搜索"
             allow-clear
             show-search
-            :filter-option="(input, option) => {
-              return option?.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0
-            }"
+            :filter-option="false"
+            :loading="fetchingUsers"
+            :not-found-content="fetchingUsers ? '加载中...' : '暂无数据'"
+            @search="handleSearchUsers"
             :options="allUsers.map(user => ({ 
               label: `${user.operatorName} - ${user.userID} - ${user.orgName}`, 
               value: user.operatorID 

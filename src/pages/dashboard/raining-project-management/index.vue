@@ -18,6 +18,9 @@ const environmentDictList = ref<DictionaryItem[]>([])
 // 组织列表数据
 const organizationList = ref<RawOrganizationModel[]>([])
 
+// 组织搜索加载状态
+const fetchingOrganization = ref(false)
+
 /**
  * 获取环境字典数据
  * 需要查询三个字典组：project#environment_1, project#environment_2, project#environment_3
@@ -55,15 +58,17 @@ const fetchEnvironmentDict = async () => {
 }
 
 /**
- * 获取组织列表数据
+ * 获取组织列表数据（支持按 orgName 搜索）
  */
-const fetchOrganizationList = async () => {
+const fetchOrganizationList = async (searchValue: string = '') => {
+  fetchingOrganization.value = true
   try {
     const response = await getAllOrganizationListApi({
-      limit: 10000, // 获取所有数据
+      limit: 50, // 限制返回数量
       page: 1,
       startNum: 0,
       orderbyFiled: 'orgCode:asc',
+      orgName: searchValue || undefined, // 传递搜索关键词
     })
     
     if (response && response.data && response.data.list) {
@@ -72,7 +77,25 @@ const fetchOrganizationList = async () => {
   } catch (error) {
     console.error('获取组织列表失败：', error)
     organizationList.value = []
+  } finally {
+    fetchingOrganization.value = false
   }
+}
+
+// 防抖定时器
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 远程搜索组织（带防抖）
+ */
+const handleSearchOrganization = (searchValue: string) => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+  
+  searchTimer = setTimeout(() => {
+    fetchOrganizationList(searchValue)
+  }, 300) // 300ms 防抖
 }
 
 /**
@@ -122,6 +145,7 @@ const organizerOptions = computed(() => {
       value: name,
     }))
 })
+
 
 // 分页配置
 const pagination = ref({
@@ -225,7 +249,7 @@ const handleSearch = () => {
 // 组件挂载时获取字典和列表
 onMounted(() => {
   fetchEnvironmentDict() // 获取环境字典数据
-  fetchOrganizationList() // 获取组织列表数据
+  fetchOrganizationList() // 初始加载一些组织数据
   fetchProjectList()
 })
 
@@ -337,8 +361,17 @@ const handleDelete = (record: any) => {
           </a-col>
           <a-col :span="6">
             <a-form-item label="主办单位：" name="organizer">
-              <a-select v-model:value="searchForm.organizer" placeholder="请选择主办单位" :options="organizerOptions"
-                allow-clear />
+              <a-select 
+                v-model:value="searchForm.organizer" 
+                placeholder="请输入主办单位名称搜索" 
+                :options="organizerOptions"
+                allow-clear 
+                show-search 
+                :filter-option="false"
+                :loading="fetchingOrganization"
+                :not-found-content="fetchingOrganization ? '加载中...' : '暂无数据'"
+                @search="handleSearchOrganization"
+              />
             </a-form-item>
           </a-col>
           <a-col :span="6" class="form-actions">
