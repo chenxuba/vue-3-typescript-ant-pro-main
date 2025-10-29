@@ -1,0 +1,1 @@
+import{_ as t}from"./index-D3w9uP0F.js";import{$ as o}from"./antd-C-FgyWyA.js";import{_ as r,a1 as a,k as c}from"./vue-PnzzEkKE.js";const s={},n={class:"test-page-container"};function _(d,f){const e=o;return a(),r("div",n,[c(e,{title:"测试页面",bordered:!1})])}const l=t(s,[["render",_]]);export{l as default};

@@ -1,215 +1,102 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { Empty, message } from 'ant-design-vue'
-import { ApartmentOutlined,SearchOutlined, InfoCircleOutlined,  } from '@ant-design/icons-vue'
-import { getAllOrganizationListApi, type RawOrganizationModel, type OrganizationModel } from '@/api/system/organization'
-import {  } from '@ant-design/icons-vue'
+import { ref, onMounted } from 'vue'
+import { message } from 'ant-design-vue'
+import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { getAllOrganizationListApi, type RawOrganizationModel } from '@/api/system/organization'
+
 defineOptions({
   name: 'OrganizationManagement',
 })
 
-// 树形数据
-const treeData = ref<any[]>([])
-// 原始树形数据（用于搜索过滤）
-const originalTreeData = ref<any[]>([])
+// 树形数据 - 直接使用原始数据格式，添加key属性以满足ant-design-vue的要求
+interface TreeNode extends RawOrganizationModel {
+  key: number // key必须存在且为number类型
+  children?: TreeNode[]
+  isLeaf?: boolean
+}
+
+const treeData = ref<TreeNode[]>([])
 // 选中的组织
-const selectedOrg = ref<any>(null)
+const selectedOrg = ref<RawOrganizationModel | null>(null)
 // 展开的节点
 const expandedKeys = ref<(string | number)[]>([])
 // 选中的节点
 const selectedKeys = ref<(string | number)[]>([])
 // 搜索关键词
 const searchKeyword = ref<string>('')
+// 是否正在搜索
+const isSearching = ref<boolean>(false)
 // 加载状态
 const loading = ref<boolean>(false)
+// 正在加载子节点的节点集合
+const loadingNodeKeys = ref<Set<number>>(new Set())
 
-// 递归获取所有节点的key（用于默认展开所有节点）
-const getAllKeys = (data: any[]): (string | number)[] => {
-  const keys: (string | number)[] = []
-  const traverse = (nodes: any[]) => {
-    nodes.forEach((node) => {
-      if (node.id) {
-        keys.push(node.id)
-      }
+// 递归统计节点数量
+const countNodes = (nodes: TreeNode[]): number => {
+  let count = 0
+  const traverse = (items: TreeNode[]) => {
+    items.forEach((node) => {
+      count++
       if (node.children && node.children.length > 0) {
         traverse(node.children)
       }
     })
   }
-  traverse(data)
-  return keys
-}
-
-// 深度克隆树形数据
-const deepClone = (data: any[]): any[] => {
-  return JSON.parse(JSON.stringify(data))
-}
-
-// 递归过滤树形数据
-const filterTree = (nodes: any[], keyword: string): any[] => {
-  if (!keyword) return deepClone(nodes)
-  
-  const result: any[] = []
-  
-  nodes.forEach((node) => {
-    const nodeCopy = { ...node }
-    
-    // 检查当前节点是否匹配
-    const nameMatch = node.name?.toLowerCase().includes(keyword.toLowerCase())
-    const codeMatch = node.code?.toLowerCase().includes(keyword.toLowerCase())
-    
-    // 递归处理子节点
-    if (node.children && node.children.length > 0) {
-      const filteredChildren = filterTree(node.children, keyword)
-      if (filteredChildren.length > 0) {
-        nodeCopy.children = filteredChildren
-        result.push(nodeCopy)
-      } else if (nameMatch || codeMatch) {
-        // 当前节点匹配但没有匹配的子节点
-        delete nodeCopy.children
-        result.push(nodeCopy)
-      }
-    } else if (nameMatch || codeMatch) {
-      // 叶子节点匹配
-      result.push(nodeCopy)
-    }
-  })
-  
-  return result
-}
-
-// 获取匹配节点的所有父节点key（用于展开）
-const getMatchedKeys = (nodes: any[], keyword: string): (string | number)[] => {
-  if (!keyword) return []
-  
-  const keys: (string | number)[] = []
-  
-  const traverse = (nodes: any[], parentKeys: (string | number)[] = []): boolean => {
-    let hasMatch = false
-    
-    nodes.forEach((node) => {
-      const nameMatch = node.name?.toLowerCase().includes(keyword.toLowerCase())
-      const codeMatch = node.code?.toLowerCase().includes(keyword.toLowerCase())
-      const currentPath = [...parentKeys, node.id]
-      
-      let childMatch = false
-      if (node.children && node.children.length > 0) {
-        childMatch = traverse(node.children, currentPath)
-      }
-      
-      if (nameMatch || codeMatch || childMatch) {
-        // 添加当前节点和所有父节点的key
-        keys.push(...currentPath)
-        hasMatch = true
-      }
-    })
-    
-    return hasMatch
-  }
-  
   traverse(nodes)
-  return [...new Set(keys)] // 去重
+  return count
 }
 
-// 将原始 API 数据转换为组织模型
-const convertRawToOrganization = (raw: RawOrganizationModel): OrganizationModel => {
-  return {
-    id: raw.orgID,
-    name: raw.orgName,
-    code: raw.orgCode,
-    parentId: raw.parentOrgID || null,
-    parentName: raw.parentOrgName,
-    isActive: raw.status === 1,
-    order: raw.sortID,
-    isIndependentTraining: raw.isOrg === 1,
-    isVirtual: raw.isVirOrg === 1,
-  }
-}
-
-// 将扁平列表转换为树形结构
-const buildTree = (list: OrganizationModel[]): OrganizationModel[] => {
-  const map = new Map<string | number, OrganizationModel>()
-  const roots: OrganizationModel[] = []
-  
-  // 先将所有节点放入 map
-  list.forEach((item) => {
-    map.set(item.id!, { ...item, children: [] })
-  })
-  
-  // 构建树形结构
-  list.forEach((item) => {
-    const node = map.get(item.id!)
-    if (!node) return
-    
-    if (item.parentId && map.has(item.parentId)) {
-      // 有父节点，添加到父节点的 children 中
-      const parent = map.get(item.parentId)
-      if (parent) {
-        if (!parent.children) {
-          parent.children = []
-        }
-        parent.children.push(node)
-      }
-    } else {
-      // 没有父节点或父节点不存在，作为根节点
-      roots.push(node)
-    }
-  })
-  
-  return roots
-}
-
-// 监听搜索关键词变化
-watch(searchKeyword, (newKeyword) => {
-  if (!newKeyword || newKeyword.trim() === '') {
-    // 如果搜索框为空，显示所有数据并展开所有节点
-    treeData.value = deepClone(originalTreeData.value)
-    expandedKeys.value = getAllKeys(treeData.value)
-  } else {
-    // 过滤树形数据
-    const keyword = newKeyword.trim()
-    treeData.value = filterTree(originalTreeData.value, keyword)
-    // 自动展开匹配的节点
-    expandedKeys.value = getMatchedKeys(originalTreeData.value, keyword)
-  }
-})
-
-// 初始化数据（调用真实接口）
+// 初始化数据（加载顶级组织）
 const initData = async () => {
   try {
     loading.value = true
     
-    // 调用真实接口获取组织列表
+    // 调用接口获取顶级组织列表 (parentOrgID = 0)
     const response = await getAllOrganizationListApi({
-      limit: 10000, // 获取所有数据
+      limit: 10000,
       page: 1,
       startNum: 0,
       orderbyFiled: 'orgCode:asc',
+      parentOrgID: 0, // 默认传0，查询顶级组织
     })
     
-    // 根据接口返回的格式，数据在 response.data 中
-    // ResponseBody 格式: { code: number, data: OrganizationListResponse, msg: string }
     if (response && response.data && response.data.list) {
-      // 转换数据格式
-      const organizations = response.data.list.map(convertRawToOrganization)
-      
-      // 构建树形结构
-      const treeStructure = buildTree(organizations)
-      
-      // 保存原始数据
-      originalTreeData.value = deepClone(treeStructure)
-      treeData.value = deepClone(treeStructure)
-      
-      // 默认展开所有节点
-      expandedKeys.value = getAllKeys(treeData.value)
+      // 直接使用原始数据，不转换格式，添加key属性
+      treeData.value = response.data.list.map(item => ({
+        ...item,
+        key: item.orgID, // 添加key属性
+        children: [], // 初始化children为空数组
+        isLeaf: false, // 假设都有子节点，点击时再加载
+      }))
       
       // 默认选中第一个节点
       if (treeData.value.length > 0) {
-        selectedKeys.value = [treeData.value[0].id!]
+        selectedKeys.value = [treeData.value[0].orgID]
         selectedOrg.value = treeData.value[0]
+        
+        // 自动展开第一级：为所有顶级组织加载子节点
+        const expandKeys: number[] = []
+        let totalChildren = 0
+        
+        for (const node of treeData.value) {
+          const childCount = await loadChildrenData(node.orgID, true) // silent=true，不显示错误消息
+          if (childCount > 0) {
+            expandKeys.push(node.orgID)
+            totalChildren += childCount
+          }
+        }
+        
+        // 设置展开的节点
+        expandedKeys.value = expandKeys
+        
+        if (totalChildren > 0) {
+          message.success(`成功加载 ${treeData.value.length} 个顶级组织和 ${totalChildren} 个子组织`)
+        } else {
+          message.success(`成功加载 ${treeData.value.length} 个顶级组织`)
+        }
+      } else {
+        message.success(`成功加载 ${treeData.value.length} 个顶级组织`)
       }
-      
-      message.success(`成功加载 ${organizations.length} 个组织`)
     } else {
       message.warning('未获取到组织数据')
     }
@@ -221,12 +108,167 @@ const initData = async () => {
   }
 }
 
+// 递归查找节点
+const findNode = (nodes: TreeNode[], targetId: number): TreeNode | null => {
+  for (const node of nodes) {
+    if (node.orgID === targetId) {
+      return node
+    }
+    if (node.children && node.children.length > 0) {
+      const found = findNode(node.children, targetId)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+// 动态加载子节点
+const loadChildrenData = async (parentOrgID: number, silent = false) => {
+  try {
+    loadingNodeKeys.value.add(parentOrgID)
+    
+    const response = await getAllOrganizationListApi({
+      limit: 10000,
+      page: 1,
+      startNum: 0,
+      orderbyFiled: 'orgCode:asc',
+      parentOrgID: parentOrgID, // 传递父级ID
+    })
+    
+    if (response && response.data && response.data.list) {
+      const children = response.data.list.map(item => ({
+        ...item,
+        key: item.orgID, // 添加key属性
+        children: [],
+        isLeaf: false,
+      }))
+      
+      // 找到父节点并更新其子节点
+      const parentNode = findNode(treeData.value, parentOrgID)
+      if (parentNode) {
+        parentNode.children = children
+        // 如果没有子节点，标记为叶子节点
+        if (children.length === 0) {
+          parentNode.isLeaf = true
+        }
+      }
+      
+      // 触发树的更新
+      treeData.value = [...treeData.value]
+      
+      return children.length
+    }
+    return 0
+  } catch (error) {
+    console.error('加载子节点失败:', error)
+    if (!silent) {
+      message.error('加载子节点失败')
+    }
+    return 0
+  } finally {
+    loadingNodeKeys.value.delete(parentOrgID)
+  }
+}
+
+// 树节点展开事件
+const onExpand = async (expandedKeysValue: (string | number)[], info: any) => {
+  expandedKeys.value = expandedKeysValue
+  
+  // 如果是展开操作且该节点还没有加载过子节点
+  if (info.expanded) {
+    const node = info.node as TreeNode
+    const nodeId = node.orgID
+    
+    // 如果子节点为空数组且不是叶子节点，则加载子节点
+    if (node.children && node.children.length === 0 && !node.isLeaf) {
+      const count = await loadChildrenData(nodeId)
+      if (count > 0) {
+        message.success(`加载了 ${count} 个子组织`)
+      }
+    }
+  }
+}
+
 // 选择树节点
 const onSelectTree = (keys: (string | number)[], info: any) => {
   if (keys.length > 0) {
     selectedKeys.value = keys
-    selectedOrg.value = info.node
+    selectedOrg.value = info.node as RawOrganizationModel
   }
+}
+
+// 搜索组织
+const searchOrganization = async () => {
+  const keyword = searchKeyword.value.trim()
+  
+  if (!keyword) {
+    // 如果搜索关键词为空，恢复到初始状态
+    clearSearch()
+    return
+  }
+  
+  try {
+    isSearching.value = true
+    loading.value = true
+    
+    // 调用接口，传递 orgName 参数进行搜索，不传 parentOrgID
+    const response = await getAllOrganizationListApi({
+      limit: 10000,
+      page: 1,
+      startNum: 0,
+      orderbyFiled: 'orgCode:asc',
+      orgName: keyword, // 传递搜索关键词
+    })
+    
+    if (response && response.data && response.data.list) {
+      // 搜索结果直接展示为扁平列表，不加载子节点
+      treeData.value = response.data.list.map(item => ({
+        ...item,
+        key: item.orgID,
+        children: [],
+        isLeaf: true, // 搜索结果标记为叶子节点
+      }))
+      
+      // 清空选中状态
+      selectedKeys.value = []
+      selectedOrg.value = null
+      expandedKeys.value = []
+      
+      message.success(`找到 ${treeData.value.length} 个匹配的组织`)
+    } else {
+      treeData.value = []
+      message.warning('未找到匹配的组织')
+    }
+  } catch (error) {
+    console.error('搜索组织失败:', error)
+    message.error('搜索失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 清空搜索，恢复到初始状态
+const clearSearch = async () => {
+  searchKeyword.value = ''
+  isSearching.value = false
+  selectedKeys.value = []
+  selectedOrg.value = null
+  expandedKeys.value = []
+  await initData()
+}
+
+// 处理搜索框输入事件
+const handleSearch = () => {
+  if (searchKeyword.value.trim()) {
+    searchOrganization()
+  } else {
+    clearSearch()
+  }
+}
+
+// 处理搜索框清空事件
+const handleClear = () => {
+  clearSearch()
 }
 
 onMounted(() => {
@@ -261,9 +303,21 @@ onMounted(() => {
             allow-clear
             class="modern-search"
             :disabled="loading"
+            @pressEnter="handleSearch"
+            @clear="handleClear"
           >
             <template #prefix>
               <SearchOutlined />
+            </template>
+            <template #suffix>
+              <a-button 
+                type="primary" 
+                size="small" 
+                :loading="loading"
+                @click="handleSearch"
+              >
+                搜索
+              </a-button>
             </template>
           </a-input>
         </div>
@@ -272,31 +326,25 @@ onMounted(() => {
           <a-spin size="large" tip="加载中..." />
         </div>
 
-        <div v-else-if="searchKeyword && treeData.length === 0" class="empty-search">
-          <a-empty 
-            description="未找到匹配的组织"
-            :image="Empty.PRESENTED_IMAGE_SIMPLE"
-          />
+        <div v-else-if="treeData.length === 0" class="empty-search">
+          <a-empty description="未找到匹配的组织" />
         </div>
 
         <div v-else class="tree-container">
-          <div v-if="searchKeyword" class="search-result-tip">
-            <InfoCircleOutlined />
-            <span class="ml-6px">搜索到 {{ getAllKeys(treeData).length }} 个匹配结果</span>
-          </div>
-          
           <a-tree
             v-model:expanded-keys="expandedKeys"
             v-model:selected-keys="selectedKeys"
             :tree-data="treeData"
-            :field-names="{ title: 'name', key: 'id', children: 'children' }"
+            :field-names="{ title: 'orgName', key: 'orgID', children: 'children' }"
             show-line
+            @expand="onExpand"
             @select="onSelectTree"
           >
-            <template #title="{ name }">
-              <a-tooltip :title="name" placement="topLeft">
+            <template #title="{ orgName, orgID }">
+              <a-tooltip :title="orgName" placement="topLeft">
                 <div class="tree-node-title">
-                  <span class="node-name">{{ name }}</span>
+                  <span class="node-name">{{ orgName }}</span>
+                  <a-spin v-if="loadingNodeKeys.has(orgID)" size="small" class="ml-2" />
                 </div>
               </a-tooltip>
             </template>
@@ -306,9 +354,14 @@ onMounted(() => {
         <div class="panel-footer">
           <div class="stats-info">
             <div class="stat-item">
-              <span class="stat-label">总数</span>
-              <span class="stat-value">{{ getAllKeys(treeData).length }}</span>
+              <span class="stat-label">{{ isSearching ? '搜索结果' : '已加载' }}</span>
+              <span class="stat-value">{{ countNodes(treeData) }}</span>
             </div>
+          </div>
+          <div v-if="isSearching" class="search-tip">
+            <a-button type="link" size="small" @click="clearSearch">
+              清空搜索，返回树形结构
+            </a-button>
           </div>
         </div>
       </div>
@@ -322,25 +375,34 @@ onMounted(() => {
         <div v-if="selectedOrg" class="detail-content">
           <a-descriptions bordered :column="1">
             <a-descriptions-item label="单位名称">
-              {{ selectedOrg.name }}
+              {{ selectedOrg.orgName }}
             </a-descriptions-item>
             <a-descriptions-item label="单位编号">
-              {{ selectedOrg.code }}
+              {{ selectedOrg.orgCode }}
+            </a-descriptions-item>
+            <a-descriptions-item label="组织ID">
+              {{ selectedOrg.orgID }}
+            </a-descriptions-item>
+            <a-descriptions-item label="上级单位ID">
+              {{ selectedOrg.parentOrgID || '-' }}
             </a-descriptions-item>
             <a-descriptions-item label="上级单位名称">
-              {{ selectedOrg.parentName || '-' }}
+              {{ selectedOrg.parentOrgName || '-' }}
             </a-descriptions-item>
             <a-descriptions-item label="是否有效">
-              {{ selectedOrg.isActive ? '是' : '否' }}
+              {{ selectedOrg.status === 1 ? '是' : '否' }}
             </a-descriptions-item>
             <a-descriptions-item label="序号">
-              {{ selectedOrg.order|| '-' }}
+              {{ selectedOrg.sortID || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="组织层级">
+              {{ selectedOrg.orglevel || '-' }}
             </a-descriptions-item>
             <a-descriptions-item label="是否独立组织培训机构">
-              {{ selectedOrg.isIndependentTraining ? '是' : '否' }}
+              {{ selectedOrg.isOrg === 1 ? '是' : '否' }}
             </a-descriptions-item>
             <a-descriptions-item label="是否虚拟组织机构">
-              {{ selectedOrg.isVirtual ? '是' : '否' }}
+              {{ selectedOrg.isVirOrg === 1 ? '是' : '否' }}
             </a-descriptions-item>
           </a-descriptions>
         </div>
@@ -374,38 +436,27 @@ onMounted(() => {
     display: flex;
     gap: 20px;
     min-height: calc(100vh - 180px);
+    align-items: flex-start;
   }
 
   .left-panel {
     width: 320px;
     height: fit-content;
-    max-height: calc(100vh - 100px);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    max-height: calc(100vh - 40px);
+    background: #fff;
     border-radius: 16px;
     padding: 0;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     overflow: hidden;
-    position: relative;
-
-    // 添加装饰性背景
-    &::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -50%;
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-      border-radius: 50%;
-    }
+    position: sticky;
+    top: 20px;
 
     .panel-header {
       padding: 24px 20px 16px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      background: linear-gradient(135deg, rgba(64, 150, 255, 0.05) 0%, rgba(22, 119, 255, 0.05) 100%);
+      border-bottom: 1px solid #f0f0f0;
       position: relative;
       z-index: 1;
 
@@ -413,19 +464,19 @@ onMounted(() => {
         display: flex;
         align-items: center;
         gap: 12px;
-        color: #fff;
+        color: rgba(0, 0, 0, 0.85);
 
         .title-icon {
           width: 40px;
           height: 40px;
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(64, 150, 255, 0.1);
           border-radius: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 20px;
-          backdrop-filter: blur(10px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          color: #4096ff;
+          box-shadow: 0 2px 8px rgba(64, 150, 255, 0.1);
         }
 
         .title-text {
@@ -459,37 +510,37 @@ onMounted(() => {
       padding: 16px 20px;
       position: relative;
       z-index: 1;
+      background: #fff;
 
       .modern-search {
-        border-radius: 12px;
-        border: none;
-        background: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        border: 1px solid #d9d9d9;
+        background: #fff;
         transition: all 0.3s ease;
 
         &:hover {
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-          transform: translateY(-1px);
+          border-color: #4096ff;
         }
 
         &:focus-within {
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+          border-color: #4096ff;
+          box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1);
         }
 
         :deep(.ant-input) {
           background: transparent;
           border: none;
           font-size: 14px;
-          padding: 10px 12px;
+          padding: 4px 11px;
 
           &::placeholder {
-            color: rgba(0, 0, 0, 0.4);
+            color: rgba(0, 0, 0, 0.45);
           }
         }
 
         :deep(.ant-input-prefix) {
-          color: rgba(102, 126, 234, 0.6);
-          font-size: 16px;
+          color: rgba(0, 0, 0, 0.45);
+          font-size: 14px;
         }
       }
     }
@@ -500,11 +551,8 @@ onMounted(() => {
       align-items: center;
       justify-content: center;
       padding: 40px 20px;
-      background: rgba(255, 255, 255, 0.95);
-      margin: 0 12px 16px;
-      border-radius: 12px;
-      position: relative;
-      z-index: 1;
+      background: #fff;
+      margin: 0 20px 16px;
 
       :deep(.ant-spin) {
         .ant-spin-text {
@@ -515,7 +563,7 @@ onMounted(() => {
 
         .ant-spin-dot {
           .ant-spin-dot-item {
-            background-color: #667eea;
+            background-color: #4096ff;
           }
         }
       }
@@ -527,11 +575,8 @@ onMounted(() => {
       align-items: center;
       justify-content: center;
       padding: 40px 20px;
-      background: rgba(255, 255, 255, 0.95);
-      margin: 0 12px 16px;
-      border-radius: 12px;
-      position: relative;
-      z-index: 1;
+      background: #fff;
+      margin: 0 20px 16px;
 
       :deep(.ant-empty) {
         .ant-empty-image {
@@ -549,12 +594,8 @@ onMounted(() => {
       flex: 1;
       overflow: auto;
       padding: 8px 16px 16px;
-      background: rgba(255, 255, 255, 0.95);
-      margin: 0 12px;
-      border-radius: 12px;
-      position: relative;
-      z-index: 1;
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.04);
+      background: #fff;
+      margin: 0 20px;
 
       .search-result-tip {
         display: flex;
@@ -562,7 +603,7 @@ onMounted(() => {
         gap: 0px;
         padding: 8px 12px;
         margin-bottom: 12px;
-        background: linear-gradient(90deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+        background: rgba(64, 150, 255, 0.05);
         border-radius: 8px;
         font-size: 13px;
         color: rgba(0, 0, 0, 0.65);
@@ -573,7 +614,7 @@ onMounted(() => {
         }
 
         .anticon {
-          color: #667eea;
+          color: #4096ff;
           font-size: 14px;
         }
       }
@@ -600,11 +641,11 @@ onMounted(() => {
       }
 
       &::-webkit-scrollbar-thumb {
-        background: rgba(102, 126, 234, 0.3);
+        background: rgba(0, 0, 0, 0.15);
         border-radius: 3px;
         
         &:hover {
-          background: rgba(102, 126, 234, 0.5);
+          background: rgba(0, 0, 0, 0.25);
         }
       }
 
@@ -618,7 +659,7 @@ onMounted(() => {
 
           &:hover {
             .ant-tree-node-content-wrapper {
-              background: linear-gradient(90deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+              background: rgba(0, 0, 0, 0.04);
             }
           }
         }
@@ -653,15 +694,13 @@ onMounted(() => {
             transform: translateY(-50%);
             width: 3px;
             height: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #4096ff;
             border-radius: 2px;
             transition: height 0.3s ease;
           }
 
           &:hover {
-            background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            transform: translateX(4px);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+            background: rgba(0, 0, 0, 0.04);
 
             &::before {
               height: 24px;
@@ -683,9 +722,7 @@ onMounted(() => {
 
         .ant-tree-node-selected {
           .ant-tree-node-content-wrapper {
-            background: linear-gradient(90deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-            box-shadow: 0 3px 12px rgba(102, 126, 234, 0.2);
-            transform: translateX(6px);
+            background: rgba(64, 150, 255, 0.1);
             font-weight: 500;
 
             &::before {
@@ -694,7 +731,7 @@ onMounted(() => {
 
             .tree-node-title {
               .node-name {
-                color: #667eea;
+                color: #4096ff;
                 font-weight: 600;
               }
             }
@@ -707,12 +744,12 @@ onMounted(() => {
           justify-content: center;
           width: 24px;
           height: 24px;
-          color: rgba(102, 126, 234, 0.7);
+          color: rgba(0, 0, 0, 0.45);
           transition: all 0.3s ease;
           margin-top: 7px;
           &:hover {
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
+            color: #4096ff;
+            background: rgba(64, 150, 255, 0.1);
             border-radius: 4px;
           }
 
@@ -751,9 +788,8 @@ onMounted(() => {
 
     .panel-footer {
       padding: 16px 20px 20px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      background: #fafafa;
+      border-top: 1px solid #f0f0f0;
       position: relative;
       z-index: 1;
 
@@ -767,20 +803,36 @@ onMounted(() => {
           align-items: center;
           gap: 8px;
           padding: 10px 20px;
-          background: rgba(255, 255, 255, 0.2);
-          border-radius: 10px;
-          backdrop-filter: blur(10px);
+          background: #fff;
+          border-radius: 8px;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 
           .stat-label {
             font-size: 13px;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(0, 0, 0, 0.65);
             font-weight: 500;
           }
 
           .stat-value {
             font-size: 16px;
-            color: #fff;
+            color: #4096ff;
             font-weight: 700;
+          }
+        }
+      }
+
+      .search-tip {
+        margin-top: 12px;
+        text-align: center;
+
+        :deep(.ant-btn-link) {
+          color: #4096ff;
+          font-size: 12px;
+          padding: 0;
+          height: auto;
+
+          &:hover {
+            color: #1677ff;
           }
         }
       }
@@ -796,9 +848,9 @@ onMounted(() => {
     overflow: hidden;
 
     .detail-header {
-      padding: 28px 32px;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-      border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+      padding: 14px 32px;
+      background: linear-gradient(135deg, rgba(64, 150, 255, 0.05) 0%, rgba(22, 119, 255, 0.05) 100%);
+      border-bottom: 1px solid #f0f0f0;
       position: relative;
 
       &::before {
@@ -808,7 +860,7 @@ onMounted(() => {
         top: 0;
         bottom: 0;
         width: 4px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #4096ff;
       }
 
       h3 {
@@ -833,7 +885,7 @@ onMounted(() => {
       :deep(.ant-descriptions) {
         .ant-descriptions-item-label {
           width: 200px;
-          background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+          background: #fafafa;
           font-weight: 500;
           color: rgba(0, 0, 0, 0.75);
         }
@@ -845,7 +897,7 @@ onMounted(() => {
         }
 
         .ant-descriptions-row {
-          border-bottom: 1px solid rgba(102, 126, 234, 0.08);
+          border-bottom: 1px solid #f0f0f0;
 
           &:last-child {
             border-bottom: none;

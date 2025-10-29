@@ -23,15 +23,17 @@
 
       <!-- 预览模式 -->
       <div v-if="!isEditing" class="content">
-        <div v-html="copyrightContent"></div>
+        <a-spin :spinning="loading">
+          <div v-html="copyrightContent"></div>
+        </a-spin>
         
-        <div class="copyright-info">
+        <!-- <div class="copyright-info">
           <a-divider />
           <div class="info-box">
             <p><strong>版权所有</strong> © {{ currentYear }} 所有权利保留</p>
             <p class="text-gray-500">本声明最后更新日期：{{ updateTime }}</p>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <!-- 编辑模式 -->
@@ -56,10 +58,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { EditOutlined, SaveOutlined } from '@ant-design/icons-vue'
 import RichTextEditor from '@/pages/dashboard/raining-project-management/components/RichTextEditor.vue'
+import { getSysConfigByCodeApi, updateSysConfigByCodeApi } from '@/api/system/config'
 
 // 默认版权声明内容
 const defaultContent = `
@@ -100,11 +103,33 @@ const defaultContent = `
 
 const isEditing = ref(false)
 const saveLoading = ref(false)
+const loading = ref(false)
 const copyrightContent = ref<string>(defaultContent)
 const editContent = ref<string>('')
 
-const currentYear = computed(() => new Date().getFullYear())
 const updateTime = ref(new Date().toLocaleDateString('zh-CN'))
+
+// 获取版权声明内容
+const fetchCopyrightContent = async () => {
+  try {
+    loading.value = true
+    const response = await getSysConfigByCodeApi({ code: 'copyright' })
+    if (response && response.data && response.data.config) {
+      copyrightContent.value = response.data.config
+    }
+  } catch (error) {
+    console.error('获取版权声明失败:', error)
+    // 如果获取失败，使用默认内容
+    copyrightContent.value = defaultContent
+  } finally {
+    loading.value = false
+  }
+}
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchCopyrightContent()
+})
 
 // 进入编辑模式
 const handleEdit = () => {
@@ -123,11 +148,11 @@ const handleSave = async () => {
   try {
     saveLoading.value = true
     
-    // 这里可以调用API保存到后端
-    // await saveCopyrightApi({ content: editContent.value })
-    
-    // 模拟保存延迟
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用API保存到后端
+    await updateSysConfigByCodeApi({
+      config: editContent.value,
+      keyName: 'copyright',
+    })
     
     // 更新内容和时间
     copyrightContent.value = editContent.value

@@ -66,6 +66,14 @@ interface OrganizationListParams {
   orderbyFiled?: string
   page: number
   startNum: number
+  /**
+   * 父组织ID，默认传0查询顶级组织
+   */
+  parentOrgID?: number
+  /**
+   * 组织名称，用于搜索
+   */
+  orgName?: string
 }
 
 /**

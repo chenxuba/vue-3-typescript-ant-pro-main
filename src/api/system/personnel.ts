@@ -156,6 +156,18 @@ interface AllUsersQueryParams {
    * 排序字段 (例如: "name:desc,github:asc")
    */
   orderbyFiled?: string
+  /**
+   * 组织名称
+   */
+  orgName?: string
+  /**
+   * 操作员名称
+   */
+  operatorName?: string
+  /**
+   * 操作员ID
+   */
+  operatorID?: number
 }
 
 /**

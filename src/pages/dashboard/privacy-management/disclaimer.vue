@@ -23,12 +23,14 @@
 
       <!-- 预览模式 -->
       <div v-if="!isEditing" class="content">
-        <div v-html="disclaimerContent"></div>
+        <a-spin :spinning="loading">
+          <div v-html="disclaimerContent"></div>
+        </a-spin>
         
-        <div class="update-time">
+        <!-- <div class="update-time">
           <a-divider />
           <p class="text-gray-500">最后更新时间：{{ updateTime }}</p>
-        </div>
+        </div> -->
       </div>
 
       <!-- 编辑模式 -->
@@ -53,10 +55,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { EditOutlined, SaveOutlined } from '@ant-design/icons-vue'
 import RichTextEditor from '@/pages/dashboard/raining-project-management/components/RichTextEditor.vue'
+import { getSysConfigByCodeApi, updateSysConfigByCodeApi } from '@/api/system/config'
 
 // 默认免责声明内容
 const defaultContent = `
@@ -96,10 +99,33 @@ const defaultContent = `
 
 const isEditing = ref(false)
 const saveLoading = ref(false)
+const loading = ref(false)
 const disclaimerContent = ref<string>(defaultContent)
 const editContent = ref<string>('')
 
 const updateTime = ref(new Date().toLocaleDateString('zh-CN'))
+
+// 获取隐私协议内容
+const fetchDisclaimerContent = async () => {
+  try {
+    loading.value = true
+    const response = await getSysConfigByCodeApi({ code: 'privacy' })
+    if (response && response.data && response.data.config) {
+      disclaimerContent.value = response.data.config
+    }
+  } catch (error) {
+    console.error('获取隐私协议失败:', error)
+    // 如果获取失败，使用默认内容
+    disclaimerContent.value = defaultContent
+  } finally {
+    loading.value = false
+  }
+}
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchDisclaimerContent()
+})
 
 // 进入编辑模式
 const handleEdit = () => {
@@ -118,17 +144,17 @@ const handleSave = async () => {
   try {
     saveLoading.value = true
     
-    // 这里可以调用API保存到后端
-    // await saveDisclaimerApi({ content: editContent.value })
-    
-    // 模拟保存延迟
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用API保存到后端
+    await updateSysConfigByCodeApi({
+      config: editContent.value,
+      keyName: 'privacy',
+    })
     
     // 更新内容和时间
     disclaimerContent.value = editContent.value
     updateTime.value = new Date().toLocaleDateString('zh-CN')
     
-    message.success('免责声明保存成功')
+    message.success('隐私协议保存成功')
     isEditing.value = false
     editContent.value = ''
   } catch (error) {
