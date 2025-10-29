@@ -126,57 +126,57 @@ const handleTestSetSelectChange = (testSet: TestSet, checked: boolean) => {
 const testValidateFileList = ref<any[]>([])
 
 // 自定义上传请求（用于多文件上传）
-const handleLearningResourceCustomRequest = (options: any) => {
-  const { onSuccess } = options
-  // 直接调用成功回调，实际上传在 change 事件中处理
-  setTimeout(() => {
-    onSuccess('ok')
-  }, 0)
-}
+// const handleLearningResourceCustomRequest = (options: any) => {
+//   const { onSuccess } = options
+//   // 直接调用成功回调，实际上传在 change 事件中处理
+//   setTimeout(() => {
+//     onSuccess('ok')
+//   }, 0)
+// }
 
-// 处理评测文件上传
-const handleTestValidateFilesUpload = async (info: any) => {
-  const { fileList } = info
+// // 处理评测文件上传
+// const handleTestValidateFilesUpload = async (info: any) => {
+//   const { fileList } = info
   
-  // 过滤掉正在上传和失败的文件
-  const validFiles = fileList.filter((file: any) => {
-    if (file.status === 'uploading') return true
-    if (file.status === 'done' || !file.status) return true
-    return false
-  })
+//   // 过滤掉正在上传和失败的文件
+//   const validFiles = fileList.filter((file: any) => {
+//     if (file.status === 'uploading') return true
+//     if (file.status === 'done' || !file.status) return true
+//     return false
+//   })
   
-  testValidateFileList.value = validFiles
+//   testValidateFileList.value = validFiles
   
-  // 上传所有文件
-  const uploadPromises = validFiles
-    .filter((file: any) => file.originFileObj && !file.url)
-    .map(async (file: any) => {
-      try {
-        const url = await uploadFileApi(file.originFileObj)
-        file.url = url
-        return url
-      } catch (error) {
-        message.error(`文件 ${file.name} 上传失败`)
-        return null
-      }
-    })
+//   // 上传所有文件
+//   const uploadPromises = validFiles
+//     .filter((file: any) => file.originFileObj && !file.url)
+//     .map(async (file: any) => {
+//       try {
+//         const url = await uploadFileApi(file.originFileObj)
+//         file.url = url
+//         return url
+//       } catch (error) {
+//         message.error(`文件 ${file.name} 上传失败`)
+//         return null
+//       }
+//     })
   
-  if (uploadPromises.length > 0) {
-    const urls = await Promise.all(uploadPromises)
-    const successUrls = urls.filter(url => url !== null)
+//   if (uploadPromises.length > 0) {
+//     const urls = await Promise.all(uploadPromises)
+//     const successUrls = urls.filter(url => url !== null)
     
-    if (successUrls.length > 0) {
-      // 获取所有已上传文件的URL，用逗号拼接
-      const allUrls = validFiles
-        .filter((file: any) => file.url)
-        .map((file: any) => file.url)
-        .join(',')
+//     if (successUrls.length > 0) {
+//       // 获取所有已上传文件的URL，用逗号拼接
+//       const allUrls = validFiles
+//         .filter((file: any) => file.url)
+//         .map((file: any) => file.url)
+//         .join(',')
       
-      evaluationData.value.testValidateFiles = allUrls
-      message.success(`成功上传 ${successUrls.length} 个文件`)
-    }
-  }
-}
+//       evaluationData.value.testValidateFiles = allUrls
+//       message.success(`成功上传 ${successUrls.length} 个文件`)
+//     }
+//   }
+// }
 
 // 表单数据
 interface FormData {
