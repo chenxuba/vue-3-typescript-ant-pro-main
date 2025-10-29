@@ -5,7 +5,7 @@ import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
-import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi } from '@/api/project'
+import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 // @ts-ignore
@@ -64,6 +64,16 @@ const taskId = ref<number | null>(null)
 // 表单引用
 const formRef = ref<FormInstance>()
 const trainingScopeFormRef = ref<FormInstance>()
+
+// Jupyter编辑器
+const jupyterUrl = ref<string>('')
+const isFullscreen = ref(false)
+const loadingPodUrl = ref(false) // 加载Pod URL状态
+
+// 全屏切换
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value
+}
 
 // 图片上传相关
 const topCoverUrl = ref<string>('')
@@ -149,10 +159,15 @@ onMounted(async () => {
 
 // 监听步骤变化，自动创建任务
 watch(currentStep, async (newStep, oldStep) => {
-  // 当从第二步进入第三步，且还没有创建任务时，自动创建任务
+  // 当从第二步进入第三步（实验内容），且还没有创建任务时，自动创建任务
   if (newStep === 2 && oldStep === 1 && !taskId.value && projectId.value) {
-    console.log('进入第三步，自动创建任务...')
+    console.log('进入第三步（实验内容），自动创建任务...')
     await handleCreateTaskAutomatic()
+  }
+  
+  // 当进入第三步（实验内容），且已有任务ID时，获取Pod配置
+  if (newStep === 2 && taskId.value) {
+    await fetchPodConfig()
   }
 })
 
@@ -263,6 +278,7 @@ const loadedFolderKeys = ref<Set<string>>(new Set())
 const steps = [
   { title: '基本信息' },
   { title: '代码仓库' },
+  { title: '实验内容' },
   { title: '评测设置' },
   { title: '实验环境' },
 ]
@@ -973,7 +989,15 @@ const handleNext = async () => {
     // 提交创建项目
     await handleCreateProject()
   } else if (currentStep.value === 2) {
-    // 第三步：评测设置验证
+    // 第三步：实验内容，停止Pod后进入下一步
+    if (taskId.value) {
+      await handleStopPod()
+    }
+    
+    currentStep.value = 3
+    scrollToTop()
+  } else if (currentStep.value === 3) {
+    // 第四步：评测设置验证
     // 校验评测设置和参考答案是否都已保存
     if (!evaluationSaved.value) {
       message.error('请先保存评测设置后再进行下一步')
@@ -987,7 +1011,7 @@ const handleNext = async () => {
       return
     }
     
-    currentStep.value = 3
+    currentStep.value = 4
     scrollToTop()
   }
 }
@@ -1018,10 +1042,63 @@ const handleCreateTaskAutomatic = async () => {
       taskId.value = response.taskId
       console.log('任务ID已保存：', taskId.value)
       message.success('任务创建成功！')
+      
+      // 创建任务成功后，立即获取Pod配置
+      await fetchPodConfig()
     }
   } catch (error) {
     console.error('任务创建失败：', error)
     message.error('任务创建失败，请稍后重试')
+  }
+}
+
+// 获取Pod配置
+const fetchPodConfig = async () => {
+  if (!taskId.value) {
+    console.log('taskId不存在，无法获取Pod配置')
+    return
+  }
+  
+  try {
+    loadingPodUrl.value = true
+    console.log('正在获取Pod配置，taskId:', taskId.value)
+    
+    const podData = await getPodApi({ taskId: taskId.value })
+    console.log('获取到Pod数据：', podData)
+    
+    if (podData && podData.config && podData.config.url) {
+      jupyterUrl.value = podData.config.url
+      console.log('更新Jupyter URL为：', jupyterUrl.value)
+      message.success('实验环境加载成功！')
+    } else {
+      console.error('Pod配置中没有url字段')
+      message.warning('未获取到实验环境URL')
+    }
+  } catch (error) {
+    console.error('获取Pod配置失败：', error)
+    message.error('获取实验环境失败，请稍后重试')
+  } finally {
+    loadingPodUrl.value = false
+  }
+}
+
+// 停止Pod
+const handleStopPod = async () => {
+  if (!taskId.value) {
+    console.log('taskId不存在，无法停止Pod')
+    return
+  }
+  
+  try {
+    console.log('正在停止Pod，taskId:', taskId.value)
+    
+    await stopPodApi({ taskId: taskId.value })
+    console.log('Pod停止成功')
+    message.success('实验环境已停止')
+  } catch (error) {
+    console.error('停止Pod失败：', error)
+    message.error('停止实验环境失败，请稍后重试')
+    // 即使停止失败，也允许继续流程
   }
 }
 
@@ -1570,8 +1647,40 @@ const scrollToTop = () => {
         </div>
       </div>
 
-      <!-- 第三步：评测设置 -->
-      <div v-if="currentStep === 2" class="step-content evaluation-step">
+      <!-- 第三步：实验内容 -->
+      <div v-if="currentStep === 2" class="step-content">
+        <div class="jupyter-container" :class="{ 'fullscreen': isFullscreen }">
+          <div class="jupyter-header">
+            <h3>Jupyter Lab 编辑器</h3>
+            <div class="jupyter-actions">
+              <a-tooltip :title="isFullscreen ? '退出全屏' : '全屏'">
+                <a-button 
+                  type="text" 
+                  :icon="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+                  @click="toggleFullscreen"
+                >
+                  {{ isFullscreen ? '退出全屏' : '全屏' }}
+                </a-button>
+              </a-tooltip>
+            </div>
+          </div>
+          <div class="jupyter-iframe-wrapper">
+            <div v-if="loadingPodUrl" class="loading-container">
+              <a-spin size="large" tip="正在加载实验环境..." />
+            </div>
+            <iframe 
+              v-else
+              :src="jupyterUrl" 
+              class="jupyter-iframe"
+              frameborder="0"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- 第四步：评测设置 -->
+      <div v-if="currentStep === 3" class="step-content evaluation-step">
         <a-tabs v-model:activeKey="evaluationActiveTab" class="evaluation-tabs">
           <!-- 评测设置标签页 -->
           <a-tab-pane key="settings" tab="评测设置">
@@ -1764,8 +1873,8 @@ const scrollToTop = () => {
         </a-tabs>
       </div>
 
-      <!-- 第四步：实验环境 -->
-      <div v-if="currentStep === 3" class="step-content environment-step">
+      <!-- 第五步：实验环境 -->
+      <div v-if="currentStep === 4" class="step-content environment-step">
         <div class="environment-section">
           <h3 class="section-main-title">实验环境</h3>
           
@@ -1839,7 +1948,7 @@ const scrollToTop = () => {
       <div class="page-footer">
         <a-button v-if="currentStep === 0" @click="handleBack">返回</a-button>
         <a-button v-else @click="handleBack">上一步</a-button>
-        <a-button v-if="currentStep === 3" type="primary" @click="handleSave">完成创建</a-button>
+        <a-button v-if="currentStep === 4" type="primary" @click="handleSave">完成创建</a-button>
         <a-button v-else type="primary" @click="handleNext">下一步</a-button>
       </div>
     </div>
@@ -2158,6 +2267,72 @@ const scrollToTop = () => {
 .custom-radio ::v-deep(.ant-radio-inner::after) {
   background-color: var(--pro-ant-color-primary);
   transform: scale(0.5);
+}
+
+/* Jupyter编辑器样式 */
+.jupyter-container {
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+  transition: all 0.3s;
+  
+  &.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    border-radius: 0;
+    
+    .jupyter-iframe-wrapper {
+      height: calc(100vh - 64px);
+    }
+  }
+  
+  .jupyter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.85);
+    }
+    
+    .jupyter-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+  
+  .jupyter-iframe-wrapper {
+    width: 100%;
+    height: 700px;
+    position: relative;
+    
+    .loading-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+    }
+    
+    .jupyter-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+  }
 }
 
 /* 评测设置样式 */
