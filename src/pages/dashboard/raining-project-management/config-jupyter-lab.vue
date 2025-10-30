@@ -90,7 +90,7 @@ interface FormData {
   difficulty: number
   environment?: number | string // 支持数字和字符串
   secondType?: number
-  classHour: string
+  classHour: number
   topCover: string
   cover: string
   description: string
@@ -108,7 +108,7 @@ const formData = ref<FormData>({
   difficulty: 1,
   environment: undefined,
   secondType: undefined,
-  classHour: '',
+  classHour: 0,
   topCover: '',
   cover: '',
   description: '',
@@ -139,7 +139,7 @@ onMounted(async () => {
     formData.value.difficulty = routeData.difficulty || 1
     formData.value.environment = routeData.environment
     formData.value.secondType = routeData.secondType
-    formData.value.classHour = routeData.classHour || ''
+    formData.value.classHour = routeData.classHour || 0
     formData.value.showTaskRequire = routeData.showTaskRequire || false
 
     console.log('已自动填充表单数据:', {
@@ -190,9 +190,6 @@ const formRules: Record<string, Rule[]> = {
   ],
   secondType: [
     { required: true, message: '请选择小类别', trigger: 'change' },
-  ],
-  classHour: [
-    { required: true, message: '请输入学时', trigger: 'blur' },
   ],
   topCover: [
     { required: true, message: '请上传顶部背景图', trigger: 'change' },
@@ -1445,7 +1442,7 @@ const scrollToTop = () => {
               </a-col>
             </a-row>
 
-            <a-form-item label="学时" name="classHour" required>
+            <a-form-item label="学时" name="classHour" >
               <a-input-number :min="0" disabled class="w-full" v-model:value="formData.classHour" placeholder="配置任务后自动计算学时" />
             </a-form-item>
 

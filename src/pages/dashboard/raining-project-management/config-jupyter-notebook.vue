@@ -282,9 +282,6 @@ const formRules: Record<string, Rule[]> = {
   secondType: [
     { required: true, message: '请选择小类别', trigger: 'change' },
   ],
-  classHour: [
-    { required: true, message: '请输入学时', trigger: 'blur' },
-  ],
   topCover: [
     { required: true, message: '请上传顶部背景图', trigger: 'change' },
   ],
@@ -382,7 +379,6 @@ const handleCreateProject = async () => {
       tag: formData.value.tag,
       fieldType: formData.value.fieldType,
       difficulty: formData.value.difficulty,
-      classHour: formData.value.classHour,
       topCover: formData.value.topCover,
       cover: formData.value.cover,
       description: formData.value.description,
@@ -879,7 +875,7 @@ const handleCoverUpload = async (file: File) => {
               </a-col>
             </a-row>
 
-            <a-form-item label="学时" name="classHour" required>
+            <a-form-item label="学时" name="classHour">
               <a-input-number :min="0" disabled class="w-full" v-model:value="formData.classHour" placeholder="配置任务后自动计算学时" />
             </a-form-item>
 
