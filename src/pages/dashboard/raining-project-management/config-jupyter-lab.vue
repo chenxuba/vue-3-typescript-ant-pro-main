@@ -745,6 +745,7 @@ interface EvaluationData {
   testValidateFiles: string // 评测文件URL
   testValidateSh: string // 评测执行命令
   timeLimitM: string | number // 评测时长限制（分钟）
+  classHour: number | undefined // 学时
   scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
   evaluationSetting: number // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: TestSet[]
@@ -761,6 +762,7 @@ const evaluationData = ref<EvaluationData>({
   testValidateFiles: '', // 评测文件
   testValidateSh: '', // 评测执行命令
   timeLimitM: '', // 评测时长限制
+  classHour: undefined, // 学时
   scoreRule: 1, // 默认通过全部测试集
   evaluationSetting: 1, // 默认通过所有代码块评测
   testSets: [
@@ -905,7 +907,7 @@ const handleCreateProject = async () => {
       tag: formData.value.tag,
       fieldType: formData.value.fieldType,
       difficulty: formData.value.difficulty,
-      classHour: formData.value.classHour,
+      // classHour: formData.value.classHour,
       topCover: formData.value.topCover,
       cover: formData.value.cover,
       description: formData.value.description,
@@ -1101,6 +1103,12 @@ const handleSaveEvaluation = async () => {
         return
       }
       
+      // 校验学时
+      if (!evaluationData.value.classHour || evaluationData.value.classHour <= 0) {
+        message.error('请输入有效的学时')
+        return
+      }
+      
       // 校验测试集
       if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
         message.error('请至少添加一个测试集')
@@ -1138,6 +1146,7 @@ const handleSaveEvaluation = async () => {
       testValidateFiles: evaluationData.value.testValidateFiles,
       testValidateSh: evaluationData.value.testValidateSh,
       timeLimitM: evaluationData.value.timeLimitM,
+      classHour: evaluationData.value.classHour,
       scoreRule: evaluationData.value.scoreRule,
       evaluationSetting: evaluationData.value.evaluationSetting,
       testContent: JSON.stringify(testContentArray),
@@ -1586,6 +1595,15 @@ const scrollToTop = () => {
                           />
                           <span>分钟</span>
                         </div>
+                      </a-form-item>
+
+                      <a-form-item label="学时" required>
+                        <a-input-number 
+                          v-model:value="evaluationData.classHour" 
+                          :min="0"
+                          placeholder="请输入学时" 
+                          style="width: 600px"
+                        />
                       </a-form-item>
 
                       <a-form-item label="系统评分规则">
