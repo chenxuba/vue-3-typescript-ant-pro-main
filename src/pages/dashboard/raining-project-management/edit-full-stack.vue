@@ -311,19 +311,19 @@ const initializeExperimentEnvironments = () => {
 // 获取任务关卡列表并初始化任务关卡数据
 const fetchProjectTaskList = async () => {
   if (!projectId.value) return
-  
+
   try {
     const response = await getProjectTaskListApi({ projectId: projectId.value, orderbyFiled: 'weight:asc' })
-    
+
     // 兼容不同的返回格式
     let list: any[] = []
-    
+
     if (Array.isArray(response)) {
       list = response
     } else if (response && typeof response === 'object') {
       list = (response as any).list || (response as any).data || (response as any).tasks || []
     }
-    
+
     // 将获取的任务关卡数据转换为 taskLevels 格式
     if (list && list.length > 0) {
       taskLevels.value = list.map((task: ProjectTaskItem) => {
@@ -332,7 +332,7 @@ const fetchProjectTaskList = async () => {
         if (task.type === 4) taskType = 'kernel'
         else if (task.type === 2) taskType = 'choice'
         else if (task.type === 1) taskType = 'programming'
-        
+
         // 解析学习资源文件列表
         const sourceFiles = task.source ? task.source.split(',').map((url: string, index: number) => ({
           uid: `${index}`,
@@ -341,7 +341,7 @@ const fetchProjectTaskList = async () => {
           url: url,
           response: url,
         })) : []
-        
+
         // 解析测试集内容
         let testContent: any[] = []
         if (task.testContent) {
@@ -351,7 +351,7 @@ const fetchProjectTaskList = async () => {
             console.error('解析测试集内容失败:', e)
           }
         }
-        
+
         return {
           id: String(task.taskId),
           name: task.name,
@@ -402,16 +402,16 @@ const fetchProjectTaskList = async () => {
           questions: task.questions || [],
         }
       }) as any
-      
+
       // 如果有任务关卡，默认选中第一个
       if (taskLevels.value.length > 0) {
         selectTaskLevel(taskLevels.value[0].id)
       }
     }
-    
+
     // 初始化实验环境数据 - 从任务关卡中提取（通过 envIsDel 字段判断）
     let envData: any[] = []
-    
+
     if (list && list.length > 0) {
       list.forEach((task: any, index: number) => {
         // envIsDel 为 0 或者不存在该字段，表示实验环境未删除
@@ -430,12 +430,12 @@ const fetchProjectTaskList = async () => {
             containerPath: task.containerPath,
             envIsDel: task.envIsDel,
           }
-          
+
           envData.push(envConfig)
         }
       })
     }
-    
+
     // 解析实验环境数据
     if (envData.length > 0) {
       experimentEnvironments.value = envData.map((env: any, index: number) => {
@@ -450,7 +450,7 @@ const fetchProjectTaskList = async () => {
             viewTypesArray = env.viewTypes.map((v: any) => Number(v))
           }
         }
-        
+
         return {
           id: String(env.id || Date.now() + index),
           name: env.title || env.name || `实验环境${index + 1}`,
@@ -468,7 +468,7 @@ const fetchProjectTaskList = async () => {
           }
         }
       })
-      
+
       if (experimentEnvironments.value.length > 0) {
         activeEnvironmentKey.value = experimentEnvironments.value[0].id
       }
@@ -492,7 +492,7 @@ const fetchProjectDetail = async () => {
   try {
     loading.value = true
     const detail = await getProjectDetailApi({ id: projectId.value })
-    
+
     // 回填基本信息表单数据
     formData.value = {
       name: detail.name || '',
@@ -510,7 +510,7 @@ const fetchProjectDetail = async () => {
       gitUrl: detail.gitUrl || '',
       environment: detail.environment,
     }
-    
+
     // 设置图片预览
     if (detail.topCover) {
       topCoverUrl.value = imageUrlPrefix + detail.topCover
@@ -518,19 +518,19 @@ const fetchProjectDetail = async () => {
     if (detail.cover) {
       coverUrl.value = imageUrlPrefix + detail.cover
     }
-    
+
     // 设置实验环境
     selectedEnvironment.value = detail.environment || 1
-    
+
     // 如果有仓库地址，自动打开开关并锁定输入框
     // 注意：不在这里加载文件树，而是等到用户进入第二步时再加载
     if (detail.gitUrl) {
       isRepositoryUrlLocked.value = true
     }
-    
+
     // 获取任务关卡列表和实验环境
     await fetchProjectTaskList()
-    
+
   } catch (error: any) {
     console.error('获取项目详情失败：', error)
     message.error(error.message || '获取项目详情失败')
@@ -617,16 +617,16 @@ const handleRepositorySwitchChange = (checked: boolean | string | number) => {
 const fetchRepositoryFiles = async () => {
   try {
     const loadingMsg = message.loading('正在查询仓库文件...', 0)
-    
+
     // 调用API获取文件列表
     const fileList = await getGitFileListApi(formData.value.gitUrl, '')
-    
+
     // 加载文件树
     loadRemoteFileTree(fileList)
-    
+
     // 清空已加载文件夹记录
     loadedFolderKeys.value.clear()
-    
+
     loadingMsg()
     message.success('仓库文件查询成功')
     console.log('查询仓库地址：', formData.value.gitUrl)
@@ -645,13 +645,13 @@ const handleConfirmRepository = async () => {
     handleCancelRepository()
     return
   }
-  
+
   formData.value.enableCodeRepository = true
   showRepositoryModal.value = false
-  
+
   // 锁定仓库地址输入框
   isRepositoryUrlLocked.value = true
-  
+
   // 请求接口查询仓库文件（目前模拟）
   await fetchRepositoryFiles()
 }
@@ -668,7 +668,7 @@ watch(() => formData.value.repositoryType, (newType) => {
     // 选择切换仓库时，解锁仓库地址输入框
     isRepositoryUrlLocked.value = false
     message.info('已解锁仓库地址，请重新输入')
-    
+
     // 自动切换回代码仓库选项
     nextTick(() => {
       formData.value.repositoryType = '代码仓库'
@@ -691,33 +691,33 @@ const handleRepositoryUrlBlur = () => {
 // 处理文件树展开事件
 const handleTreeExpand = async (_expandedKeys: (string | number)[], info: any) => {
   const { expanded, node } = info
-  
+
   // 只处理展开事件，且是文件夹节点
   if (expanded && !node.isLeaf) {
     const nodeKey = String(node.key)
-    
+
     // 如果该文件夹已经加载过，则不再重复加载
     if (loadedFolderKeys.value.has(nodeKey)) {
       console.log('文件夹已加载，跳过：', nodeKey)
       return
     }
-    
+
     try {
       // 获取该节点的路径
       const nodePath = getNodePathFromMap(nodeKey)
       console.log('加载文件夹：', nodePath, '节点key:', nodeKey)
-      
+
       const loadingMsg = message.loading(`正在加载 ${node.title}...`, 0)
-      
+
       // 调用API获取子文件列表
       const fileList = await getGitFileListApi(formData.value.gitUrl, nodePath)
-      
+
       // 加载子文件到树中
       loadChildrenData(nodeKey, fileList)
-      
+
       // 标记该文件夹已加载
       loadedFolderKeys.value.add(nodeKey)
-      
+
       loadingMsg()
       console.log('文件夹加载成功：', nodePath, fileList)
     } catch (error: any) {
@@ -781,18 +781,18 @@ const triggerFileUpload = (path: string) => {
 const handleFileUploadChange = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  
+
   if (!file) return
-  
+
   try {
     // 计算上传路径：如果在根目录，path为空；否则去掉前缀斜杠
     let uploadPath = currentUploadPath.value === '/' ? '' : currentUploadPath.value.replace(/^\//, '')
-    
+
     const loadingMsg = message.loading(`正在上传 ${file.name}...`, 0)
-    
+
     // 调用API上传文件到Git仓库
     await uploadFileToGitApi(file, formData.value.gitUrl, uploadPath)
-    
+
     // 读取文件内容并添加到本地文件树（用于预览）
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -800,7 +800,7 @@ const handleFileUploadChange = async (event: Event) => {
       addFileToTree(file.name, content, currentUploadPath.value)
     }
     reader.readAsText(file)
-    
+
     loadingMsg()
     message.success(`文件 ${file.name} 上传成功`)
     console.log('文件上传成功：', { fileName: file.name, path: uploadPath })
@@ -826,9 +826,9 @@ const handleConfirmNewFile = async (newFileData: NewFileForm) => {
   try {
     // 计算文件路径：如果在根目录，path为空；否则去掉前缀斜杠
     let filePath = currentParentPath.value === '/' ? '' : currentParentPath.value.replace(/^\//, '')
-    
+
     const loadingMsg = message.loading('正在保存文件...', 0)
-    
+
     // 调用API保存文件
     await saveGitFileContentApi({
       fileContent: newFileData.fileContent,
@@ -837,14 +837,14 @@ const handleConfirmNewFile = async (newFileData: NewFileForm) => {
       path: filePath,
       commit: newFileData.commitMessage,
     })
-    
+
     // 添加到本地文件树
     addFileToTree(newFileData.fileName, newFileData.fileContent, currentParentPath.value)
-    
+
     loadingMsg()
     message.success('文件创建成功')
     showNewFileModal.value = false
-    
+
     console.log('文件保存成功：', { fileName: newFileData.fileName, path: filePath })
   } catch (error: any) {
     message.error(error.message || '文件创建失败')
@@ -862,26 +862,26 @@ const handleNewFolder = (parentPath: string = '/') => {
 const handleConfirmNewFolder = async (newFolderData: NewFolderForm) => {
   try {
     // 计算文件夹路径：如果在根目录，path为文件夹名；否则拼接路径
-    let folderPath = currentFolderParentPath.value === '/' 
-      ? newFolderData.folderName 
+    let folderPath = currentFolderParentPath.value === '/'
+      ? newFolderData.folderName
       : `${currentFolderParentPath.value.replace(/^\//, '')}/${newFolderData.folderName}`
-    
+
     const loadingMsg = message.loading('正在创建文件夹...', 0)
-    
+
     // 调用API创建文件夹
     await createGitDirApi({
       commit: newFolderData.commitMessage,
       gitUrl: formData.value.gitUrl,
       path: folderPath,
     })
-    
+
     // 添加到本地文件树
     addFolderToTree(newFolderData.folderName, currentFolderParentPath.value)
-    
+
     loadingMsg()
     message.success('文件夹创建成功')
     showNewFolderModal.value = false
-    
+
     console.log('文件夹创建成功：', { folderName: newFolderData.folderName, path: folderPath })
   } catch (error: any) {
     message.error(error.message || '文件夹创建失败')
@@ -897,7 +897,7 @@ const removeNodeFromTree = (nodeKey: string) => {
       nodes.splice(index, 1)
       return true
     }
-    
+
     for (const node of nodes) {
       if (node.children && deleteNode(node.children)) {
         return true
@@ -905,7 +905,7 @@ const removeNodeFromTree = (nodeKey: string) => {
     }
     return false
   }
-  
+
   deleteNode(fileTreeData.value)
 }
 
@@ -913,15 +913,15 @@ const removeNodeFromTree = (nodeKey: string) => {
 const handleDeleteWithApi = async (nodeData: any) => {
   const isFolder = nodeData.children !== undefined || nodeData.isLeaf === false
   const fileName = nodeData.title
-  
+
   // 获取节点路径
   const fullPath = getNodePathFromMap(nodeData.key) || getNodePath(nodeData.key)
-  
+
   // 计算 path 参数（去除文件名，只保留父路径）
   const pathParts = fullPath.split('/')
   pathParts.pop() // 移除最后一个元素（文件/文件夹名）
   const path = pathParts.join('/') || '' // 如果是根目录，则为空字符串
-  
+
   const { Modal } = await import('ant-design-vue')
   Modal.confirm({
     title: '确认删除',
@@ -933,17 +933,17 @@ const handleDeleteWithApi = async (nodeData: any) => {
       let loadingMsg: any = null
       try {
         loadingMsg = message.loading('正在删除...', 0)
-        
+
         // 调用API删除文件/文件夹
         await deleteGitFileApi({
           fileName: fileName,
           gitUrl: formData.value.gitUrl,
           path: path,
         })
-        
+
         // API删除成功后，从本地树中移除节点
         removeNodeFromTree(nodeData.key)
-        
+
         loadingMsg()
         message.success('删除成功')
         console.log('删除成功：', { fileName, path })
@@ -987,7 +987,7 @@ const handleBack = async () => {
   if (currentStep.value > 0) {
     currentStep.value--
     scrollToTop()
-    
+
     // 如果返回到第二步（代码仓库），且有仓库地址且文件树为空，自动加载文件树
     if (currentStep.value === 1 && formData.value.gitUrl && formData.value.enableCodeRepository && fileTreeData.value.length === 0) {
       await fetchRepositoryFiles()
@@ -1007,7 +1007,7 @@ const handleNext = async () => {
       ])
       currentStep.value = 1
       scrollToTop()
-      
+
       // 如果有仓库地址且文件树为空，自动加载文件树
       if (formData.value.gitUrl && formData.value.enableCodeRepository && fileTreeData.value.length === 0) {
         await fetchRepositoryFiles()
@@ -1036,14 +1036,14 @@ const handleNext = async () => {
       message.error('请至少添加一个任务关卡')
       return
     }
-    
+
     // 检查是否所有关卡都已保存
     const hasUnsavedLevel = taskLevels.value.some(level => !level.taskId)
     if (hasUnsavedLevel) {
       message.error('请先保存所有任务关卡后再进行下一步')
       return
     }
-    
+
     // 批量保存所有任务关卡的修改
     try {
       // saveAllTaskLevels 会自动同步当前表单数据到本地状态，然后批量更新所有关卡
@@ -1053,7 +1053,7 @@ const handleNext = async () => {
       console.error('批量保存任务关卡失败:', error)
       return
     }
-    
+
     currentStep.value = 3
     scrollToTop()
   } else if (currentStep.value === 3) {
@@ -1063,7 +1063,7 @@ const handleNext = async () => {
       message.error('请先保存所有实验环境配置')
       return
     }
-    
+
     // 批量保存所有实验环境的修改
     try {
       await saveAllEnvironments()
@@ -1072,7 +1072,7 @@ const handleNext = async () => {
       console.error('批量保存实验环境失败:', error)
       return
     }
-    
+
     // 完成更新
     await handleUpdateProject(true)
   }
@@ -1082,7 +1082,7 @@ const handleNext = async () => {
 const handleUpdateProject = async (isComplete: boolean = false) => {
   try {
     loading.value = true
-    
+
     // 准备提交的数据
     const submitData: any = {
       id: projectId.value,
@@ -1113,7 +1113,7 @@ const handleUpdateProject = async (isComplete: boolean = false) => {
     }
 
     await updateProjectApi(submitData)
-    
+
     if (isComplete) {
       message.success('项目更新成功！')
       // 返回列表页
@@ -1202,7 +1202,7 @@ const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0)
 const saveAllEnvironments = async () => {
   // 先验证当前激活的实验环境的表单
   const currentEnv = experimentEnvironments.value.find(e => e.id === activeEnvironmentKey.value)
-  
+
   if (currentEnv) {
     // 验证当前环境的表单
     const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'secondType', 'taskId']
@@ -1238,27 +1238,27 @@ const saveAllEnvironments = async () => {
       throw new Error('当前实验环境表单验证失败')
     }
   }
-  
+
   // 过滤出所有已保存的实验环境（isSaved 为 true 的）
   const savedEnvironments = experimentEnvironments.value.filter(env => env.isSaved)
-  
+
   if (savedEnvironments.length === 0) {
     console.log('没有需要更新的实验环境')
     return
   }
-  
+
   console.log(`开始批量更新 ${savedEnvironments.length} 个实验环境`)
-  
+
   // 保存错误信息
   const errors: string[] = []
-  
+
   // 遍历所有已保存的实验环境
   for (const env of savedEnvironments) {
     try {
       if (!projectId.value) {
         throw new Error('项目ID不存在，无法保存')
       }
-      
+
       const updateData = {
         title: env.name,
         dockerImage: env.config.dockerImage,
@@ -1272,7 +1272,7 @@ const saveAllEnvironments = async () => {
         projectId: projectId.value,
         envisDel: 0,
       }
-      
+
       await updateProjectEnvironmentApi(updateData)
       console.log(`实验环境 "${env.name}" 更新成功`)
     } catch (error: any) {
@@ -1281,7 +1281,7 @@ const saveAllEnvironments = async () => {
       errors.push(errorMsg)
     }
   }
-  
+
   // 根据结果显示提示
   if (errors.length === 0) {
     message.success(`成功更新 ${savedEnvironments.length} 个实验环境`)
@@ -1322,9 +1322,9 @@ const toggleInterface = (type: number) => {
 // 判断任务关卡是否已被其他环境选择
 const isTaskLevelSelectedByOther = (currentEnvId: string, taskId: number | string | undefined) => {
   if (!taskId) return false
-  
+
   const taskIdNum = typeof taskId === 'string' ? Number(taskId) : taskId
-  
+
   return experimentEnvironments.value.some(env => {
     if (!env.config.taskId) return false
     const envTaskIdNum = typeof env.config.taskId === 'string' ? Number(env.config.taskId) : env.config.taskId
@@ -1362,21 +1362,21 @@ const handleDeleteEnvironment = async (id: string) => {
     message.warning('至少保留一个实验环境')
     return
   }
-  
+
   const index = experimentEnvironments.value.findIndex(e => e.id === id)
   if (index > -1) {
     const env = experimentEnvironments.value[index]
-    
+
     if (env.isSaved) {
       await saveEnvironment(env, 1)
     }
-    
+
     experimentEnvironments.value.splice(index, 1)
-    
+
     if (activeEnvironmentKey.value === id) {
       activeEnvironmentKey.value = experimentEnvironments.value[0].id
     }
-    
+
     if (!env.isSaved) {
       message.success('删除实验环境成功')
     }
@@ -1540,7 +1540,7 @@ onMounted(() => {
   difficulty.load()
   collateralEnvironment.load()
   programmingLanguage.load()
-  
+
   // 从路由参数获取项目ID
   const id = route.query.id
   if (id) {
@@ -1595,23 +1595,15 @@ onMounted(() => {
                 <a-col :span="12">
                   <a-form-item label="领域类别" name="fieldType" required :label-col="{ span: 4 }"
                     :wrapper-col="{ span: 12 }">
-                    <a-select 
-                      v-model:value="formData.fieldType" 
-                      placeholder="请选择领域类别" 
-                      :options="fieldCategory.options.value"
-                      :loading="fieldCategory.loading.value"
-                    />
+                    <a-select v-model:value="formData.fieldType" placeholder="请选择领域类别"
+                      :options="fieldCategory.options.value" :loading="fieldCategory.loading.value" />
                   </a-form-item>
                 </a-col>
               </a-row>
 
               <a-form-item label="难度" name="difficulty" required>
                 <a-radio-group v-model:value="formData.difficulty" class="custom-radio">
-                  <a-radio 
-                    v-for="item in difficulty.data.value" 
-                    :key="item.value" 
-                    :value="Number(item.value)"
-                  >
+                  <a-radio v-for="item in difficulty.data.value" :key="item.value" :value="Number(item.value)">
                     {{ item.name }}
                   </a-radio>
                 </a-radio-group>
@@ -1645,14 +1637,16 @@ onMounted(() => {
               <a-form-item label="封面图" name="cover" required>
                 <div class="flex items-top gap-16px">
                   <div class="flex flex-col gap-12px">
-                    <a-upload :before-upload="handleCoverUpload" :show-upload-list="false" accept="image/png,image/jpeg">
+                    <a-upload :before-upload="handleCoverUpload" :show-upload-list="false"
+                      accept="image/png,image/jpeg">
                       <a-button :loading="uploadingCover">
                         <template v-if="!uploadingCover">选择文件</template>
                         <template v-else>上传中...</template>
                       </a-button>
                     </a-upload>
                     <div v-if="coverUrl" class="image-preview">
-                      <img :src="coverUrl" alt="封面图预览" style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
+                      <img :src="coverUrl" alt="封面图预览"
+                        style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
                     </div>
                   </div>
                   <div class="upload-hint">
@@ -1703,13 +1697,8 @@ onMounted(() => {
                 class="repository-type-select" />
               <div class="repository-url-group">
                 <span class="url-label">仓库地址：</span>
-                <a-input 
-                  v-model:value="formData.gitUrl" 
-                  placeholder="请输入仓库地址" 
-                  class="url-input"
-                  :disabled="isRepositoryUrlLocked"
-                  @blur="handleRepositoryUrlBlur"
-                />
+                <a-input v-model:value="formData.gitUrl" placeholder="请输入仓库地址" class="url-input"
+                  :disabled="isRepositoryUrlLocked" @blur="handleRepositoryUrlBlur" />
               </div>
             </div>
 
@@ -1720,11 +1709,8 @@ onMounted(() => {
                 <div class="repository-switch-box flex items-center justify-between">
                   <div class="flex items-center gap-12px">
                     <span class="switch-label">代码仓库</span>
-                    <a-switch 
-                      :checked="formData.enableCodeRepository" 
-                      :disabled="formData.enableCodeRepository"
-                      @change="handleRepositorySwitchChange" 
-                    />
+                    <a-switch :checked="formData.enableCodeRepository" :disabled="formData.enableCodeRepository"
+                      @change="handleRepositorySwitchChange" />
                   </div>
                   <a-dropdown v-if="formData.enableCodeRepository">
                     <template #overlay>
@@ -1743,7 +1729,7 @@ onMounted(() => {
 
                 <!-- 文件树 -->
                 <FileTreeComponent v-if="formData.enableCodeRepository" :file-tree-data="fileTreeData"
-                  v-model:expanded-keys="expandedKeys" @select="handleSelectFile" @menu-click="handleTreeNodeMenuClick" 
+                  v-model:expanded-keys="expandedKeys" @select="handleSelectFile" @menu-click="handleTreeNodeMenuClick"
                   @expand="handleTreeExpand" />
 
                 <div v-if="formData.enableCodeRepository" class="repository-tips">
@@ -1780,7 +1766,8 @@ onMounted(() => {
               <div class="header-buttons">
                 <a-button type="primary" @click="addTaskLevel('kernel')">添加内核链接任务</a-button>
                 <a-button type="primary" @click="addTaskLevel('choice')">添加选择题任务</a-button>
-                <a-button v-if="formData.enableCodeRepository" type="primary" @click="addTaskLevel('programming')">添加编程任务</a-button>
+                <a-button v-if="formData.enableCodeRepository" type="primary"
+                  @click="addTaskLevel('programming')">添加编程任务</a-button>
               </div>
             </div>
 
@@ -1841,11 +1828,8 @@ onMounted(() => {
 
                         <a-form-item label="难度系数" name="difficulty" required>
                           <a-radio-group v-model:value="taskLevelFormData.difficulty" class="custom-radio">
-                            <a-radio 
-                              v-for="item in difficulty.data.value" 
-                              :key="item.value" 
-                              :value="Number(item.value)"
-                            >
+                            <a-radio v-for="item in difficulty.data.value" :key="item.value"
+                              :value="Number(item.value)">
                               {{ item.name }}
                             </a-radio>
                           </a-radio-group>
@@ -1881,8 +1865,8 @@ onMounted(() => {
                       <div v-else class="questions-list">
                         <div v-for="(question, index) in getCurrentQuestions" :key="question.id" class="question-item"
                           draggable="true" :class="{ 'dragging': draggedIndex === index }"
-                          @dragstart="handleDragStart(index)" @dragover="handleDragOver" @drop="handleDrop($event, index)"
-                          @dragend="handleDragEnd">
+                          @dragstart="handleDragStart(index)" @dragover="handleDragOver"
+                          @drop="handleDrop($event, index)" @dragend="handleDragEnd">
                           <div class="question-header">
                             <div class="question-number-with-drag">
                               <HolderOutlined class="drag-handle" />
@@ -1937,16 +1921,10 @@ onMounted(() => {
                               <div class="file-select-wrapper">
                                 <a-button type="primary" @click="showUserFileSelectModal = true">点击选择</a-button>
                                 <div class="selected-files-list">
-                                  <a-tag 
-                                    v-for="file in userFileList" 
-                                    :key="file.uid"
-                                    closable
-                                    @close="() => {
-                                      userFileList = userFileList.filter(f => f.uid !== file.uid)
-                                      evaluationFormData.userFiles = [...userFileList]
-                                    }"
-                                    style="margin: 4px;"
-                                  >
+                                  <a-tag v-for="file in userFileList" :key="file.uid" closable @close="() => {
+                                    userFileList = userFileList.filter(f => f.uid !== file.uid)
+                                    evaluationFormData.userFiles = [...userFileList]
+                                  }" style="margin: 4px;">
                                     {{ file.name }}
                                   </a-tag>
                                 </div>
@@ -1960,16 +1938,10 @@ onMounted(() => {
                               <div class="file-select-wrapper">
                                 <a-button type="primary" @click="showTestValidateFileSelectModal = true">点击选择</a-button>
                                 <div class="selected-files-list">
-                                  <a-tag 
-                                    v-for="file in testValidateFileList" 
-                                    :key="file.uid"
-                                    closable
-                                    @close="() => {
-                                      testValidateFileList = testValidateFileList.filter(f => f.uid !== file.uid)
-                                      evaluationFormData.testValidateFiles = [...testValidateFileList]
-                                    }"
-                                    style="margin: 4px;"
-                                  >
+                                  <a-tag v-for="file in testValidateFileList" :key="file.uid" closable @close="() => {
+                                    testValidateFileList = testValidateFileList.filter(f => f.uid !== file.uid)
+                                    evaluationFormData.testValidateFiles = [...testValidateFileList]
+                                  }" style="margin: 4px;">
                                     {{ file.name }}
                                   </a-tag>
                                 </div>
@@ -2001,10 +1973,7 @@ onMounted(() => {
                             </a-form-item>
 
                             <a-form-item v-if="evaluationFormData.passType === 2" label="判定规则">
-                              <a-input 
-                                v-model:value="evaluationFormData.passTypeRule" 
-                                placeholder="请输入判定规则" 
-                              />
+                              <a-input v-model:value="evaluationFormData.passTypeRule" placeholder="请输入判定规则" />
                               <div class="upload-hint">
                                 （请输入实际输出满足的规则描述）
                               </div>
@@ -2058,7 +2027,8 @@ onMounted(() => {
                                   class="test-case-checkbox" />
                                 <span class="test-case-label">测试集{{ index + 1 }}</span>
                                 <a-input v-model:value="testCase.arg" placeholder="请输入输入内容" class="test-case-input" />
-                                <a-input v-model:value="testCase.answer" placeholder="请输入期望输出" class="test-case-output" />
+                                <a-input v-model:value="testCase.answer" placeholder="请输入期望输出"
+                                  class="test-case-output" />
                                 <DeleteOutlined class="delete-test-case" @click="removeTestCase(testCase.id)" />
                               </div>
                             </div>
@@ -2135,7 +2105,7 @@ onMounted(() => {
                         <div class="card-title">代码编辑器</div>
                         <div class="card-desc">提供代码编辑器，编辑器，调试器等工具</div>
                       </div>
-                      <div class="interface-card" :class="{ active: env.config.viewTypes.includes(2) }"
+                      <!-- <div class="interface-card" :class="{ active: env.config.viewTypes.includes(2) }"
                         @click="toggleInterface(2)">
                         <div class="card-title">命令行终端</div>
                         <div class="card-desc">提供命令行窗口</div>
@@ -2144,41 +2114,34 @@ onMounted(() => {
                         @click="toggleInterface(3)">
                         <div class="card-title">容器内服务</div>
                         <div class="card-desc">直接预览容器内部Web服务</div>
-                      </div>
+                      </div> -->
                     </div>
                   </a-form-item>
 
                   <a-form-item label="附带环境" name="secondType" required>
-                    <a-select 
-                      v-model:value="env.config.secondType" 
-                      placeholder="请选择附带环境" 
-                      :options="collateralEnvironment.options.value"
-                      :loading="collateralEnvironment.loading.value"
-                      allowClear
-                    />
+                    <a-select v-model:value="env.config.secondType" placeholder="请选择附带环境"
+                      :options="collateralEnvironment.options.value" :loading="collateralEnvironment.loading.value"
+                      allowClear />
                   </a-form-item>
 
                   <a-form-item label="任务关卡" name="taskId" required>
                     <a-select v-model:value="env.config.taskId" placeholder="请选择任务关卡" allowClear>
-                      <a-select-option v-for="level in sortedTaskLevels" :key="level.taskId || level.id" 
+                      <a-select-option v-for="level in sortedTaskLevels" :key="level.taskId || level.id"
                         :value="level.taskId ? String(level.taskId) : undefined"
                         :disabled="!level.taskId || isTaskLevelSelectedByOther(env.id, level.taskId)">
                         {{ level.name }}
                         <span v-if="!level.taskId" style="color: #999;"> (未保存)</span>
-                        <span v-else-if="isTaskLevelSelectedByOther(env.id, level.taskId)" style="color: #999;"> (已被使用)</span>
+                        <span v-else-if="isTaskLevelSelectedByOther(env.id, level.taskId)" style="color: #999;">
+                          (已被使用)</span>
                       </a-select-option>
                     </a-select>
                   </a-form-item>
 
                   <!-- 选择代码编辑器时显示编程语言 -->
                   <a-form-item v-if="env.config.viewTypes.includes(1)" label="编程语言" name="codeType" required>
-                    <a-select 
-                      v-model:value="env.config.codeType" 
-                      placeholder="请选择编程语言" 
-                      :options="programmingLanguage.options.value"
-                      :loading="programmingLanguage.loading.value"
-                      allowClear
-                    />
+                    <a-select v-model:value="env.config.codeType" placeholder="请选择编程语言"
+                      :options="programmingLanguage.options.value" :loading="programmingLanguage.loading.value"
+                      allowClear />
                   </a-form-item>
 
                   <!-- 选择命令行终端时显示开启时触发命令 -->
@@ -2219,12 +2182,7 @@ onMounted(() => {
     </a-spin>
 
     <!-- 隐藏的文件上传选择器 -->
-    <input 
-      ref="fileUploadInput" 
-      type="file" 
-      style="display: none" 
-      @change="handleFileUploadChange"
-    />
+    <input ref="fileUploadInput" type="file" style="display: none" @change="handleFileUploadChange" />
 
     <!-- 弹窗组件 -->
     <RepositoryModal v-model:open="showRepositoryModal" @confirm="handleConfirmRepository"
@@ -2235,27 +2193,19 @@ onMounted(() => {
     <!-- 新建文件夹弹窗 -->
     <NewFolderModal v-model:open="showNewFolderModal" :parent-path="currentFolderParentPath"
       @confirm="handleConfirmNewFolder" />
-    
+
     <!-- 添加题目弹窗 -->
     <QuestionModal v-model:open="showQuestionModal" :question="currentEditingQuestion"
       :project-id="projectId ?? undefined" :task-id="taskLevelFormData.taskId" :existing-questions="getCurrentQuestions"
       @confirm="handleConfirmQuestion" />
-    
+
     <!-- 学员任务文件选择器 -->
-    <FileSelectModal 
-      v-model:open="showUserFileSelectModal" 
-      title="选择学员任务文件"
-      :git-url="formData.gitUrl"
-      @confirm="handleUserFilesSelect" 
-    />
-    
+    <FileSelectModal v-model:open="showUserFileSelectModal" title="选择学员任务文件" :git-url="formData.gitUrl"
+      @confirm="handleUserFilesSelect" />
+
     <!-- 评测执行文件选择器 -->
-    <FileSelectModal 
-      v-model:open="showTestValidateFileSelectModal" 
-      title="选择评测执行文件"
-      :git-url="formData.gitUrl"
-      @confirm="handleTestValidateFilesSelect" 
-    />
+    <FileSelectModal v-model:open="showTestValidateFileSelectModal" title="选择评测执行文件" :git-url="formData.gitUrl"
+      @confirm="handleTestValidateFilesSelect" />
   </div>
 </template>
 
@@ -2312,7 +2262,7 @@ onMounted(() => {
     .form-section {
       max-width: 100%;
       overflow-x: hidden;
-      
+
       .ant-form-item {
         margin-bottom: 24px;
 
@@ -2496,6 +2446,7 @@ onMounted(() => {
 }
 
 .edit-full-stack-page {
+
   // 任务关卡样式
   .task-level-section {
     .task-level-header {
@@ -2933,6 +2884,7 @@ onMounted(() => {
     gap: 16px;
 
     .interface-card {
+      max-width: 350px;
       flex: 1;
       background: #e8e8e8;
       color: rgba(0, 0, 0, 0.65);
@@ -2973,4 +2925,3 @@ onMounted(() => {
   }
 }
 </style>
-

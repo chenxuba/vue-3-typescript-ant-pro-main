@@ -51,7 +51,7 @@ interface EvaluationData {
   openTestValidate: number // 1开 2不开
   testValidateFiles: string // 评测文件URL
   testValidateSh: string // 评测执行命令
-  timeLimitM: string // 评测时长限制（分钟）
+  timeLimitM: number | undefined // 评测时长限制（分钟）
   scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
   evaluationSetting: number // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: TestSet[]
@@ -68,7 +68,7 @@ const evaluationData = ref<EvaluationData>({
   openTestValidate: 1, // 默认开启
   testValidateFiles: '', // 评测文件
   testValidateSh: '', // 评测执行命令
-  timeLimitM: '', // 评测时长限制
+  timeLimitM: undefined, // 评测时长限制
   scoreRule: 1, // 默认通过全部测试集
   evaluationSetting: 1, // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: [
@@ -365,7 +365,7 @@ const fetchProjectTaskList = async () => {
         // 回填评测设置数据
         evaluationData.value.openTestValidate = task.openTestValidate || 1
         evaluationData.value.testValidateSh = task.testValidateSh || ''
-        evaluationData.value.timeLimitM = task.timeLimitM ? String(task.timeLimitM) : ''
+        evaluationData.value.timeLimitM = task.timeLimitM ? Number(task.timeLimitM) : undefined
         evaluationData.value.scoreRule = task.scoreRule || 1
         evaluationData.value.evaluationSetting = task.evaluationSetting || 1
         
@@ -549,9 +549,9 @@ const handleSaveEvaluation = async () => {
   // 如果启用了评测功能，进行非空校验
   if (evaluationData.value.openTestValidate === 1) {
     // 校验评测时长限制
-    if (!evaluationData.value.timeLimitM || evaluationData.value.timeLimitM.trim() === '') {
-      message.error('请输入评测时长限制')
-      throw new Error('请输入评测时长限制')
+    if (!evaluationData.value.timeLimitM || evaluationData.value.timeLimitM <= 0) {
+      message.error('请输入有效的评测时长限制')
+      throw new Error('请输入有效的评测时长限制')
     }
     
     // 校验测试集
