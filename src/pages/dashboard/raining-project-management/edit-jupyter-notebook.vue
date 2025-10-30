@@ -52,6 +52,7 @@ interface EvaluationData {
   testValidateFiles: string // 评测文件URL
   testValidateSh: string // 评测执行命令
   timeLimitM: number | undefined // 评测时长限制（分钟）
+  classHour: number | undefined // 学时
   scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
   evaluationSetting: number // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: TestSet[]
@@ -59,7 +60,6 @@ interface EvaluationData {
 
 interface TestSet {
   id: number
-  arg: string
   answer: string
   select: number
 }
@@ -69,11 +69,12 @@ const evaluationData = ref<EvaluationData>({
   testValidateFiles: '', // 评测文件
   testValidateSh: '', // 评测执行命令
   timeLimitM: undefined, // 评测时长限制
+  classHour: undefined, // 学时
   scoreRule: 1, // 默认通过全部测试集
   evaluationSetting: 1, // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: [
-    { id: 1, arg: '', answer: '', select: 1 },
-    { id: 2, arg: '', answer: '', select: 1 },
+    { id: 1, answer: '', select: 1 },
+    { id: 2, answer: '', select: 1 },
   ],
 })
 
@@ -101,7 +102,6 @@ let testSetIdCounter = 3
 const addTestSet = () => {
   evaluationData.value.testSets.push({
     id: testSetIdCounter++,
-    arg: '',
     answer: '',
     select: 1,
   })
@@ -366,6 +366,7 @@ const fetchProjectTaskList = async () => {
         evaluationData.value.openTestValidate = task.openTestValidate || 1
         evaluationData.value.testValidateSh = task.testValidateSh || ''
         evaluationData.value.timeLimitM = task.timeLimitM ? Number(task.timeLimitM) : undefined
+        evaluationData.value.classHour = task.classHour ? Number(task.classHour) : undefined
         evaluationData.value.scoreRule = task.scoreRule || 1
         evaluationData.value.evaluationSetting = task.evaluationSetting || 1
         
@@ -389,7 +390,6 @@ const fetchProjectTaskList = async () => {
             if (Array.isArray(testContent) && testContent.length > 0) {
               evaluationData.value.testSets = testContent.map((item: any, index: number) => ({
                 id: index + 1,
-                arg: item.arg || '',
                 answer: item.answer || '',
                 select: item.select || 1,
               }))
@@ -554,6 +554,12 @@ const handleSaveEvaluation = async () => {
       throw new Error('请输入有效的评测时长限制')
     }
     
+    // 校验学时
+    if (!evaluationData.value.classHour || evaluationData.value.classHour <= 0) {
+      message.error('请输入有效的学时')
+      throw new Error('请输入有效的学时')
+    }
+    
     // 校验测试集
     if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
       message.error('请至少添加一个测试集')
@@ -567,13 +573,9 @@ const handleSaveEvaluation = async () => {
       throw new Error('请至少选中一个测试集')
     }
     
-    // 校验选中的测试集是否填写了输入内容和期望输出
+    // 校验选中的测试集是否填写了期望输出
     for (let i = 0; i < selectedTestSets.length; i++) {
       const testSet = selectedTestSets[i]
-      if (!testSet.arg || testSet.arg.trim() === '') {
-        message.error(`测试集${i + 1}的输入内容不能为空`)
-        throw new Error(`测试集${i + 1}的输入内容不能为空`)
-      }
       if (!testSet.answer || testSet.answer.trim() === '') {
         message.error(`测试集${i + 1}的期望输出不能为空`)
         throw new Error(`测试集${i + 1}的期望输出不能为空`)
@@ -583,7 +585,6 @@ const handleSaveEvaluation = async () => {
   
   // 准备测试集数据
   const testContentArray = evaluationData.value.testSets.map(item => ({
-    arg: item.arg,
     answer: item.answer,
     select: item.select,
   }))
@@ -596,6 +597,7 @@ const handleSaveEvaluation = async () => {
     testValidateFiles: evaluationData.value.testValidateFiles,
     testValidateSh: evaluationData.value.testValidateSh,
     timeLimitM: evaluationData.value.timeLimitM,
+    classHour: evaluationData.value.classHour,
     scoreRule: evaluationData.value.scoreRule,
     evaluationSetting: evaluationData.value.evaluationSetting,
     testContent: JSON.stringify(testContentArray),
@@ -605,7 +607,7 @@ const handleSaveEvaluation = async () => {
     // 调用更新任务接口
     await updateProjectTaskApi(taskUpdateData as any)
     evaluationSaved.value = true
-    // message.success('评测设置保存成功！')
+    message.success('评测设置保存成功！')
   } catch (error) {
     message.error('评测设置保存失败，请重试')
     throw error
@@ -1046,6 +1048,15 @@ onMounted(async () => {
                           />
                         </a-form-item>
 
+                        <a-form-item label="学时" required>
+                          <a-input-number 
+                            :min="0"
+                            v-model:value="evaluationData.classHour" 
+                            placeholder="请输入学时" 
+                            style="width: 600px"
+                          />
+                        </a-form-item>
+
                         <a-form-item label="系统评分规则">
                           <a-radio-group v-model:value="evaluationData.scoreRule" class="custom-radio">
                             <a-radio :value="1">
@@ -1092,12 +1103,6 @@ onMounted(async () => {
                         class="test-set-checkbox" 
                       />
                       <span class="test-set-label">测试集{{ index + 1 }}</span>
-                      <a-textarea 
-                        v-model:value="testSet.arg" 
-                        placeholder="请输入输入内容"
-                        class="test-set-input"
-                        :auto-size="{ minRows: 3 }"
-                      />
                       <a-textarea 
                         v-model:value="testSet.answer" 
                         placeholder="请输入期望输出"

@@ -47,6 +47,7 @@ interface EvaluationData {
   openTestValidate: number // 1开 2不开
   testValidateFiles: string // 评测文件URL
   timeLimitM: number | undefined // 评测时长限制（分钟）
+  classHour: number | undefined // 学时
   scoreRule: number // 系统评分规则：1-通过全部测试集 2-通过部分测试集
   evaluationSetting: number // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: TestSet[]
@@ -54,7 +55,6 @@ interface EvaluationData {
 
 interface TestSet {
   id: number
-  arg: string
   answer: string
   select: number
 }
@@ -63,11 +63,11 @@ const evaluationData = ref<EvaluationData>({
   openTestValidate: 1, // 默认开启
   testValidateFiles: '', // 评测文件
   timeLimitM: undefined, // 评测时长限制
+  classHour: undefined, // 学时
   scoreRule: 1, // 默认通过全部测试集
   evaluationSetting: 1, // 1-通过所有代码块评测 2-通过指定代码块评测
   testSets: [
-    { id: 1, arg: '', answer: '', select: 1 },
-    { id: 2, arg: '', answer: '', select: 1 },
+    { id: 1, answer: '', select: 1 },
   ],
 })
 
@@ -95,7 +95,6 @@ let testSetIdCounter = 3
 const addTestSet = () => {
   evaluationData.value.testSets.push({
     id: testSetIdCounter++,
-    arg: '',
     answer: '',
     select: 1,
   })
@@ -561,6 +560,12 @@ const handleSaveEvaluation = async () => {
         return
       }
       
+      // 校验学时
+      if (!evaluationData.value.classHour || evaluationData.value.classHour <= 0) {
+        message.error('请输入有效的学时')
+        return
+      }
+      
       // 校验测试集
       if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
         message.error('请至少添加一个测试集')
@@ -574,13 +579,9 @@ const handleSaveEvaluation = async () => {
         return
       }
       
-      // 校验选中的测试集是否填写了输入内容和期望输出
+      // 校验选中的测试集是否填写了期望输出
       for (let i = 0; i < selectedTestSets.length; i++) {
         const testSet = selectedTestSets[i]
-        if (!testSet.arg || testSet.arg.trim() === '') {
-          message.error(`测试集${i + 1}的输入内容不能为空`)
-          return
-        }
         if (!testSet.answer || testSet.answer.trim() === '') {
           message.error(`测试集${i + 1}的期望输出不能为空`)
           return
@@ -591,7 +592,6 @@ const handleSaveEvaluation = async () => {
     // 准备测试集数据（转换为与 config-full-stack.vue 一致的格式）
     // 注意：需要传递所有测试集，包括未选中的（select=2），不包含id字段
     const testContentArray = evaluationData.value.testSets.map(item => ({
-      arg: item.arg,
       answer: item.answer,
       select: item.select, // 1=选中, 2=未选中
     }))
@@ -603,6 +603,7 @@ const handleSaveEvaluation = async () => {
       openTestValidate: evaluationData.value.openTestValidate,
       testValidateFiles: evaluationData.value.testValidateFiles,
       timeLimitM: evaluationData.value.timeLimitM,
+      classHour: evaluationData.value.classHour,
       scoreRule: evaluationData.value.scoreRule,
       testContent: JSON.stringify(testContentArray), // 转换为 JSON 字符串，与 config-full-stack.vue 一致
     }
@@ -1028,6 +1029,15 @@ const handleCoverUpload = async (file: File) => {
                         />
                       </a-form-item>
 
+                      <a-form-item label="学时" required>
+                        <a-input-number 
+                          v-model:value="evaluationData.classHour" 
+                          :min="0"
+                          placeholder="请输入学时" 
+                          style="width: 600px"
+                        />
+                      </a-form-item>
+
                       <a-form-item label="系统评分规则">
                         <a-radio-group v-model:value="evaluationData.scoreRule" class="custom-radio">
                           <a-radio :value="1">
@@ -1074,12 +1084,6 @@ const handleCoverUpload = async (file: File) => {
                       class="test-set-checkbox" 
                     />
                     <span class="test-set-label">测试集{{ index + 1 }}</span>
-                    <a-textarea 
-                      v-model:value="testSet.arg" 
-                      placeholder="请输入输入内容"
-                      class="test-set-input"
-                      :auto-size="{ minRows: 3 }"
-                    />
                     <a-textarea 
                       v-model:value="testSet.answer" 
                       placeholder="请输入期望输出"
