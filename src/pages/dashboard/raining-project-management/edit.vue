@@ -32,6 +32,8 @@ const projectType = ref(1)
 // 完整的项目详情数据（用于更新时合并）
 const projectDetail = ref<any>(null)
 
+
+
 // 编辑项目表单
 const editForm = ref<{
   name: string
@@ -39,7 +41,7 @@ const editForm = ref<{
   difficulty: number | undefined
   environment: string | undefined
   secondType: number | undefined
-  classHour: string
+  classHour: number
   showTaskRequire: boolean
 }>({
   name: '',
@@ -47,7 +49,7 @@ const editForm = ref<{
   difficulty: undefined,
   environment: undefined,
   secondType: undefined,
-  classHour: '',
+  classHour: 0,
   showTaskRequire: false,
 })
 
@@ -160,7 +162,7 @@ const fetchProjectDetail = async () => {
       difficulty: detail.difficulty || undefined,
       environment: detail.environment || undefined,
       secondType: detail.secondType || undefined,
-      classHour: detail.classHour ? String(detail.classHour) : '',
+      classHour: detail.classHour ? Number(detail.classHour) : 0,
       showTaskRequire: detail.showTaskRequire === 1,
     }
   } catch (error: any) {
@@ -411,7 +413,13 @@ onMounted(() => {
             </a-form-item>
 
             <a-form-item label="学时" name="classHour">
-              <a-input v-model:value="editForm.classHour" placeholder="配置任务后自动计算" disabled />
+              <a-input-number 
+                :min="0" 
+                class="w-full" 
+                v-model:value="editForm.classHour" 
+                disabled
+                placeholder="配置任务后自动计算" 
+              />
             </a-form-item>
           </a-form>
         </div>

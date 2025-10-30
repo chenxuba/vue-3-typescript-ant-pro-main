@@ -1446,7 +1446,7 @@ const scrollToTop = () => {
             </a-row>
 
             <a-form-item label="学时" name="classHour" required>
-              <a-input-number :min="0" class="w-full" v-model:value="formData.classHour" placeholder="请输入学时" />
+              <a-input-number :min="0" disabled class="w-full" v-model:value="formData.classHour" placeholder="配置任务后自动计算学时" />
             </a-form-item>
 
             <a-form-item label="顶部背景图" name="topCover" required>

@@ -86,7 +86,7 @@ export interface CreateProjectParams {
   tag: string
   fieldType?: number
   difficulty: number
-  classHour?: string
+  classHour?: number
   topCover: string
   cover: string
   description: string

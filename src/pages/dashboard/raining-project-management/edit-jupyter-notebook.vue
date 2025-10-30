@@ -186,7 +186,7 @@ interface FormData {
   difficulty: number
   environment?: number
   secondType?: number
-  classHour: string
+  classHour: number
   topCover: string
   cover: string
   description: string
@@ -201,7 +201,7 @@ const formData = ref<FormData>({
   difficulty: 1,
   environment: undefined,
   secondType: undefined,
-  classHour: '',
+  classHour: 0,
   topCover: '',
   cover: '',
   description: '',
@@ -312,7 +312,7 @@ const fetchProjectDetail = async () => {
       difficulty: detail.difficulty || 1,
       environment: detail.environment,
       secondType: detail.secondType,
-      classHour: detail.classHour || '',
+      classHour: detail.classHour ? Number(detail.classHour) : 0,
       topCover: detail.topCover || '',
       cover: detail.cover || '',
       description: detail.description || '',
@@ -897,7 +897,7 @@ onMounted(async () => {
               </a-row>
 
               <a-form-item label="学时" name="classHour" required>
-                <a-input-number :min="0" class="w-full" v-model:value="formData.classHour" placeholder="请输入学时" />
+                <a-input-number :min="0" class="w-full" disabled v-model:value="formData.classHour" placeholder="请输入学时" />
               </a-form-item>
 
               <a-form-item label="顶部背景图" name="topCover" required>
