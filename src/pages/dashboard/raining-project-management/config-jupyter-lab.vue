@@ -752,7 +752,6 @@ interface EvaluationData {
 
 interface TestSet {
   id: number
-  arg: string
   answer: string
   select: number
 }
@@ -765,8 +764,8 @@ const evaluationData = ref<EvaluationData>({
   scoreRule: 1, // 默认通过全部测试集
   evaluationSetting: 1, // 默认通过所有代码块评测
   testSets: [
-    { id: 1, arg: '', answer: '', select: 1 },
-    { id: 2, arg: '', answer: '', select: 1 },
+    { id: 1, answer: '', select: 1 },
+    { id: 2, answer: '', select: 1 },
   ],
 })
 
@@ -794,7 +793,6 @@ let testSetIdCounter = 3
 const addTestSet = () => {
   evaluationData.value.testSets.push({
     id: testSetIdCounter++,
-    arg: '',
     answer: '',
     select: 1,
   })
@@ -1116,13 +1114,9 @@ const handleSaveEvaluation = async () => {
         return
       }
       
-      // 校验选中的测试集是否填写了输入内容和期望输出
+      // 校验选中的测试集是否填写了期望输出
       for (let i = 0; i < selectedTestSets.length; i++) {
         const testSet = selectedTestSets[i]
-        if (!testSet.arg || testSet.arg.trim() === '') {
-          message.error(`测试集${i + 1}的输入内容不能为空`)
-          return
-        }
         if (!testSet.answer || testSet.answer.trim() === '') {
           message.error(`测试集${i + 1}的期望输出不能为空`)
           return
@@ -1132,7 +1126,6 @@ const handleSaveEvaluation = async () => {
     
     // 准备测试集数据
     const testContentArray = evaluationData.value.testSets.map(item => ({
-      arg: item.arg,
       answer: item.answer,
       select: item.select,
     }))
@@ -1641,12 +1634,6 @@ const scrollToTop = () => {
                       class="test-set-checkbox" 
                     />
                     <span class="test-set-label">测试集{{ index + 1 }}</span>
-                    <a-textarea 
-                      v-model:value="testSet.arg" 
-                      placeholder="请输入输入内容"
-                      class="test-set-input"
-                      :auto-size="{ minRows: 3 }"
-                    />
                     <a-textarea 
                       v-model:value="testSet.answer" 
                       placeholder="请输入期望输出"
