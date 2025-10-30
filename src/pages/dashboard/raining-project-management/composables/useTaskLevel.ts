@@ -25,6 +25,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     jumpUrl: '',
     type: 1, // 默认为编程任务
     projectId: projectId?.value || undefined,
+    weight: 0, // 默认权重为0
   })
 
   // 用于上传组件的临时文件列表
@@ -168,6 +169,11 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       kernel: '内核链接实训任务关卡',
     }
     
+    // 计算默认权重：找到当前最大权重，新任务权重为最大权重+1
+    const maxWeight = taskLevels.value.reduce((max, level) => {
+      return Math.max(max, level.weight || 0)
+    }, 0)
+    
     const newLevel: TaskLevel = {
       id: Date.now().toString(),
       name: `第${taskLevels.value.length + 1}关：${typeNames[type]}`,
@@ -178,6 +184,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       difficulty: 2,
       tag: '',
       classHour: '',
+      weight: maxWeight + 1, // 默认权重为当前最大权重+1
     }
     
     taskLevels.value.push(newLevel)
@@ -285,6 +292,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         type: typeMap[level.type] || 3,
         projectId: projectId?.value || undefined,
         taskId: level.taskId, // 加载已保存的 taskId
+        weight: level.weight || 0, // 加载权重
       }
       
       // 加载评测设置数据
@@ -343,6 +351,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       level.tag = taskLevelFormData.value.tag
       level.classHour = taskLevelFormData.value.classHour
       level.jumpUrl = taskLevelFormData.value.jumpUrl
+      level.weight = taskLevelFormData.value.weight || 0 // 保存权重
       // 保存 taskId（如果有）
       if (taskLevelFormData.value.taskId) {
         level.taskId = taskLevelFormData.value.taskId
@@ -545,6 +554,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
           classHour: level.classHour,
           jumpUrl: level.jumpUrl,
           projectId: projectId?.value || undefined,
+          weight: level.weight || 0,
         }
         
         // 根据任务类型设置type字段
@@ -650,6 +660,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
           jumpUrl: '',
           type: currentType,
           projectId: projectId?.value || undefined,
+          weight: 0,
         }
         
         // 重置评测设置表单数据为初始值

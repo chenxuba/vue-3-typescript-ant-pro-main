@@ -67,6 +67,7 @@ export interface TaskLevel {
   classHour: string
   jumpUrl?: string // 内嵌链接
   taskId?: number // 任务关卡ID，存在表示已保存到服务器
+  weight?: number // 排序权重，默认从小到大
   questions?: Question[] // 选择题题目列表
   // 评测设置
   evaluationSettings?: {
@@ -96,6 +97,7 @@ export interface TaskLevelForm {
   type: number // 1: 编程, 2: 选择题, 4: 内嵌链接
   projectId?: number // 项目ID
   taskId?: number // 任务关卡ID，存在表示已保存过
+  weight?: number // 排序权重，默认从小到大
 }
 
 // 测试集

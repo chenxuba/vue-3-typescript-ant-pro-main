@@ -344,7 +344,7 @@ const fetchProjectTaskList = async () => {
   if (!projectId.value) return
   
   try {
-    const response = await getProjectTaskListApi({ projectId: projectId.value })
+    const response = await getProjectTaskListApi({ projectId: projectId.value, orderbyFiled: 'weight:asc' })
     
     // 兼容不同的返回格式
     let list: any[] = []

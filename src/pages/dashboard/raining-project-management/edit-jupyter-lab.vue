@@ -529,7 +529,7 @@ const fetchProjectTaskList = async () => {
   if (!projectId.value) return
   
   try {
-    const response = await getProjectTaskListApi({ projectId: projectId.value })
+    const response = await getProjectTaskListApi({ projectId: projectId.value, orderbyFiled: 'weight:asc' })
     
     let list: any[] = []
     if (Array.isArray(response)) {

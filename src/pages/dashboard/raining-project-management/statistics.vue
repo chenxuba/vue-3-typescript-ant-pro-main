@@ -160,6 +160,7 @@ const fetchProjectTaskCount = async () => {
   try {
     const params: GetProjectTaskListParams = {
       projectId: projectId.value,
+      orderbyFiled:'task_id:asc',
     }
     
     const response = await getProjectTaskListApi(params)

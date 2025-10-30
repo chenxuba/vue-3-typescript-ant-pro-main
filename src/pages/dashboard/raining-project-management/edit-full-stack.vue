@@ -252,6 +252,15 @@ const {
   saveQuestionsOrder,
 } = useTaskLevel(projectId)
 
+// 任务关卡列表按权重排序（从小到大）
+const sortedTaskLevels = computed(() => {
+  return [...taskLevels.value].sort((a, b) => {
+    const weightA = a.weight ?? 0
+    const weightB = b.weight ?? 0
+    return weightA - weightB
+  })
+})
+
 // 弹窗状态
 const showRepositoryModal = ref(false)
 const showNewFileModal = ref(false)
@@ -304,7 +313,7 @@ const fetchProjectTaskList = async () => {
   if (!projectId.value) return
   
   try {
-    const response = await getProjectTaskListApi({ projectId: projectId.value })
+    const response = await getProjectTaskListApi({ projectId: projectId.value, orderbyFiled: 'weight:asc' })
     
     // 兼容不同的返回格式
     let list: any[] = []
@@ -1781,7 +1790,7 @@ onMounted(() => {
               <div class="task-level-list">
                 <div class="list-title">任务关卡 ({{ taskLevels.length }})</div>
                 <div class="list-items">
-                  <div v-for="level in taskLevels" :key="level.id"
+                  <div v-for="level in sortedTaskLevels" :key="level.id"
                     :class="['list-item', { active: selectedTaskLevelId === level.id }]"
                     @click="selectTaskLevel(level.id)">
                     <span class="item-name">{{ level.name }}</span>
@@ -1852,6 +1861,14 @@ onMounted(() => {
                         <a-form-item label="任务学时" name="classHour" required>
                           <a-input-number style="width:100%;" :min="0" v-model:value="taskLevelFormData.classHour"
                             placeholder="请输入任务学时" />
+                        </a-form-item>
+
+                        <a-form-item label="排序权重" name="weight">
+                          <a-input-number style="width:100%;" :min="0" v-model:value="taskLevelFormData.weight"
+                            placeholder="请输入排序权重，数值越小越靠前" />
+                          <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                            权重用于任务关卡排序，数值越小越靠前，默认按从小到大排序
+                          </div>
                         </a-form-item>
                       </a-form>
                     </a-tab-pane>
@@ -2143,7 +2160,7 @@ onMounted(() => {
 
                   <a-form-item label="任务关卡" name="taskId" required>
                     <a-select v-model:value="env.config.taskId" placeholder="请选择任务关卡" allowClear>
-                      <a-select-option v-for="level in taskLevels" :key="level.taskId || level.id" 
+                      <a-select-option v-for="level in sortedTaskLevels" :key="level.taskId || level.id" 
                         :value="level.taskId ? String(level.taskId) : undefined"
                         :disabled="!level.taskId || isTaskLevelSelectedByOther(env.id, level.taskId)">
                         {{ level.name }}

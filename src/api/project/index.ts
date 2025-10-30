@@ -294,6 +294,7 @@ export interface CreateProjectTaskParams {
   jumpUrl?: string
   type: number // 1: 编程, 2: 选择题, 4: 内嵌链接
   projectId?: number
+  weight?: number // 排序权重，默认从小到大
   // 评测设置相关字段（编程任务使用）
   timeLimitM?: number // 评测时长限制（单位：分钟）
   userFiles?: string // 学员任务文件（多个文件URL，逗号隔开）
@@ -360,6 +361,7 @@ export async function updateProjectTaskApi(params: UpdateProjectTaskParams): Pro
  */
 export interface GetProjectTaskListParams {
   projectId: number // 项目ID
+  orderbyFiled?: string // 排序字段，如 "task_id:asc"
 }
 
 /**
@@ -377,6 +379,7 @@ export interface ProjectTaskItem {
   jumpUrl?: string
   type: number
   projectId: number
+  weight?: number // 排序权重，默认从小到大
   // 评测设置相关字段
   timeLimitM?: number
   userFiles?: string
