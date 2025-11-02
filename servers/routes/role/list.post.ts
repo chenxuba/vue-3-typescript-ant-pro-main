@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const mockData = [
     {
       id: '1',
-      roleName: '实训项目管理员',
+      roleName: '项目管理员',
       roleCode: 'ROLE_001',
       isVirtualManagerRole: false,
       managementScopeType: '本单位及下属单位',

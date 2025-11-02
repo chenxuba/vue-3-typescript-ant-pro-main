@@ -3,7 +3,7 @@ export enum AccessEnum {
   ADMIN = 'ADMIN',
   USER = 'USER',
   
-  // 实训项目管理权限
+  // 项目管理权限
   PROJECT_VIEW = 'project:view',
   // PROJECT_LIST = 'project:list',
   // PROJECT_CREATE = 'project:create',

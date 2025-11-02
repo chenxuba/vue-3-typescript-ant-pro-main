@@ -26,7 +26,7 @@ const router = useRouter()
 const route = useRoute()
 
 // 获取项目信息（从路由参数）
-const projectName = ref(route.query.name || '实训项目管理详情')
+const projectName = ref(route.query.name || '项目管理详情')
 
 // 当前激活的标签页
 const activeTab = ref('participation')

@@ -8,7 +8,7 @@ export default [
     redirect: '/dashboard/analysis',
     name: 'Dashboard',
     meta: {
-      title: '实训项目管理',
+      title: '项目管理',
       icon: 'DashboardOutlined',
       hideChildrenInMenu:true,
       access: [AccessEnum.PROJECT_VIEW],
@@ -20,7 +20,7 @@ export default [
         name: 'DashboardAnalysis',
         component: () => import('~/pages/dashboard/raining-project-management/index.vue'),
         meta: {
-          title: '实训项目管理',
+          title: '项目管理',
           parentKeys:['/dashboard'],
           // access: [AccessEnum.PROJECT_LIST],
         },
@@ -85,7 +85,7 @@ export default [
         name: 'ProjectStatistics',
         component: () => import('~/pages/dashboard/raining-project-management/statistics.vue'),
         meta: {
-          title: '实训项目管理详情',
+          title: '项目管理详情',
           parentKeys:['/dashboard'],
           hideInMenu: true,
           // access: [AccessEnum.PROJECT_STATISTICS],

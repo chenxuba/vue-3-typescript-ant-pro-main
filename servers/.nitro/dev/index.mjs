@@ -3249,7 +3249,7 @@ const list_post$2 = defineEventHandler(async (event) => {
       userCode: "user004",
       userName: "\u5B59\u6885",
       organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
-      roles: ["\u5B9E\u8BAD\u9879\u76EE\u7BA1\u7406\u5458"],
+      roles: ["\u9879\u76EE\u7BA1\u7406\u5458"],
       roleIds: ["1"]
     },
     {
@@ -3330,7 +3330,7 @@ const _id__get = defineEventHandler(async (event) => {
   const id = getRouterParam(event, "id");
   const mockRole = {
     id,
-    roleName: "\u5B9E\u8BAD\u9879\u76EE\u7BA1\u7406\u5458",
+    roleName: "\u9879\u76EE\u7BA1\u7406\u5458",
     roleCode: "ROLE_001",
     isVirtualManagerRole: false,
     managementScopeType: "\u672C\u5355\u4F4D\u53CA\u4E0B\u5C5E\u5355\u4F4D",
@@ -3465,7 +3465,7 @@ const list_post = defineEventHandler(async (event) => {
   const mockData = [
     {
       id: "1",
-      roleName: "\u5B9E\u8BAD\u9879\u76EE\u7BA1\u7406\u5458",
+      roleName: "\u9879\u76EE\u7BA1\u7406\u5458",
       roleCode: "ROLE_001",
       isVirtualManagerRole: false,
       managementScopeType: "\u672C\u5355\u4F4D\u53CA\u4E0B\u5C5E\u5355\u4F4D",

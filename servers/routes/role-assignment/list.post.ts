@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
       userCode: 'user004',
       userName: '孙梅',
       organization: '管理信息化技术与应用发展部',
-      roles: ['实训项目管理员'],
+      roles: ['项目管理员'],
       roleIds: ['1'],
     },
     {

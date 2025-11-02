@@ -77,7 +77,7 @@ interface FormData {
   difficulty: number
   environment?: number | string // 支持数字和字符串
   secondType?: number
-  classHour: string
+  classHour: number | undefined
   topCover: string
   cover: string
   description: string
@@ -95,7 +95,7 @@ const formData = ref<FormData>({
   difficulty: 1,
   environment: undefined,
   secondType: undefined,
-  classHour: '',
+  classHour: 0,
   topCover: '',
   cover: '',
   description: '',
@@ -142,9 +142,6 @@ const formRules: Record<string, Rule[]> = {
   ],
   secondType: [
     { required: true, message: '请选择小类别', trigger: 'change' },
-  ],
-  classHour: [
-    { required: true, message: '请输入学时', trigger: 'blur' },
   ],
   topCover: [
     { required: true, message: '请上传顶部背景图', trigger: 'change' },
@@ -476,7 +473,7 @@ const fetchProjectDetail = async () => {
       difficulty: detail.difficulty || 1,
       environment: detail.environment,
       secondType: detail.secondType,
-      classHour: detail.classHour || '',
+      classHour: Number(detail.classHour) || undefined,
       topCover: detail.topCover || '',
       cover: detail.cover || '',
       description: detail.description || '',
@@ -1514,7 +1511,7 @@ onMounted(async () => {
                 </a-col>
               </a-row>
 
-              <a-form-item label="学时" name="classHour" required>
+              <a-form-item label="学时" name="classHour">
                 <a-input-number :min="0" disabled class="w-full" v-model:value="formData.classHour" placeholder="配置任务后自动计算学时" />
               </a-form-item>
 
