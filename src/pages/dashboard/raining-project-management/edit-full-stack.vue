@@ -2106,7 +2106,7 @@ onMounted(() => {
                         <div class="card-title">代码编辑器</div>
                         <div class="card-desc">提供代码编辑器，编辑器，调试器等工具</div>
                       </div>
-                      <!-- <div class="interface-card" :class="{ active: env.config.viewTypes.includes(2) }"
+                      <div class="interface-card" :class="{ active: env.config.viewTypes.includes(2) }"
                         @click="toggleInterface(2)">
                         <div class="card-title">命令行终端</div>
                         <div class="card-desc">提供命令行窗口</div>
@@ -2115,7 +2115,7 @@ onMounted(() => {
                         @click="toggleInterface(3)">
                         <div class="card-title">容器内服务</div>
                         <div class="card-desc">直接预览容器内部Web服务</div>
-                      </div> -->
+                      </div>
                     </div>
                   </a-form-item>
 
