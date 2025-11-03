@@ -72,7 +72,7 @@ const list_post = defineEventHandler(async (event) => {
       userCode: "user004",
       userName: "\u5B59\u6885",
       organization: "\u7BA1\u7406\u4FE1\u606F\u5316\u6280\u672F\u4E0E\u5E94\u7528\u53D1\u5C55\u90E8",
-      roles: ["\u5B9E\u8BAD\u9879\u76EE\u7BA1\u7406\u5458"],
+      roles: ["\u9879\u76EE\u7BA1\u7406\u5458"],
       roleIds: ["1"]
     },
     {

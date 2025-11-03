@@ -13,7 +13,7 @@ const list_post = defineEventHandler(async (event) => {
   const mockData = [
     {
       id: "1",
-      roleName: "\u5B9E\u8BAD\u9879\u76EE\u7BA1\u7406\u5458",
+      roleName: "\u9879\u76EE\u7BA1\u7406\u5458",
       roleCode: "ROLE_001",
       isVirtualManagerRole: false,
       managementScopeType: "\u672C\u5355\u4F4D\u53CA\u4E0B\u5C5E\u5355\u4F4D",
