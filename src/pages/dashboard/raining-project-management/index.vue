@@ -212,7 +212,7 @@ const fetchProjectList = async () => {
     const result = await getProjectListPagerApi(params)
 
     dataSource.value = result.list
-    pagination.value.total = result.count // 使用 count 字段作为总条数
+    pagination.value.total = result.total // 使用 count 字段作为总条数
   } catch (error: any) {
     message.error(error.message || '获取项目列表失败')
     dataSource.value = []
