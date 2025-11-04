@@ -7,7 +7,7 @@ const {  nickname } = storeToRefs(userStore)
 function handleClick({ key }: any) {
   if (key === 'backToFront') {
     // 跳转到前台页面
-    window.location.href = 'http://101.200.13.193/web'
+    window.location.href = `${window.location.origin}/web`
   }
 }
 </script>
