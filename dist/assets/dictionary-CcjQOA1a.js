@@ -1,1 +1,0 @@
-import{k as n}from"./index-BiYfe02N.js";async function r(t){const e=await n("/admin/api/dic/getDicGroup",t,{customDev:!0});if(e&&e.data)return e.data;throw new Error("获取字典数据失败")}function i(t){return{1:"project#environment_1",2:"project#environment_2",3:"project#environment_3"}[t]||""}export{r as a,i as g};

@@ -29,7 +29,7 @@ router.beforeEach(async (to, _, next) => {
         // 获取用户信息
         await userStore.getUserInfo()
         const roles = (userStore.userInfo as unknown as UserInfo)?.shixun?.roles || []
-        if (roles.includes('admin')) {
+        if (roles.includes('default')) {
           next({
             path: '/403',
           })

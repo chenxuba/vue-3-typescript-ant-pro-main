@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const router = useRouter()
+// const router = useRouter()
 function back() {
   window.location.href = `${window.location.origin}/web`
 }
