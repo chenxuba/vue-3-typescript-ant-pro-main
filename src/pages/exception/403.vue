@@ -1,17 +1,15 @@
 <script setup lang="ts">
 const router = useRouter()
 function back() {
-  router.replace({
-    path: '/',
-  })
+  window.location.href = `${window.location.origin}/web`
 }
 </script>
 
 <template>
-  <a-result status="403" title="403" sub-title="Sorry, you don't have access to this page.">
+  <a-result status="403" title="403" sub-title="抱歉，您没有访问此页面的权限。">
     <template #extra>
       <a-button type="primary" @click="back">
-        Back to home
+        返回
       </a-button>
     </template>
   </a-result>

@@ -50,5 +50,8 @@
     "src/locales",
     "src/locales/lang",
     "src/pages/common/locales"
+  ],
+  "cSpell.words": [
+    "shixun"
   ]
 }

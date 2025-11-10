@@ -17,7 +17,7 @@ const handleDownload = () => {
   // 如果有 fileUrl，从服务器下载
   if (file.fileUrl) {
     // 拼接完整的文件URL
-    const fullUrl = `http://101.200.13.193${file.fileUrl}`
+    const fullUrl = `${window.location.origin}${file.fileUrl}`
     
     // 创建一个隐藏的a标签来触发下载
     const link = document.createElement('a')

@@ -2,7 +2,7 @@ import { AxiosError } from 'axios'
 import router from '~/router'
 import { useMetaTitle } from '~/composables/meta-title'
 import { setRouteEmitter } from '~@/utils/route-listener'
-
+import type { UserInfo } from '~@/api/common/user'
 const allowList = ['/login', '/error', '/401', '/404', '/403']
 const loginPath = '/login'
 
@@ -28,6 +28,13 @@ router.beforeEach(async (to, _, next) => {
       try {
         // 获取用户信息
         await userStore.getUserInfo()
+        const roles = (userStore.userInfo as unknown as UserInfo)?.shixun?.roles || []
+        if (roles.includes('admin')) {
+          next({
+            path: '/403',
+          })
+          return
+        }
         // 获取路由菜单的信息
         const currentRoute = await userStore.generateDynamicRoutes()
         router.addRoute(currentRoute)

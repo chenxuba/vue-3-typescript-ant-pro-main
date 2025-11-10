@@ -80,7 +80,7 @@ const topCoverUrl = ref<string>('')
 const coverUrl = ref<string>('')
 const uploadingTopCover = ref(false)
 const uploadingCover = ref(false)
-const imageUrlPrefix = 'http://101.200.13.193'
+const imageUrlPrefix = window.location.origin
 
 // 表单数据
 interface FormData {

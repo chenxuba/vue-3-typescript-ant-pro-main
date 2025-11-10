@@ -19,6 +19,14 @@ export default [
     },
   },
   {
+    path: '/403',
+    name: 'Error500',
+    component: () => import('~/pages/exception/403.vue'),
+    meta: {
+      title: '您没有权限访问本系统',
+    },
+  },
+  {
     path: '/common',
     name: 'LayoutBasicRedirect',
     component: Layout,

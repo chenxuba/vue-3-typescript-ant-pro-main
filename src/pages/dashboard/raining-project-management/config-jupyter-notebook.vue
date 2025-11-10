@@ -208,7 +208,7 @@ const topCoverUrl = ref<string>('')
 const coverUrl = ref<string>('')
 const uploadingTopCover = ref(false)
 const uploadingCover = ref(false)
-const imageUrlPrefix = 'http://101.200.13.193'
+const imageUrlPrefix = window.location.origin
 
 // 从路由接收数据并填充表单
 onMounted(async () => {
@@ -471,7 +471,7 @@ const fetchPodConfig = async () => {
     
     if (podData && podData.config && podData.config.url) {
       // 拼接完整的URL - 基础URL + config中的url
-      // const baseUrl = 'http://101.200.13.193'
+      // const baseUrl = window.location.origin
       jupyterUrl.value = podData.config.url
       console.log('更新Jupyter URL为：', jupyterUrl.value)
       message.success('实验环境加载成功！')
