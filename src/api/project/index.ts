@@ -902,3 +902,138 @@ export async function getProjectUserTaskListPagerApi(params: GetProjectUserTaskL
   }
 }
 
+/**
+ * 导出项目用户列表的请求参数
+ */
+export interface ExportProjectUserParams {
+  limit: number
+  page: number
+  projectId: number
+  userId?: number | string // 用户编号
+  nickName?: string // 用户姓名
+  orgName?: string // 单位
+  status?: string // 参训状态
+}
+
+/**
+ * 导出项目用户列表
+ * @param params 导出参数
+ * @returns 返回文件blob
+ */
+export async function exportProjectUserApi(params: ExportProjectUserParams): Promise<Blob> {
+  // 直接使用axios实例处理blob响应
+  const axios = (await import('axios')).default
+  const { useAuthorization, AUTH_HEADER_KEY } = await import('~/composables/authorization')
+  const { useI18nLocale } = await import('~/composables/i18n-locale')
+  
+  const token = useAuthorization()
+  const { locale } = useI18nLocale()
+  
+  // 构建请求URL
+  let baseURL = import.meta.env.VITE_APP_BASE_API ?? '/'
+  if (import.meta.env.DEV && import.meta.env.VITE_APP_BASE_API_DEV && import.meta.env.VITE_APP_BASE_URL_DEV) {
+    baseURL = import.meta.env.VITE_APP_BASE_API_DEV
+  }
+  
+  const url = `${baseURL}/admin/api/projectUser/getExport`
+  
+  const response = await axios.post(url, params, {
+    responseType: 'blob',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token.value ? { [AUTH_HEADER_KEY]: token.value } : {}),
+      'Accept-Language': locale.value ?? 'zh-CN',
+    },
+  })
+  
+  // 检查响应是否为错误（blob响应中的错误通常是JSON格式）
+  if (response.data.type === 'application/json') {
+    const text = await response.data.text()
+    const errorData = JSON.parse(text)
+    if (errorData.result === 401 || errorData.code === 401) {
+      const { Modal } = await import('ant-design-vue')
+      Modal.confirm({
+        title: '登录失效',
+        content: errorData.msg || '无token，请重新登录',
+        okText: '确认',
+        okCancel: false,
+        onOk() {
+          window.location.href = `${window.location.origin}/web`
+        },
+      })
+      throw new Error(errorData.msg || '登录失效')
+    }
+    throw new Error(errorData.msg || '导出失败')
+  }
+  
+  return response.data as Blob
+}
+
+/**
+ * 导出任务完成情况列表的请求参数
+ */
+export interface ExportProjectUserTaskParams {
+  limit: number
+  page: number
+  projectId: number
+  taskId: number // 任务ID（必填）
+  userId?: number | string // 用户编号
+  nickName?: string // 用户姓名
+  orgName?: string // 单位
+  orderbyFiled?: string // 排序字段
+}
+
+/**
+ * 导出任务完成情况列表
+ * @param params 导出参数
+ * @returns 返回文件blob
+ */
+export async function exportProjectUserTaskApi(params: ExportProjectUserTaskParams): Promise<Blob> {
+  // 直接使用axios实例处理blob响应
+  const axios = (await import('axios')).default
+  const { useAuthorization, AUTH_HEADER_KEY } = await import('~/composables/authorization')
+  const { useI18nLocale } = await import('~/composables/i18n-locale')
+  
+  const token = useAuthorization()
+  const { locale } = useI18nLocale()
+  
+  // 构建请求URL
+  let baseURL = import.meta.env.VITE_APP_BASE_API ?? '/'
+  if (import.meta.env.DEV && import.meta.env.VITE_APP_BASE_API_DEV && import.meta.env.VITE_APP_BASE_URL_DEV) {
+    baseURL = import.meta.env.VITE_APP_BASE_API_DEV
+  }
+  
+  const url = `${baseURL}/admin/api/projectUserTask/export`
+  
+  const response = await axios.post(url, params, {
+    responseType: 'blob',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token.value ? { [AUTH_HEADER_KEY]: token.value } : {}),
+      'Accept-Language': locale.value ?? 'zh-CN',
+    },
+  })
+  
+  // 检查响应是否为错误（blob响应中的错误通常是JSON格式）
+  if (response.data.type === 'application/json') {
+    const text = await response.data.text()
+    const errorData = JSON.parse(text)
+    if (errorData.result === 401 || errorData.code === 401) {
+      const { Modal } = await import('ant-design-vue')
+      Modal.confirm({
+        title: '登录失效',
+        content: errorData.msg || '无token，请重新登录',
+        okText: '确认',
+        okCancel: false,
+        onOk() {
+          window.location.href = `${window.location.origin}/web`
+        },
+      })
+      throw new Error(errorData.msg || '登录失效')
+    }
+    throw new Error(errorData.msg || '导出失败')
+  }
+  
+  return response.data as Blob
+}
+

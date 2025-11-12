@@ -11,7 +11,11 @@ import {
   type GetProjectTaskListParams,
   getProjectUserTaskListPagerApi,
   type GetProjectUserTaskListParams,
-  type ProjectUserTaskListItem
+  type ProjectUserTaskListItem,
+  exportProjectUserApi,
+  type ExportProjectUserParams,
+  exportProjectUserTaskApi,
+  type ExportProjectUserTaskParams
 } from '@/api/project'
 import { 
   getAllOrganizationListApi,
@@ -42,14 +46,19 @@ const filterForm = ref({
 // 单位选项（从接口获取）
 const unitOptions = ref<Array<{ label: string; value: string }>>([])
 
-// 获取组织列表
-const fetchOrganizationList = async () => {
+// 组织搜索加载状态
+const fetchingOrganization = ref(false)
+
+// 获取组织列表（支持按 orgName 搜索）
+const fetchOrganizationList = async (searchValue: string = '') => {
+  fetchingOrganization.value = true
   try {
     const response = await getAllOrganizationListApi({
-      limit: 10000, // 获取所有数据
+      limit: 50, // 限制返回数量
       page: 1,
       startNum: 0,
       orderbyFiled: 'orgCode:asc',
+      orgName: searchValue || undefined, // 传递搜索关键词
     })
     
     if (response && response.data && response.data.list) {
@@ -62,7 +71,26 @@ const fetchOrganizationList = async () => {
   } catch (error) {
     console.error('获取组织列表失败:', error)
     message.error('获取组织列表失败')
+    unitOptions.value = []
+  } finally {
+    fetchingOrganization.value = false
   }
+}
+
+// 防抖定时器
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 远程搜索组织（带防抖）
+ */
+const handleSearchOrganization = (searchValue: string) => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+  
+  searchTimer = setTimeout(() => {
+    fetchOrganizationList(searchValue)
+  }, 300) // 300ms 防抖
 }
 
 // 参训状态选项
@@ -354,8 +382,90 @@ const handleReset = () => {
 }
 
 // 导出
-const handleExport = () => {
-  console.log('导出数据')
+const handleExport = async () => {
+  try {
+    message.loading({ content: '正在导出...', key: 'export', duration: 0 })
+    
+    let blob: Blob
+    let fileName: string
+    
+    if (activeTab.value === 'participation') {
+      // 参训整体情况导出
+      const params: ExportProjectUserParams = {
+        limit: pagination.value.pageSize,
+        page: pagination.value.current,
+        projectId: projectId.value,
+      }
+
+      // 添加筛选条件
+      if (filterForm.value.userNumber) {
+        params.userId = filterForm.value.userNumber
+      }
+      if (filterForm.value.userName) {
+        params.nickName = filterForm.value.userName
+      }
+      if (filterForm.value.unit) {
+        params.orgName = filterForm.value.unit
+      }
+      // 参训状态筛选
+      if (filterForm.value.status) {
+        params.status = filterForm.value.status
+      }
+
+      blob = await exportProjectUserApi(params)
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+      fileName = `${projectName.value || '项目统计'}_参训整体情况_${timestamp}.xlsx`
+    } else {
+      // 任务完成情况导出
+      if (!selectedTaskLevel.value) {
+        message.error({ content: '请先选择任务关卡', key: 'export' })
+        return
+      }
+      
+      const params: ExportProjectUserTaskParams = {
+        limit: taskPagination.value.pageSize,
+        page: taskPagination.value.current,
+        projectId: projectId.value,
+        taskId: selectedTaskLevel.value,
+        orderbyFiled: 'id:desc',
+      }
+
+      // 添加筛选条件
+      if (filterForm.value.userNumber) {
+        params.userId = filterForm.value.userNumber
+      }
+      if (filterForm.value.userName) {
+        params.nickName = filterForm.value.userName
+      }
+      if (filterForm.value.unit) {
+        params.orgName = filterForm.value.unit
+      }
+
+      blob = await exportProjectUserTaskApi(params)
+      const taskName = taskLevelList.value.find(t => t.taskId === selectedTaskLevel.value)?.name || '任务'
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+      fileName = `${projectName.value || '项目统计'}_${taskName}_${timestamp}.xlsx`
+    }
+    
+    // 创建下载链接
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    
+    // 触发下载
+    document.body.appendChild(link)
+    link.click()
+    
+    // 清理
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    message.success({ content: '导出成功', key: 'export' })
+  } catch (error: any) {
+    console.error('导出失败:', error)
+    message.error({ content: error.message || '导出失败', key: 'export' })
+  }
 }
 
 // 返回
@@ -421,9 +531,14 @@ onMounted(async () => {
                   <a-form-item label="单位：" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
                     <a-select 
                       v-model:value="filterForm.unit" 
-                      placeholder="请选择" 
+                      placeholder="请输入单位名称搜索" 
                       :options="unitOptions"
                       allow-clear
+                      show-search
+                      :filter-option="false"
+                      :loading="fetchingOrganization"
+                      :not-found-content="fetchingOrganization ? '加载中...' : '暂无数据'"
+                      @search="handleSearchOrganization"
                     />
                   </a-form-item>
                 </a-col>
@@ -511,9 +626,14 @@ onMounted(async () => {
                   <a-form-item label="单位：" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
                     <a-select 
                       v-model:value="filterForm.unit" 
-                      placeholder="请选择" 
+                      placeholder="请输入单位名称搜索" 
                       :options="unitOptions"
                       allow-clear
+                      show-search
+                      :filter-option="false"
+                      :loading="fetchingOrganization"
+                      :not-found-content="fetchingOrganization ? '加载中...' : '暂无数据'"
+                      @search="handleSearchOrganization"
                     />
                   </a-form-item>
                 </a-col>
