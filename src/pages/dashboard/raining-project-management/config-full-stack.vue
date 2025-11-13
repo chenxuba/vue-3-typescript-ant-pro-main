@@ -1958,7 +1958,10 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
                 <!-- 选择命令行终端时显示开启时触发命令 -->
                 <a-form-item v-if="env.config.viewTypes.includes(2)" label="开启时触发命令" name="shellBegin" required>
-                  <a-input v-model:value="env.config.shellBegin" placeholder="请输入命令" />
+                  <a-select v-model:value="env.config.shellBegin" placeholder="请选择终端类型">
+                    <a-select-option value="bash">bash</a-select-option>
+                    <a-select-option value="sh">sh</a-select-option>
+                  </a-select>
                 </a-form-item>
 
                 <!-- 选择容器内服务时显示容器端口和路由 -->
