@@ -223,7 +223,7 @@ const initializeExperimentEnvironments = () => {
         secondType: undefined,
         taskId: undefined,
         codeType: undefined,
-        shellBegin: undefined,
+        shellBegin: 'bash',
         containerPort: undefined,
         containerPath: undefined,
       }
