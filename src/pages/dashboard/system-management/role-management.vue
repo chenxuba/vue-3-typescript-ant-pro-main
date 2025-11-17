@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import type { RolePagerQueryParams, RolePagerItem } from '@/api/system/role'
@@ -357,6 +357,238 @@ const buildPermissionTree = () => {
 const routeAccessMap = buildRouteAccessMap()
 const accessRouteMap = buildAccessRouteMap()
 const permissionTree = ref(buildPermissionTree())
+const halfCheckedKeys = ref<string[]>([])
+const nodeMetaMap = ref<Record<string, { parentKey: string | null; childrenKeys: string[] }>>({})
+
+const rebuildNodeMetaMap = () => {
+  const map: Record<string, { parentKey: string | null; childrenKeys: string[] }> = {}
+  
+  const traverse = (nodes: any[], parentKey: string | null) => {
+    nodes.forEach((node: any) => {
+      map[node.key] = {
+        parentKey,
+        childrenKeys: node.children?.map((child: any) => child.key) || [],
+      }
+      
+      if (node.children && node.children.length > 0) {
+        traverse(node.children, node.key)
+      }
+    })
+  }
+  
+  traverse(permissionTree.value, null)
+  nodeMetaMap.value = map
+}
+
+const getDescendantKeys = (key: string): string[] => {
+  const meta = nodeMetaMap.value[key]
+  if (!meta) {
+    return []
+  }
+  
+  const result: string[] = []
+  meta.childrenKeys.forEach((childKey) => {
+    result.push(childKey)
+    result.push(...getDescendantKeys(childKey))
+  })
+  return result
+}
+
+const getAncestorKeys = (key: string): string[] => {
+  const ancestors: string[] = []
+  let currentKey = key
+  
+  while (nodeMetaMap.value[currentKey]?.parentKey) {
+    const parentKey = nodeMetaMap.value[currentKey]?.parentKey
+    if (!parentKey) {
+      break
+    }
+    ancestors.push(parentKey)
+    currentKey = parentKey
+  }
+  
+  return ancestors
+}
+
+const updateHalfCheckedKeys = () => {
+  const halfSet = new Set<string>()
+  const checkedSet = new Set(checkedKeys.value)
+  
+  const traverse = (node: any): { checked: boolean; partial: boolean } => {
+    const isNodeChecked = checkedSet.has(node.key)
+    
+    if (!node.children || node.children.length === 0) {
+      return {
+        checked: isNodeChecked,
+        partial: false,
+      }
+    }
+    
+    let childCheckedCount = 0
+    let childHasPartial = false
+    let childHasSelection = false
+    
+    node.children.forEach((child: any) => {
+      const childState = traverse(child)
+      if (childState.checked) {
+        childCheckedCount++
+      }
+      if (childState.partial) {
+        childHasPartial = true
+      }
+      if (childState.checked || childState.partial) {
+        childHasSelection = true
+      }
+    })
+    
+    const allChildrenChecked = childCheckedCount === node.children.length && !childHasPartial
+    const partial =
+      (!isNodeChecked && childHasSelection && !allChildrenChecked) ||
+      (childHasPartial && !isNodeChecked)
+    
+    if (partial) {
+      halfSet.add(node.key)
+    }
+    
+    return {
+      checked: isNodeChecked,
+      partial,
+    }
+  }
+  
+  permissionTree.value.forEach((node: any) => traverse(node))
+  halfCheckedKeys.value = Array.from(halfSet)
+}
+
+const syncAncestorSelection = (key: string, checkedSet: Set<string>) => {
+  const ancestors = getAncestorKeys(key)
+  ancestors.forEach((ancestorKey) => {
+    const childrenKeys = nodeMetaMap.value[ancestorKey]?.childrenKeys || []
+    if (childrenKeys.length === 0) {
+      return
+    }
+    const allChecked = childrenKeys.every(childKey => checkedSet.has(childKey))
+    if (allChecked) {
+      checkedSet.add(ancestorKey)
+    } else {
+      checkedSet.delete(ancestorKey)
+    }
+  })
+}
+
+const handleTreeCheck = (_: any, info: any) => {
+  const key = info?.node?.key
+  if (!key) {
+    return
+  }
+  
+  const isChecked = info.checked
+  const newChecked = new Set(checkedKeys.value)
+  const descendants = getDescendantKeys(key)
+  
+  if (isChecked) {
+    newChecked.add(key)
+    descendants.forEach(descKey => newChecked.add(descKey))
+  } else {
+    newChecked.delete(key)
+    descendants.forEach(descKey => newChecked.delete(descKey))
+  }
+  
+  syncAncestorSelection(key, newChecked)
+  checkedKeys.value = Array.from(newChecked)
+  updateHalfCheckedKeys()
+}
+
+const normalizeCheckedKeys = () => {
+  const checkedSet = new Set(checkedKeys.value)
+  
+  const traverse = (nodes: any[]) => {
+    nodes.forEach((node: any) => {
+      if (node.children && node.children.length > 0) {
+        traverse(node.children)
+        const allChildrenChecked = node.children.every((child: any) => checkedSet.has(child.key))
+        if (allChildrenChecked) {
+          checkedSet.add(node.key)
+        } else {
+          checkedSet.delete(node.key)
+        }
+      }
+    })
+  }
+  
+  traverse(permissionTree.value)
+  checkedKeys.value = Array.from(checkedSet)
+}
+
+rebuildNodeMetaMap()
+updateHalfCheckedKeys()
+
+watch(permissionTree, () => {
+  rebuildNodeMetaMap()
+  updateHalfCheckedKeys()
+}, { deep: true })
+
+watch(checkedKeys, () => {
+  updateHalfCheckedKeys()
+}, { deep: true })
+
+const flattenTreeKeys = (nodes: any[] = []): string[] => {
+  const keys: string[] = []
+  
+  nodes.forEach((node) => {
+    if (node?.key) {
+      keys.push(node.key)
+    }
+    
+    if (node?.children?.length) {
+      keys.push(...flattenTreeKeys(node.children))
+    }
+  })
+  
+  return keys
+}
+
+const parseAuthMenus = (authMenus: string | string[] | null | undefined): string[] => {
+  if (!authMenus) {
+    return []
+  }
+  
+  const normalizeItems = (list: any[]) =>
+    list
+      .map((item) => (typeof item === 'string' ? item : String(item)))
+      .map((item) => item.trim())
+      .filter((item) => !!item)
+  
+  if (Array.isArray(authMenus)) {
+    return normalizeItems(authMenus)
+  }
+  
+  const trimmed = authMenus.trim()
+  if (!trimmed) {
+    return []
+  }
+  
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return normalizeItems(parsed)
+      }
+    } catch (error) {
+      console.warn('解析 authMenus JSON 失败:', error)
+      const fallback = trimmed.slice(1, -1)
+      if (fallback) {
+        return normalizeItems(
+          fallback.split(/[,，]/).map((item) => item.replace(/^["']|["']$/g, ''))
+        )
+      }
+    }
+  }
+  
+  return normalizeItems(
+    trimmed.split(/[,，]/).map((item) => item.replace(/^["']|["']$/g, ''))
+  )
+}
 
 // 权限管理
 const handlePermissionManage = async (record: any) => {
@@ -370,12 +602,12 @@ const handlePermissionManage = async (record: any) => {
   permissionModalVisible.value = true
   
   // 展开所有节点
-  expandedKeys.value = permissionTree.value.map(node => node.key)
+  expandedKeys.value = flattenTreeKeys(permissionTree.value)
   
   // 根据 authMenus 字段回显勾选状态
   if (record.authMenus) {
     // authMenus 是逗号分隔的权限标识字符串，如 "project:view,system:view,system:role:view"
-    const authMenusArray = record.authMenus.split(',').filter((item: string) => item.trim())
+    const authMenusArray = parseAuthMenus(record.authMenus)
     
     // 将权限标识转换为路由路径
     const routePathsSet = new Set<string>()
@@ -387,6 +619,7 @@ const handlePermissionManage = async (record: any) => {
     })
     
     checkedKeys.value = Array.from(routePathsSet)
+    normalizeCheckedKeys()
     
     console.log('角色权限标识:', authMenusArray)
     console.log('转换后的路由路径:', checkedKeys.value)
@@ -412,21 +645,6 @@ const handleSavePermissions = async () => {
       const accessList = routeAccessMap[routePath]
       if (accessList && Array.isArray(accessList)) {
         accessList.forEach(access => accessSet.add(access))
-      }
-    })
-    
-    // 检查是否有子菜单被勾选，如果有，自动添加父菜单的权限标识
-    dynamicRoutes.forEach((route: any) => {
-      if (route.children && route.children.length > 0) {
-        // 检查是否有任何子菜单被选中
-        const hasSelectedChild = route.children.some((child: any) => 
-          checkedKeys.value.includes(child.path)
-        )
-        
-        // 如果有子菜单被选中，且父路由有权限标识，自动添加父路由的权限标识
-        if (hasSelectedChild && route.meta?.access && Array.isArray(route.meta.access)) {
-          route.meta.access.forEach((access: string) => accessSet.add(access))
-        }
       }
     })
     
@@ -467,6 +685,8 @@ const handleSavePermissions = async () => {
 const handleCancelPermission = () => {
   permissionModalVisible.value = false
   checkedKeys.value = []
+  expandedKeys.value = []
+  halfCheckedKeys.value = []
   currentRole.value = null
 }
 
@@ -859,12 +1079,14 @@ onMounted(() => {
 
         <div style="max-height: 400px; overflow: auto; padding: 10px; background: #fafafa; border-radius: 4px;">
           <a-tree
-            v-model:checkedKeys="checkedKeys"
+            :checkedKeys="{ checked: checkedKeys, halfChecked: halfCheckedKeys }"
             v-model:expandedKeys="expandedKeys"
             :tree-data="permissionTree"
             checkable
+            :checkStrictly="true"
             :field-names="{ title: 'title', key: 'key', children: 'children' }"
             :selectable="false"
+            @check="handleTreeCheck"
           />
         </div>
       </div>
