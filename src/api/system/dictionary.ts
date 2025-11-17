@@ -106,6 +106,7 @@ interface DictionaryItemQueryParams {
 interface PagerResponse<T> {
   list: T[]
   count: number
+  total?: number
   page: number
   limit: number
 }

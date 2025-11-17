@@ -92,7 +92,7 @@ const fetchAssignmentList = async () => {
     const result = await getRoleUserListPagerApi(params)
     if (result.data && result.data.list) {
       assignmentList.value = result.data.list as any
-      total.value = result.data.count
+      total.value = result.data.total
     }
   } catch (error) {
     message.error('获取角色分配列表失败')

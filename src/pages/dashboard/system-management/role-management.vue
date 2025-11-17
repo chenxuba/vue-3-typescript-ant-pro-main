@@ -137,7 +137,7 @@ const fetchRoleList = async () => {
     const result = await getRoleListPagerApi(params)
     if (result.data) {
       roleList.value = result.data.list
-      total.value = result.data.count
+      total.value = result.data.total
     }
   } catch (error) {
     message.error('获取角色列表失败')

@@ -197,7 +197,7 @@ const fetchItemList = async () => {
         itemTotal.value = result.data.length
       } else {
         itemList.value = result.data.list || []
-        itemTotal.value = result.data.count || 0
+        itemTotal.value = result.data.total || 0
       }
     }
   } catch (error) {

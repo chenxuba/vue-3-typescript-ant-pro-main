@@ -259,7 +259,7 @@ const fetchParticipationData = async () => {
     if (response && response.list) {
       // 直接使用后端返回的数据
       participationData.value = response.list
-      pagination.value.total = response.count
+      pagination.value.total = response.total
     }
   } catch (error) {
     console.error('获取参训数据失败:', error)
@@ -342,7 +342,7 @@ const fetchTaskCompletionData = async () => {
     
     if (response && response.list) {
       taskData.value = response.list
-      taskPagination.value.total = response.count
+      taskPagination.value.total = response.total
     }
   } catch (error) {
     console.error('获取任务完成情况失败:', error)

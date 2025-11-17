@@ -2,8 +2,8 @@
 import { ref, onMounted, reactive } from 'vue'
 import { message } from 'ant-design-vue'
 import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons-vue'
-import type { AllUserModel, AllUsersQueryParams } from '@/api/system/personnel'
-import { getAllUsersApi } from '@/api/system/personnel'
+import type { AllUserModel, AllUsersQueryParams, UserDetailModel } from '@/api/system/personnel'
+import { getAllUsersApi, getUserDetailApi } from '@/api/system/personnel'
 import { getAllOrganizationListApi } from '@/api/system/organization'
 
 defineOptions({
@@ -35,6 +35,11 @@ const queryForm = reactive({
 const loading = ref(false)
 const usersList = ref<AllUserModel[]>([])
 const total = ref(0)
+
+// 用户详情弹窗
+const userDetailVisible = ref(false)
+const userDetailLoading = ref(false)
+const currentUserDetail = ref<UserDetailModel | null>(null)
 
 // 表格列定义
 const columns = [
@@ -82,12 +87,12 @@ const columns = [
     key: 'status',
     width: 100,
   },
-  {
-    title: '操作',
-    key: 'action',
-    width: 150,
-    fixed: 'right' as const,
-  },
+  // {
+  //   title: '操作',
+  //   key: 'action',
+  //   width: 150,
+  //   fixed: 'right' as const,
+  // },
 ]
 
 // 递归统计节点数量
@@ -399,6 +404,57 @@ const fetchList = async () => {
   }
 }
 
+const formatGender = (gender?: number) => {
+  if (gender === 1) return '男'
+  if (gender === 2) return '女'
+  return '-'
+}
+
+const formatStatus = (status?: number) => {
+  if (status === 1) return '启用'
+  if (status === 0) return '禁用'
+  return '-'
+}
+
+const getStatusTagColor = (status?: number) => {
+  if (status === 1) return 'green'
+  if (status === 0) return 'red'
+  return ''
+}
+
+const formatBooleanFlag = (flag?: number) => {
+  if (flag === 1) return '是'
+  if (flag === 0) return '否'
+  return '-'
+}
+
+const showUserDetail = async (record: Partial<AllUserModel> | Record<string, any>) => {
+  if (!record?.operatorID) {
+    message.warning('无法获取该用户的编号')
+    return
+  }
+  userDetailVisible.value = true
+  userDetailLoading.value = true
+  currentUserDetail.value = null
+  try {
+    const result = await getUserDetailApi(record.operatorID)
+    if (result.result === 1 && result.data) {
+      currentUserDetail.value = result.data
+    } else {
+      message.error(result.msg || '获取用户详情失败')
+    }
+  } catch (error) {
+    console.error('获取用户详情失败:', error)
+    message.error('获取用户详情失败，请稍后重试')
+  } finally {
+    userDetailLoading.value = false
+  }
+}
+
+const closeUserDetail = () => {
+  userDetailVisible.value = false
+}
+
 // 查询
 const handleQuery = () => {
   queryForm.page = 1
@@ -413,20 +469,6 @@ const handleReset = () => {
   queryForm.page = 1
   queryForm.pageSize = 10
   fetchList()
-}
-
-// 切换状态
-const handleToggleStatus = async (record: any) => {
-  try {
-    // 状态处理 (1为正常，0为禁用)
-    const newStatus = record.status === 1 ? 0 : 1
-    // TODO: 调用状态更新接口
-    // await updateUserStatusApi(record.operatorID, newStatus)
-    record.status = newStatus
-    message.success(newStatus === 1 ? '启用成功' : '禁用成功')
-  } catch (error) {
-    message.error('操作失败')
-  }
 }
 
 // 分页变化
@@ -604,7 +646,7 @@ onMounted(() => {
           >
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'operatorName'">
-                <a class="user-link">{{ record.operatorName }}</a>
+                <a class="user-link" @click="showUserDetail(record)">{{ record.operatorName }}</a>
               </template>
               <template v-else-if="column.key === 'isAdmin'">
                 <span>-</span>
@@ -620,7 +662,7 @@ onMounted(() => {
                   {{ record.status === 1 ? '启用' : '禁用' }}
                 </a-tag>
               </template>
-              <template v-else-if="column.key === 'action'">
+              <!-- <template v-else-if="column.key === 'action'">
                 <a-space>
                   <a-button 
                     type="link" 
@@ -630,12 +672,76 @@ onMounted(() => {
                     {{ record.status === 1 ? '禁用' : '启用' }}
                   </a-button>
                 </a-space>
-              </template>
+              </template> -->
             </template>
           </a-table>
         </div>
       </div>
     </div>
+    <a-modal
+      v-model:open="userDetailVisible"
+      title="人员基本信息"
+      :width="720"
+      :footer="null"
+      destroy-on-close
+      class="user-detail-modal"
+      @cancel="closeUserDetail"
+    >
+      <a-spin :spinning="userDetailLoading">
+        <div v-if="currentUserDetail" class="detail-content">
+          <a-descriptions bordered :column="2" size="small">
+            <a-descriptions-item label="昵称">
+              {{ currentUserDetail.operatorName || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="用户ID">
+              {{ currentUserDetail.userID || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="手机号">
+              {{ currentUserDetail.mobileNO || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="性别">
+              {{ formatGender(currentUserDetail.gender) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="所属单位" :span="2">
+              {{ currentUserDetail.orgName || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="所属租户" :span="2">
+              {{ currentUserDetail.tenantOrgName || currentUserDetail.tenantName || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="工号">
+              {{ currentUserDetail.empCode || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="注册时间">
+              {{ currentUserDetail.regDate || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="出生日期">
+              {{ currentUserDetail.birthDate || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="状态">
+              <a-tag :color="getStatusTagColor(currentUserDetail.status)">
+                {{ formatStatus(currentUserDetail.status) }}
+              </a-tag>
+            </a-descriptions-item>
+            <a-descriptions-item label="是否实名">
+              {{ formatBooleanFlag(currentUserDetail.isreal) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="是否党员">
+              {{ formatBooleanFlag(currentUserDetail.isCpc) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="继续教育要求">
+              {{ formatBooleanFlag(currentUserDetail.isCtnEduRequire) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="创建时间">
+              {{ currentUserDetail.createTime || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="最后修改时间">
+              {{ currentUserDetail.lastModifyTime || '-' }}
+            </a-descriptions-item>
+          </a-descriptions>
+        </div>
+        <a-empty v-else description="暂无用户信息" />
+      </a-spin>
+    </a-modal>
   </div>
 </template>
 
@@ -1120,6 +1226,20 @@ onMounted(() => {
           text-decoration: underline;
         }
       }
+    }
+  }
+}
+
+:deep(.user-detail-modal) {
+  .detail-content {
+    margin-top: 8px;
+  }
+
+  .ant-descriptions {
+    width: 100%;
+
+    .ant-descriptions-item-label {
+      width: 120px;
     }
   }
 }

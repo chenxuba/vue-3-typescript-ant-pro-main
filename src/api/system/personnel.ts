@@ -201,6 +201,38 @@ interface AllUsersResponse {
   data: AllUsersResult
 }
 
+interface UserDetailModel {
+  operatorID?: number
+  operatorName?: string
+  operatorTag?: string
+  userID?: string
+  mobileNO?: string
+  gender?: number
+  orgName?: string
+  orgID?: number
+  orgCode?: string
+  orgSEQ?: string
+  tenantId?: number
+  tenantName?: string
+  tenantOrgId?: number
+  tenantOrgName?: string
+  empCode?: string
+  regDate?: string
+  birthDate?: string
+  createTime?: string
+  lastModifyTime?: string
+  status?: number
+  isCtnEduRequire?: number
+  isCpc?: number
+  isreal?: number
+}
+
+interface UserDetailResponse {
+  result: number
+  msg: string
+  data: UserDetailModel
+}
+
 interface PersonnelQueryParams {
   /**
    * 用户编号
@@ -265,6 +297,20 @@ export async function getAllUsersApi(params: AllUsersQueryParams): Promise<AllUs
   return response as unknown as AllUsersResponse
 }
 
+/**
+ * 获取单个用户详情
+ */
+export async function getUserDetailApi(operatorID: number | string): Promise<UserDetailResponse> {
+  const response = await usePost<any>(
+    '/web/api/user/getUser',
+    { operatorID },
+    {
+      customDev: true,
+    }
+  )
+  return response as unknown as UserDetailResponse
+}
+
 export type {
   PersonnelModel,
   PersonnelQueryParams,
@@ -273,5 +319,6 @@ export type {
   AllUsersQueryParams,
   AllUsersResult,
   AllUsersResponse,
+  UserDetailModel,
 }
 
