@@ -76,7 +76,7 @@ const formRules: any = {
   description: [{ required: true, validator: validateDescription, trigger: 'blur' }],
   difficulty: [{ required: true, message: '请选择难度', trigger: 'change' }],
   environment: [{ required: true, message: '请选择实验环境', trigger: 'change' }],
-  secondType: [{ required: true, message: '请选择小类别', trigger: 'change' }],
+  // secondType: [{ required: true, message: '请选择小类别', trigger: 'change' }],
 }
 
 // 使用难度字典
@@ -210,10 +210,10 @@ const handleNext = async () => {
   }
   
   // 如果是 JupyterNotebook 或 JupyterLab 环境，小类别也是必填
-  if ((projectType.value === 2 || projectType.value === 3) && !editForm.value.secondType) {
-    message.error('请选择小类别')
-    return
-  }
+  // if ((projectType.value === 2 || projectType.value === 3) && !editForm.value.secondType) {
+  //   message.error('请选择小类别')
+  //   return
+  // }
   
   // 保存修改的数据到后端
   if (!projectId.value || !projectDetail.value) {
@@ -399,7 +399,7 @@ onMounted(() => {
               />
             </a-form-item>
 
-            <a-form-item 
+            <!-- <a-form-item 
               v-if="projectType === 2 || projectType === 3"
               label="小类别" 
               name="secondType" 
@@ -410,7 +410,7 @@ onMounted(() => {
                 placeholder="请选择小类别"
                 :options="getSecondTypeOptions()"
               />
-            </a-form-item>
+            </a-form-item> -->
 
             <a-form-item label="学时" name="classHour">
               <a-input-number 

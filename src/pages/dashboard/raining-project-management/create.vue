@@ -59,7 +59,7 @@ const formRules: any = {
   description: [{ required: true, validator: validateDescription, trigger: 'blur' }],
   difficulty: [{ required: true, message: '请选择难度', trigger: 'change' }],
   environment: [{ required: true, message: '请选择实验环境', trigger: 'change' }],
-  secondType: [{ required: true, message: '请选择小类别', trigger: 'change' }],
+  // secondType: [{ required: true, message: '请选择小类别', trigger: 'change' }],
 }
 
 // 使用难度字典
@@ -123,10 +123,10 @@ const handleNext = async () => {
   }
   
   // 如果是 JupyterNotebook 或 JupyterLab 环境，小类别也是必填
-  if ((projectType.value === 2 || projectType.value === 3) && !createForm.value.secondType) {
-    message.error('请选择小类别')
-    return
-  }
+  // if ((projectType.value === 2 || projectType.value === 3) && !createForm.value.secondType) {
+  //   message.error('请选择小类别')
+  //   return
+  // }
   
   // 准备传递给下一个页面的数据
   const routeData = {
@@ -269,7 +269,7 @@ const getEnvironmentName = computed(() => {
             />
           </a-form-item>
 
-          <a-form-item 
+          <!-- <a-form-item 
             v-if="projectType === 2 || projectType === 3"
             label="小类别" 
             name="secondType" 
@@ -280,7 +280,7 @@ const getEnvironmentName = computed(() => {
               placeholder="请选择小类别"
               :options="getSecondTypeOptions()"
             />
-          </a-form-item>
+          </a-form-item> -->
 
           <a-form-item label="学时" name="classHour">
             <a-input v-model:value="createForm.classHour" placeholder="配置任务后自动计算" disabled />

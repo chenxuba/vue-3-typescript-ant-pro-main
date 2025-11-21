@@ -140,9 +140,9 @@ const formRules: Record<string, Rule[]> = {
   environment: [
     { required: true, message: '请选择实验环境', trigger: 'change' },
   ],
-  secondType: [
-    { required: true, message: '请选择小类别', trigger: 'change' },
-  ],
+  // secondType: [
+  //   { required: true, message: '请选择小类别', trigger: 'change' },
+  // ],
   topCover: [
     { required: true, message: '请上传顶部背景图', trigger: 'change' },
   ],
@@ -1664,7 +1664,7 @@ onMounted(async () => {
                     />
                   </a-form-item>
                 </a-col>
-                <a-col :span="12">
+                <!-- <a-col :span="12">
                   <a-form-item label="小类别" name="secondType" required :label-col="{ span: 4 }" :wrapper-col="{ span: 12 }">
                     <a-select 
                       v-model:value="formData.secondType" 
@@ -1673,7 +1673,7 @@ onMounted(async () => {
                       :loading="subcategory.loading.value"
                     />
                   </a-form-item>
-                </a-col>
+                </a-col> -->
               </a-row>
 
               <a-form-item label="学时" name="classHour">
