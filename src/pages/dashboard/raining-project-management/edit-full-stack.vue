@@ -2068,7 +2068,7 @@ onMounted(() => {
               <h3 class="environment-title">实验环境</h3>
               <div class="environment-actions">
                 <a-button type="primary" @click="handleAddEnvironment">添加实验环境</a-button>
-                <a-button>设置</a-button>
+                <!-- <a-button>设置</a-button> -->
               </div>
             </div>
             <a-form ref="experimentFormRef" :model="currentEnvironmentConfig" :rules="experimentFormRules"

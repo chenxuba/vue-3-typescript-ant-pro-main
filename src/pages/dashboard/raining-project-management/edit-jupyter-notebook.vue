@@ -205,7 +205,7 @@ const formData = ref<FormData>({
   topCover: '',
   cover: '',
   description: '',
-  showTaskRequire: false,
+  showTaskRequire: true,
   authType: 1,
 })
 
@@ -957,7 +957,7 @@ onMounted(async () => {
               </a-form-item>
 
               <a-form-item label="任务要求" name="showTaskRequire">
-                <a-checkbox v-model:checked="formData.showTaskRequire">
+                <a-checkbox v-model:checked="formData.showTaskRequire" disabled>
                   显示任务要求（勾选后，将简介作为任务要求显示在实践项目挑战页面）
                 </a-checkbox>
               </a-form-item>

@@ -50,7 +50,7 @@ const editForm = ref<{
   environment: undefined,
   secondType: undefined,
   classHour: 0,
-  showTaskRequire: false,
+  showTaskRequire: true,
 })
 
 // 验证富文本编辑器内容
@@ -273,7 +273,7 @@ const handleNext = async () => {
 watch(projectType, (newType) => {
   editForm.value.environment = undefined
   editForm.value.secondType = undefined
-  editForm.value.showTaskRequire = false
+  editForm.value.showTaskRequire = true
   // 加载新类型的环境选项
   loadEnvironmentOptions(newType)
 })
@@ -376,7 +376,7 @@ onMounted(() => {
               label="任务要求" 
               name="showTaskRequire"
             >
-              <a-checkbox v-model:checked="editForm.showTaskRequire">
+              <a-checkbox v-model:checked="editForm.showTaskRequire" disabled>
                 显示任务要求（勾选后，将简介作为任务要求显示在实践项目挑战页面）
               </a-checkbox>
             </a-form-item>

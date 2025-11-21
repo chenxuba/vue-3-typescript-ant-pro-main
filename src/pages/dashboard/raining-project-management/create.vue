@@ -33,7 +33,7 @@ const createForm = ref<{
   environment: undefined,
   secondType: undefined,
   classHour: '',
-  showTaskRequire: false,
+  showTaskRequire: true,
 })
 
 // 验证富文本编辑器内容
@@ -163,7 +163,7 @@ const handleNext = async () => {
 watch(projectType, () => {
   createForm.value.environment = undefined
   createForm.value.secondType = undefined
-  createForm.value.showTaskRequire = false
+  createForm.value.showTaskRequire = true
   // 加载新类型的环境选项
   environment.value.load()
 })
@@ -246,7 +246,7 @@ const getEnvironmentName = computed(() => {
             label="任务要求" 
             name="showTaskRequire"
           >
-            <a-checkbox v-model:checked="createForm.showTaskRequire">
+            <a-checkbox v-model:checked="createForm.showTaskRequire" disabled>
               显示任务要求（勾选后，将简介作为任务要求显示在实践项目挑战页面）
             </a-checkbox>
           </a-form-item>

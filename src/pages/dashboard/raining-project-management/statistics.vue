@@ -700,7 +700,7 @@ onMounted(async () => {
                     {{ record.userId }}
                   </template>
                   <template v-else-if="column.key === 'userName'">
-                    <a class="user-link">{{ record.nickName }}</a>
+                    <span class="user-link">{{ record.nickName }}</span>
                   </template>
                   <template v-else-if="column.key === 'unit'">
                     {{ record.orgName || '-' }}
@@ -830,7 +830,7 @@ onMounted(async () => {
     }
 
     .user-link {
-      color: #1890ff;
+      color: #333;
       text-decoration: none;
 
       &:hover {

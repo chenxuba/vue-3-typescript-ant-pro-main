@@ -199,7 +199,7 @@ const formData = ref<FormData>({
   topCover: '',
   cover: '',
   description: '',
-  showTaskRequire: false,
+  showTaskRequire: true,
   authType: 1,
 })
 
@@ -231,7 +231,7 @@ onMounted(async () => {
     formData.value.environment = routeData.environment
     formData.value.secondType = routeData.secondType
     formData.value.classHour = routeData.classHour || ''
-    formData.value.showTaskRequire = routeData.showTaskRequire || false
+    formData.value.showTaskRequire = routeData.showTaskRequire || true
 
     console.log('已自动填充表单数据:', {
       name: formData.value.name,
@@ -679,6 +679,37 @@ const handleSave = async () => {
       return
     }
     
+    // 验证是否有任务ID
+    if (!taskId.value) {
+      message.error('任务ID不存在，请重新创建任务')
+      return
+    }
+    
+    // 在完成创建前，先调用updateProjectTaskApi确保用户信息被实时更新
+    const testContentArray = evaluationData.value.testSets.map(item => ({
+      answer: item.answer,
+      select: item.select, // 1=选中, 2=未选中
+    }))
+    
+    const taskUpdateData: any = {
+      taskId: taskId.value,
+      projectId: projectId.value,
+      openTestValidate: evaluationData.value.openTestValidate,
+      testValidateFiles: evaluationData.value.testValidateFiles,
+      timeLimitM: evaluationData.value.timeLimitM,
+      classHour: evaluationData.value.classHour,
+      scoreRule: evaluationData.value.scoreRule,
+      testContent: JSON.stringify(testContentArray),
+      showAnswer: referenceAnswerData.value.showAnswer,
+      prohibitCopyAnswer: referenceAnswerData.value.prohibitCopyAnswer,
+      referenceAnswer: referenceAnswerData.value.referenceAnswer,
+    }
+    
+    console.log('完成创建前更新任务数据：', taskUpdateData)
+    
+    // 先更新任务信息
+    await updateProjectTaskApi(taskUpdateData as any)
+    
     // 更新项目状态为已完成
     await updateProjectApi({
       id: projectId.value,
@@ -934,7 +965,7 @@ const handleCoverUpload = async (file: File) => {
             </a-form-item>
 
             <a-form-item label="任务要求" name="showTaskRequire">
-              <a-checkbox v-model:checked="formData.showTaskRequire">
+              <a-checkbox v-model:checked="formData.showTaskRequire" disabled>
                 显示任务要求（勾选后，将作为任务要求显示在任务项目里）
               </a-checkbox>
             </a-form-item>
