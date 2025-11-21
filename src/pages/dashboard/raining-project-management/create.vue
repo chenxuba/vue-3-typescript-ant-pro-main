@@ -79,12 +79,12 @@ onMounted(() => {
 })
 
 // 小类别选项（使用字典 hooks）
-const getSecondTypeOptions = () => {
-  // 如果不是JupyterNotebook环境或JupyterLab环境，返回空数组
-  if (projectType.value !== 2 && projectType.value !== 3) return []
+// const getSecondTypeOptions = () => {
+//   // 如果不是JupyterNotebook环境或JupyterLab环境，返回空数组
+//   if (projectType.value !== 2 && projectType.value !== 3) return []
   
-  return subcategory.options.value
-}
+//   return subcategory.options.value
+// }
 
 // 返回
 const handleBack = () => {
