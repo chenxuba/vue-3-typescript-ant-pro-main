@@ -848,6 +848,9 @@ onMounted(async () => {
                 <a-col :span="12">
                   <a-form-item label="技能标签" name="tag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
                     <a-input v-model:value="formData.tag" placeholder="请输入技能标签" />
+                    <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                      请使用英文状态下的逗号分隔技能标签，比如html,css,js
+                    </div>
                   </a-form-item>
                 </a-col>
                 <a-col :span="12">

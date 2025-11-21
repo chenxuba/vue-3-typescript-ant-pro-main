@@ -982,21 +982,110 @@ const handleNext = async () => {
     scrollToTop()
   } else if (currentStep.value === 2) {
     // 第三步：评测设置验证
-    // 校验评测设置和参考答案是否都已保存
-    if (!evaluationSaved.value) {
-      message.error('请先保存评测设置后再进行下一步')
+    try {
+      // 验证是否有任务ID
+      if (!taskId.value) {
+        message.error('任务ID不存在，请重新创建任务')
+        return
+      }
+      
+      // 如果启用了评测功能，进行非空校验
+      if (evaluationData.value.openTestValidate === 1) {
+        // 校验评测时长限制
+        if (!evaluationData.value.timeLimitM) {
+          message.error('请输入评测时长限制')
+          scrollToTop()
+          return
+        }
+        
+        // 校验学时
+        if (!evaluationData.value.classHour || evaluationData.value.classHour <= 0) {
+          message.error('请输入有效的学时')
+          scrollToTop()
+          return
+        }
+        
+        // 校验测试集
+        if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
+          message.error('请至少添加一个测试集')
+          scrollToTop()
+          return
+        }
+        
+        // 校验是否至少有一个测试集被选中
+        const selectedTestSets = evaluationData.value.testSets.filter(item => item.select === 1)
+        if (selectedTestSets.length === 0) {
+          message.error('请至少选中一个测试集')
+          scrollToTop()
+          return
+        }
+        
+        // 校验选中的测试集是否填写了期望输出
+        for (let i = 0; i < selectedTestSets.length; i++) {
+          const testSet = selectedTestSets[i]
+          if (!testSet.answer || testSet.answer.trim() === '') {
+            message.error(`测试集${i + 1}的期望输出不能为空`)
+            scrollToTop()
+            return
+          }
+        }
+      }
+      
+      // 校验参考答案内容是否为空
+      if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
+        message.error('请输入参考答案内容')
+        scrollToTop()
+        return
+      }
+      
+      // 去除HTML标签后检查是否有实际内容
+      const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
+      if (!textContent) {
+        message.error('请输入参考答案内容')
+        scrollToTop()
+        return
+      }
+      
+      // 准备测试集数据
+      const testContentArray = evaluationData.value.testSets.map(item => ({
+        answer: item.answer,
+        select: item.select,
+      }))
+      
+      // 始终调用更新接口保存数据 - 包含两个tabs的所有参数
+      const taskUpdateData: any = {
+        taskId: taskId.value,
+        projectId: projectId.value,
+        // 评测设置参数
+        openTestValidate: evaluationData.value.openTestValidate,
+        testValidateFiles: evaluationData.value.testValidateFiles,
+        testValidateSh: evaluationData.value.testValidateSh,
+        timeLimitM: evaluationData.value.timeLimitM,
+        classHour: evaluationData.value.classHour,
+        scoreRule: evaluationData.value.scoreRule,
+        evaluationSetting: evaluationData.value.evaluationSetting,
+        testContent: JSON.stringify(testContentArray),
+        // 参考答案参数
+        showAnswer: referenceAnswerData.value.showAnswer,
+        prohibitCopyAnswer: referenceAnswerData.value.prohibitCopyAnswer,
+        referenceAnswer: referenceAnswerData.value.referenceAnswer,
+      }
+      
+      console.log('下一步时保存评测设置和参考答案数据：', taskUpdateData)
+      
+      // 调用更新任务接口
+      await updateProjectTaskApi(taskUpdateData as any)
+      evaluationSaved.value = true
+      referenceAnswerSaved.value = true
+      
+      // 保存成功后进入下一步
+      currentStep.value = 3
       scrollToTop()
-      return
-    }
-    
-    if (!referenceAnswerSaved.value) {
-      message.error('请先保存参考答案后再进行下一步')
+    } catch (error) {
+      console.error('保存数据失败：', error)
+      message.error('保存数据失败，请重试')
       scrollToTop()
-      return
     }
-    
-    currentStep.value = 3
-    scrollToTop()
   }
 }
 
@@ -1132,16 +1221,30 @@ const handleSaveEvaluation = async () => {
       }
     }
     
+    // 校验参考答案内容是否为空
+    if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
+      message.error('请输入参考答案内容')
+      return
+    }
+    
+    // 去除HTML标签后检查是否有实际内容
+    const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
+    if (!textContent) {
+      message.error('请输入参考答案内容')
+      return
+    }
+    
     // 准备测试集数据
     const testContentArray = evaluationData.value.testSets.map(item => ({
       answer: item.answer,
       select: item.select,
     }))
     
-    // 更新任务数据
+    // 更新任务数据 - 包含两个tabs的所有参数
     const taskUpdateData: any = {
       taskId: taskId.value,
       projectId: projectId.value,
+      // 评测设置参数
       openTestValidate: evaluationData.value.openTestValidate,
       testValidateFiles: evaluationData.value.testValidateFiles,
       testValidateSh: evaluationData.value.testValidateSh,
@@ -1150,17 +1253,22 @@ const handleSaveEvaluation = async () => {
       scoreRule: evaluationData.value.scoreRule,
       evaluationSetting: evaluationData.value.evaluationSetting,
       testContent: JSON.stringify(testContentArray),
+      // 参考答案参数
+      showAnswer: referenceAnswerData.value.showAnswer,
+      prohibitCopyAnswer: referenceAnswerData.value.prohibitCopyAnswer,
+      referenceAnswer: referenceAnswerData.value.referenceAnswer,
     }
     
-    console.log('保存评测设置数据：', taskUpdateData)
+    console.log('保存评测设置和参考答案数据：', taskUpdateData)
     
     // 调用更新任务接口
     await updateProjectTaskApi(taskUpdateData as any)
     evaluationSaved.value = true
-    message.success('评测设置保存成功！')
+    referenceAnswerSaved.value = true
+    message.success('评测设置和参考答案保存成功！')
   } catch (error) {
-    console.error('评测设置保存失败：', error)
-    message.error('评测设置保存失败，请重试')
+    console.error('评测设置和参考答案保存失败：', error)
+    message.error('评测设置和参考答案保存失败，请重试')
   }
 }
 
@@ -1171,6 +1279,43 @@ const handleSaveReferenceAnswer = async () => {
     if (!taskId.value) {
       message.error('任务ID不存在，请重新创建任务')
       return
+    }
+    
+    // 如果启用了评测功能，进行非空校验
+    if (evaluationData.value.openTestValidate === 1) {
+      // 校验评测时长限制
+      if (!evaluationData.value.timeLimitM) {
+        message.error('请输入评测时长限制')
+        return
+      }
+      
+      // 校验学时
+      if (!evaluationData.value.classHour || evaluationData.value.classHour <= 0) {
+        message.error('请输入有效的学时')
+        return
+      }
+      
+      // 校验测试集
+      if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
+        message.error('请至少添加一个测试集')
+        return
+      }
+      
+      // 校验是否至少有一个测试集被选中
+      const selectedTestSets = evaluationData.value.testSets.filter(item => item.select === 1)
+      if (selectedTestSets.length === 0) {
+        message.error('请至少选中一个测试集')
+        return
+      }
+      
+      // 校验选中的测试集是否填写了期望输出
+      for (let i = 0; i < selectedTestSets.length; i++) {
+        const testSet = selectedTestSets[i]
+        if (!testSet.answer || testSet.answer.trim() === '') {
+          message.error(`测试集${i + 1}的期望输出不能为空`)
+          return
+        }
+      }
     }
     
     // 校验参考答案内容是否为空
@@ -1186,24 +1331,41 @@ const handleSaveReferenceAnswer = async () => {
       return
     }
     
-    // 更新任务数据
+    // 准备测试集数据
+    const testContentArray = evaluationData.value.testSets.map(item => ({
+      answer: item.answer,
+      select: item.select,
+    }))
+    
+    // 更新任务数据 - 包含两个tabs的所有参数
     const taskUpdateData: any = {
       taskId: taskId.value,
       projectId: projectId.value,
+      // 评测设置参数
+      openTestValidate: evaluationData.value.openTestValidate,
+      testValidateFiles: evaluationData.value.testValidateFiles,
+      testValidateSh: evaluationData.value.testValidateSh,
+      timeLimitM: evaluationData.value.timeLimitM,
+      classHour: evaluationData.value.classHour,
+      scoreRule: evaluationData.value.scoreRule,
+      evaluationSetting: evaluationData.value.evaluationSetting,
+      testContent: JSON.stringify(testContentArray),
+      // 参考答案参数
       showAnswer: referenceAnswerData.value.showAnswer,
       prohibitCopyAnswer: referenceAnswerData.value.prohibitCopyAnswer,
       referenceAnswer: referenceAnswerData.value.referenceAnswer,
     }
     
-    console.log('保存参考答案数据：', taskUpdateData)
+    console.log('保存评测设置和参考答案数据：', taskUpdateData)
     
     // 调用更新任务接口
     await updateProjectTaskApi(taskUpdateData as any)
+    evaluationSaved.value = true
     referenceAnswerSaved.value = true
-    message.success('参考答案保存成功！')
+    message.success('评测设置和参考答案保存成功！')
   } catch (error) {
-    console.error('参考答案保存失败：', error)
-    message.error('参考答案保存失败，请重试')
+    console.error('评测设置和参考答案保存失败：', error)
+    message.error('评测设置和参考答案保存失败，请重试')
   }
 }
 
@@ -1395,6 +1557,9 @@ const scrollToTop = () => {
               <a-col :span="12">
                 <a-form-item label="技能标签" name="tag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
                   <a-input v-model:value="formData.tag" placeholder="请输入技能标签" />
+                  <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                    请使用英文状态下的逗号分隔技能标签，比如html,css,js
+                  </div>
                 </a-form-item>
               </a-col>
               <a-col :span="12">

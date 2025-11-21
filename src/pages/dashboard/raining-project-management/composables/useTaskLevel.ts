@@ -69,9 +69,9 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     name: [
       { required: true, message: '请输入任务名称', trigger: 'blur' },
     ],
-    source: [
-      { required: true, message: '请上传学习资源', trigger: 'change' },
-    ],
+    // source: [
+    //   { required: true, message: '请上传学习资源', trigger: 'change' },
+    // ],
     require: [
       { required: true, message: '' },
       { validator: validateRichText },
@@ -110,7 +110,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     ],
   }
 
-  // 判断当前任务类型是否为内核链接
+  // 判断当前任务类型是否为内嵌链接
   const isKernelTask = computed(() => {
     if (!selectedTaskLevelId.value) return false
     const level = taskLevels.value.find(l => l.id === selectedTaskLevelId.value)
@@ -166,7 +166,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     const typeNames = {
       programming: '编程实训任务关卡',
       choice: '选择题实训任务关卡',
-      kernel: '内核链接实训任务关卡',
+      kernel: '内嵌链接实训任务关卡',
     }
     
     // 计算默认权重：找到当前最大权重，新任务权重为最大权重+1
@@ -414,7 +414,7 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
     try {
       // 根据任务类型验证不同的表单
       if (isKernelTask.value || isChoiceTask.value) {
-        // 内核链接任务和选择题任务只验证关联任务表单
+        // 内嵌链接任务和选择题任务只验证关联任务表单
         await taskLevelFormRef.value?.validate()
       } else if (isProgrammingTask.value) {
         // 编程任务需要验证关联任务表单和评测设置表单

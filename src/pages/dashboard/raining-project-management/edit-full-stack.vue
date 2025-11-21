@@ -6,7 +6,7 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
 import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectEnvironmentApi, type ProjectTaskItem } from '@/api/project'
-import { useFieldCategoryDictionary, useDifficultyDictionary, useCollateralEnvironmentDictionary, useProgrammingLanguageDictionary } from '@/composables/dictionary'
+import { useFieldCategoryDictionary, useDifficultyDictionary, useCollateralEnvironmentDictionary, useProgrammingLanguageDictionary, useEnvironmentDictionary } from '@/composables/dictionary'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -120,9 +120,9 @@ const experimentFormRules: Record<string, Rule[]> = {
   viewTypes: [
     { required: true, type: 'array', min: 1, message: '请至少选择一个实验界面', trigger: 'change' },
   ],
-  secondType: [
-    { required: true, message: '请选择附带环境', trigger: 'change' },
-  ],
+  // secondType: [
+  //   { required: true, message: '请选择附带环境', trigger: 'change' },
+  // ],
   taskId: [
     { required: true, message: '请选择任务关卡', trigger: 'change' },
   ],
@@ -179,6 +179,9 @@ const collateralEnvironment = useCollateralEnvironmentDictionary()
 
 // 使用编程语言字典
 const programmingLanguage = useProgrammingLanguageDictionary()
+
+// 使用实验环境字典（全栈项目类型为1）
+const environment = useEnvironmentDictionary(1)
 
 // 仓库类型选项
 const repositoryTypeOptions = [
@@ -278,12 +281,8 @@ const currentUploadPath = ref('/')
 
 // 获取实验环境名称
 const getEnvironmentName = () => {
-  const environmentMap: Record<number, string> = {
-    1: 'Python3.6',
-    2: 'Python3.13',
-    3: 'Python3.12/VNC',
-  }
-  return environmentMap[selectedEnvironment.value || 1] || 'Python3.6'
+  const envItem = environment.data.value.find(item => item.value === String(selectedEnvironment.value || 1))
+  return envItem?.name || '--'
 }
 
 // 初始化实验环境
@@ -297,10 +296,10 @@ const initializeExperimentEnvironments = () => {
       config: {
         dockerImage: selectedEnvironment.value || 1,
         viewTypes: [],
-        secondType: undefined,
+        secondType: "1",
         taskId: undefined,
         codeType: undefined,
-        shellBegin: undefined,
+        shellBegin: 'bash',
         containerPort: undefined,
         containerPath: undefined,
       }
@@ -1136,7 +1135,7 @@ const handleUpdateProject = async (isComplete: boolean = false) => {
 const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0) => {
   try {
     if (envisDel !== 1) {
-      const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'secondType', 'taskId']
+      const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'taskId']
       const fieldsToClear: string[] = []
 
       if (env.config.viewTypes.includes(1)) {
@@ -1205,7 +1204,7 @@ const saveAllEnvironments = async () => {
 
   if (currentEnv) {
     // 验证当前环境的表单
-    const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'secondType', 'taskId']
+    const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'taskId']
     const fieldsToClear: string[] = []
 
     if (currentEnv.config.viewTypes.includes(1)) {
@@ -1343,10 +1342,10 @@ const handleAddEnvironment = () => {
     config: {
       dockerImage: selectedEnvironment.value || 1,
       viewTypes: [],
-      secondType: undefined,
+      secondType: "1",
       taskId: undefined,
       codeType: undefined,
-      shellBegin: undefined,
+      shellBegin: 'bash',
       containerPort: undefined,
       containerPath: undefined,
     }
@@ -1535,11 +1534,12 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
 // 页面加载时获取项目详情
 onMounted(() => {
-  // 加载领域类别字典、难度字典、附带环境字典和编程语言字典
+  // 加载领域类别字典、难度字典、附带环境字典、编程语言字典和实验环境字典
   fieldCategory.load()
   difficulty.load()
   collateralEnvironment.load()
   programmingLanguage.load()
+  environment.load()
 
   // 从路由参数获取项目ID
   const id = route.query.id
@@ -1590,6 +1590,9 @@ onMounted(() => {
                 <a-col :span="12">
                   <a-form-item label="技能标签" name="tag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
                     <a-input v-model:value="formData.tag" placeholder="请输入技能标签" />
+                    <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                      请使用英文状态下的逗号分隔技能标签，比如html,css,js
+                    </div>
                   </a-form-item>
                 </a-col>
                 <a-col :span="12">
@@ -1660,7 +1663,7 @@ onMounted(() => {
               </a-form-item>
 
               <a-form-item label="任务要求" name="showTaskRequire">
-                <a-checkbox v-model:checked="formData.showTaskRequire">
+                <a-checkbox v-model:checked="formData.showTaskRequire" disabled>
                   显示任务要求（勾选后，将作为任务要求显示在任务项目里）
                 </a-checkbox>
               </a-form-item>
@@ -1764,7 +1767,7 @@ onMounted(() => {
             <!-- 顶部按钮组 -->
             <div class="task-level-header">
               <div class="header-buttons">
-                <a-button type="primary" @click="addTaskLevel('kernel')">添加内核链接任务</a-button>
+                <a-button type="primary" @click="addTaskLevel('kernel')">添加内嵌链接任务</a-button>
                 <a-button type="primary" @click="addTaskLevel('choice')">添加选择题任务</a-button>
                 <a-button v-if="formData.enableCodeRepository" type="primary"
                   @click="addTaskLevel('programming')">添加编程任务</a-button>
@@ -1805,7 +1808,7 @@ onMounted(() => {
                         <a-form-item label="任务名称" name="name" required>
                           <a-input v-model:value="taskLevelFormData.name" placeholder="请输入任务名称" />
                         </a-form-item>
-                        <a-form-item label="学习资源" name="source" required>
+                        <a-form-item label="学习资源" name="source">
                           <a-upload v-model:file-list="learningResourceFileList"
                             :custom-request="handleLearningResourceCustomRequest" @change="handleLearningResourceUpload"
                             accept=".doc,.docx,.pdf,.ppt,.pptx,.mp4" :max-count="10">
@@ -1837,6 +1840,9 @@ onMounted(() => {
 
                         <a-form-item label="技能标签" name="tag" required>
                           <a-input v-model:value="taskLevelFormData.tag" placeholder="请输入技能标签" />
+                          <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                            请使用英文状态下的逗号分隔技能标签，比如html,css,js
+                          </div>
                         </a-form-item>
                         <a-form-item v-if="isKernelTask" label="内嵌链接" name="jumpUrl" required>
                           <a-input v-model:value="taskLevelFormData.jumpUrl" placeholder="请输入内嵌链接" />
@@ -2119,11 +2125,11 @@ onMounted(() => {
                     </div>
                   </a-form-item>
 
-                  <a-form-item label="附带环境" name="secondType" required>
+                  <!-- <a-form-item label="附带环境" name="secondType" required>
                     <a-select v-model:value="env.config.secondType" placeholder="请选择附带环境"
                       :options="collateralEnvironment.options.value" :loading="collateralEnvironment.loading.value"
                       allowClear />
-                  </a-form-item>
+                  </a-form-item> -->
 
                   <a-form-item label="任务关卡" name="taskId" required>
                     <a-select v-model:value="env.config.taskId" placeholder="请选择任务关卡" allowClear>
@@ -2140,8 +2146,12 @@ onMounted(() => {
 
                   <!-- 选择代码编辑器时显示编程语言 -->
                   <a-form-item v-if="env.config.viewTypes.includes(1)" label="编程语言" name="codeType" required>
-                    <a-select v-model:value="env.config.codeType" placeholder="请选择编程语言"
-                      :options="programmingLanguage.options.value" :loading="programmingLanguage.loading.value"
+                    <a-select 
+                      :value="env.config.codeType ? Number(env.config.codeType) : undefined" 
+                      @change="(value) => env.config.codeType = String(value)"
+                      placeholder="请选择编程语言"
+                      :options="programmingLanguage.options.value" 
+                      :loading="programmingLanguage.loading.value"
                       allowClear />
                   </a-form-item>
 

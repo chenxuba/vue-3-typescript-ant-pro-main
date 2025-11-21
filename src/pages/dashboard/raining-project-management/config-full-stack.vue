@@ -6,7 +6,7 @@ import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, updateProjectEnvironmentApi } from '@/api/project'
-import { useFieldCategoryDictionary, useDifficultyDictionary, useCollateralEnvironmentDictionary, useProgrammingLanguageDictionary } from '@/composables/dictionary'
+import { useFieldCategoryDictionary, useDifficultyDictionary, useCollateralEnvironmentDictionary, useProgrammingLanguageDictionary, useEnvironmentDictionary } from '@/composables/dictionary'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -77,7 +77,7 @@ const formData = ref<FormData>({
   topCover: '',
   cover: '',
   description: '',
-  showTaskRequire: false,
+  showTaskRequire: true,
   authType: 1,
   enableCodeRepository: false,
   repositoryType: '代码仓库',
@@ -100,21 +100,18 @@ const selectedEnvironment = ref<number | undefined>(undefined)
 
 // 获取实验环境名称
 const getEnvironmentName = () => {
-  const environmentMap: Record<number, string> = {
-    1: 'Python3.6',
-    2: 'Python3.13',
-    3: 'Python3.12/VNC',
-  }
-  return environmentMap[selectedEnvironment.value || 1] || 'Python3.6'
+  const envItem = environment.data.value.find(item => item.value === String(selectedEnvironment.value || 1))
+  return envItem?.name || '--'
 }
 
 // 从路由接收数据并填充表单
 onMounted(() => {
-  // 加载领域类别字典、难度字典、附带环境字典和编程语言字典
+  // 加载领域类别字典、难度字典、附带环境字典、编程语言字典和实验环境字典
   fieldCategory.load()
   difficulty.load()
   collateralEnvironment.load()
   programmingLanguage.load()
+  environment.load()
   
   const routeData = history.state as any
   console.log('接收到的路由数据:', routeData)
@@ -125,7 +122,7 @@ onMounted(() => {
     formData.value.description = routeData.description || ''
     formData.value.difficulty = routeData.difficulty || 1
     formData.value.classHour = routeData.classHour || ''
-    formData.value.showTaskRequire = routeData.showTaskRequire || false
+    formData.value.showTaskRequire = routeData.showTaskRequire || true
     // 保存实验环境
     selectedEnvironment.value = routeData.environment || 1
 
@@ -185,6 +182,9 @@ const collateralEnvironment = useCollateralEnvironmentDictionary()
 // 使用编程语言字典
 const programmingLanguage = useProgrammingLanguageDictionary()
 
+// 使用实验环境字典（全栈项目类型为1）
+const environment = useEnvironmentDictionary(1)
+
 // 仓库类型选项
 const repositoryTypeOptions = [
   { label: '切换仓库', value: '切换仓库' },
@@ -220,7 +220,7 @@ const initializeExperimentEnvironments = () => {
       config: {
         dockerImage: selectedEnvironment.value || 1,
         viewTypes: [],
-        secondType: undefined,
+        secondType: "1",
         taskId: undefined,
         codeType: undefined,
         shellBegin: 'bash',
@@ -242,9 +242,9 @@ const experimentFormRules: Record<string, Rule[]> = {
   viewTypes: [
     { required: true, type: 'array', min: 1, message: '请至少选择一个实验界面', trigger: 'change' },
   ],
-  secondType: [
-    { required: true, message: '请选择附带环境', trigger: 'change' },
-  ],
+  // secondType: [
+  //   { required: true, message: '请选择附带环境', trigger: 'change' },
+  // ],
   taskId: [
     { required: true, message: '请选择任务关卡', trigger: 'change' },
   ],
@@ -1350,6 +1350,9 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
               <a-col :span="12">
                 <a-form-item label="技能标签" name="tag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
                   <a-input v-model:value="formData.tag" placeholder="请输入技能标签" />
+                  <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                    请使用英文状态下的逗号分隔技能标签，比如html,css,js
+                  </div>
                 </a-form-item>
               </a-col>
               <a-col :span="12">
@@ -1428,7 +1431,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
             </a-form-item>
 
             <a-form-item label="任务要求" name="showTaskRequire">
-              <a-checkbox v-model:checked="formData.showTaskRequire">
+              <a-checkbox v-model:checked="formData.showTaskRequire" disabled>
                 显示任务要求（勾选后，将作为任务要求显示在任务项目里）
               </a-checkbox>
             </a-form-item>
@@ -1540,7 +1543,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
           <!-- 顶部按钮组 -->
           <div class="task-level-header">
             <div class="header-buttons">
-              <a-button type="primary" @click="addTaskLevel('kernel')">添加内核链接任务</a-button>
+              <a-button type="primary" @click="addTaskLevel('kernel')">添加内嵌链接任务</a-button>
               <a-button type="primary" @click="addTaskLevel('choice')">添加选择题任务</a-button>
               <a-button v-if="formData.enableCodeRepository" type="primary" @click="addTaskLevel('programming')">添加编程任务</a-button>
             </div>
@@ -1580,7 +1583,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                       <a-form-item label="任务名称" name="name" required>
                         <a-input v-model:value="taskLevelFormData.name" placeholder="请输入任务名称" />
                       </a-form-item>
-                      <a-form-item label="学习资源" name="source" required>
+                      <a-form-item label="学习资源" name="source">
                         <a-upload v-model:file-list="learningResourceFileList"
                           :custom-request="handleLearningResourceCustomRequest" @change="handleLearningResourceUpload"
                           accept=".doc,.docx,.pdf,.ppt,.pptx,.mp4" :max-count="10">
@@ -1615,6 +1618,9 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
                       <a-form-item label="技能标签" name="tag" required>
                         <a-input v-model:value="taskLevelFormData.tag" placeholder="请输入技能标签" />
+                        <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                          请使用英文状态下的逗号分隔技能标签，比如html,css,js
+                        </div>
                       </a-form-item>
                       <a-form-item v-if="isKernelTask" label="内嵌链接" name="jumpUrl" required>
                         <a-input v-model:value="taskLevelFormData.jumpUrl" placeholder="请输入内嵌链接" />
@@ -1923,7 +1929,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                   </div>
                 </a-form-item>
 
-                <a-form-item label="附带环境" name="secondType" required>
+                <!-- <a-form-item label="附带环境" name="secondType" required>
                   <a-select 
                     v-model:value="env.config.secondType" 
                     placeholder="请选择附带环境" 
@@ -1931,7 +1937,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
                     :loading="collateralEnvironment.loading.value"
                     allowClear
                   />
-                </a-form-item>
+                </a-form-item> -->
 
                 <a-form-item label="任务关卡" name="taskId" required>
                   <a-select v-model:value="env.config.taskId" placeholder="请选择任务关卡" allowClear>
