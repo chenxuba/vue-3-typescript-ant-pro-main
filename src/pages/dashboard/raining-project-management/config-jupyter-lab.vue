@@ -112,7 +112,7 @@ const formData = ref<FormData>({
   topCover: '',
   cover: '',
   description: '',
-  showTaskRequire: false,
+  showTaskRequire: true,
   authType: 1,
   enableCodeRepository: false,
   repositoryType: '代码仓库',
@@ -140,7 +140,7 @@ onMounted(async () => {
     formData.value.environment = routeData.environment
     formData.value.secondType = routeData.secondType
     formData.value.classHour = routeData.classHour || 0
-    formData.value.showTaskRequire = routeData.showTaskRequire || false
+    formData.value.showTaskRequire = routeData.showTaskRequire || true
 
     console.log('已自动填充表单数据:', {
       name: formData.value.name,
@@ -1500,8 +1500,8 @@ const scrollToTop = () => {
             </a-form-item>
 
             <a-form-item label="任务要求" name="showTaskRequire">
-              <a-checkbox v-model:checked="formData.showTaskRequire">
-                显示任务要求（勾选后，将帮作为任务要求显示在任务项目政策面）
+              <a-checkbox v-model:checked="formData.showTaskRequire" disabled>
+                显示任务要求（勾选后，将作为任务要求显示在任务项目里）
               </a-checkbox>
             </a-form-item>
           </a-form>

@@ -339,6 +339,53 @@ const handleDelete = (record: any) => {
     },
   })
 }
+
+// 可见范围设置状态
+const visibilityModalVisible = ref(false)
+const currentEditRecord = ref<any>(null)
+const visibilityForm = ref({
+  authType: 1, // 默认完全公开
+})
+
+// 可见范围选项
+const visibilityOptions = [
+  { label: '完全公开', value: 1 },
+  { label: '全院公开', value: 2 },
+  { label: '本单位公开', value: 3 },
+  { label: '不公开', value: 4 },
+]
+
+// 处理可见范围设置
+const handleVisibilityRange = (record: any) => {
+  currentEditRecord.value = record
+  visibilityForm.value.authType = record.authType || 1
+  visibilityModalVisible.value = true
+}
+
+// 确认修改可见范围
+const handleVisibilityConfirm = async () => {
+  try {
+    await updateProjectApi({
+      id: currentEditRecord.value.id,
+      authType: visibilityForm.value.authType,
+    } as any)
+
+    message.success('可见范围修改成功')
+    visibilityModalVisible.value = false
+    
+    // 刷新列表
+    fetchProjectList()
+  } catch (error: any) {
+    console.error('修改可见范围失败：', error)
+    message.error(error.message || '修改可见范围失败')
+  }
+}
+
+// 取消修改可见范围
+const handleVisibilityCancel = () => {
+  visibilityModalVisible.value = false
+  currentEditRecord.value = null
+}
 </script>
 
 <template>
@@ -461,9 +508,11 @@ const handleDelete = (record: any) => {
                 <a class="danger-link" @click="handleDelete(record)">删除</a>
               </template>
               
-              <!-- status === 10 已发布项目：统计、取消发布 -->
+              <!-- status === 10 已发布项目：统计、可见范围、取消发布 -->
               <template v-else-if="record.status === 10">
                 <a @click="handleStatistics(record)">统计</a>
+                <a-divider type="vertical" />
+                <a @click="handleVisibilityRange(record)">可见范围</a>
                 <a-divider type="vertical" />
                 <a @click="handlePublish(record)">取消发布</a>
               </template>
@@ -494,6 +543,26 @@ const handleDelete = (record: any) => {
         </template>
       </a-table>
     </div>
+
+    <!-- 可见范围设置弹窗 -->
+    <a-modal
+      v-model:open="visibilityModalVisible"
+      title="修改可见范围"
+      :width="500"
+      @ok="handleVisibilityConfirm"
+      @cancel="handleVisibilityCancel"
+    >
+      <div class="visibility-modal-content">
+        <p class="project-info">
+          项目名称：<strong>{{ currentEditRecord?.name }}</strong>
+        </p>
+        <a-form :model="visibilityForm" layout="vertical">
+          <a-form-item label="可见范围" name="authType">
+            <a-radio-group v-model:value="visibilityForm.authType" :options="visibilityOptions" />
+          </a-form-item>
+        </a-form>
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -664,6 +733,44 @@ const handleDelete = (record: any) => {
 
       .ant-divider-vertical {
         margin: 0 8px;
+      }
+    }
+  }
+
+  // 可见范围弹窗样式
+  .visibility-modal-content {
+    .project-info {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      color: rgba(0, 0, 0, 0.85);
+      
+      strong {
+        color: #1890ff;
+      }
+    }
+
+    :deep(.ant-radio-group) {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .ant-radio-wrapper {
+        margin: 0;
+        padding: 8px 12px;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        transition: all 0.3s;
+
+        &:hover {
+          border-color: #1890ff;
+        }
+
+        &.ant-radio-wrapper-checked {
+          border-color: #1890ff;
+          background: #e6f7ff;
+        }
       }
     }
   }

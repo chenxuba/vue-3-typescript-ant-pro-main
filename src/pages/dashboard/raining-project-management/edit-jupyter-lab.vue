@@ -1568,7 +1568,7 @@ onMounted(async () => {
 
               <a-form-item label="任务要求" name="showTaskRequire">
                 <a-checkbox v-model:checked="formData.showTaskRequire">
-                  显示任务要求（勾选后，将帮作为任务要求显示在任务项目政策面）
+                  显示任务要求（勾选后，将作为任务要求显示在任务项目里）
                 </a-checkbox>
               </a-form-item>
             </a-form>

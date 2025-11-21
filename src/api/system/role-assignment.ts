@@ -153,7 +153,9 @@ export async function createRoleUserApi(data: CreateRoleUserParams) {
  * 批量删除角色分配
  */
 export async function batchDeleteRoleAssignmentApi(ids: (string | number)[]) {
-  return usePost('/role-assignment/batch-delete', { ids })
+  return usePost('/admin/api/roleUser/dels', { ids }, {
+    customDev: true
+  })
 }
 
 /**
