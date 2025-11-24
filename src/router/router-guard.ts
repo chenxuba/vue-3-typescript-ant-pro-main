@@ -12,15 +12,9 @@ router.beforeEach(async (to, _, next) => {
   const userStore = useUserStore()
   const token = useAuthorization()
   if (!token.value) {
-    //  如果token不存在就跳转到登录页面
+    //  如果token不存在就跳转到前台首页
     if (!allowList.includes(to.path) && !to.path.startsWith('/redirect')) {
-      next({
-        path: loginPath,
-        query: {
-          redirect: encodeURIComponent(to.fullPath),
-        },
-      })
-      return
+      window.location.href = `${window.location.origin}/web`
     }
   }
   else {
