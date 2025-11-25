@@ -371,7 +371,7 @@ onMounted(() => {
               />
             </a-form-item>
 
-            <a-form-item 
+            <!-- <a-form-item 
               v-if="projectType === 2" 
               label="任务要求" 
               name="showTaskRequire"
@@ -379,7 +379,7 @@ onMounted(() => {
               <a-checkbox v-model:checked="editForm.showTaskRequire" disabled>
                 显示任务要求（勾选后，将简介作为任务要求显示在实践项目挑战页面）
               </a-checkbox>
-            </a-form-item>
+            </a-form-item> -->
 
             <a-form-item label="难度" name="difficulty" required>
               <a-select
