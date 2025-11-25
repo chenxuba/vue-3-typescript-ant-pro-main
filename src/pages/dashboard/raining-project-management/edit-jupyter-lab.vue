@@ -191,7 +191,7 @@ const loadEnvironmentOptions = async () => {
         selectedEnvironment.value = String(formData.value.environment)
         environmentConfig.value.dockerImage = String(formData.value.environment)
         console.log('使用第一步的环境:', formData.value.environment)
-      } 
+      }
       // 如果还没有选中的环境，默认选中第一个
       else if (!selectedEnvironment.value && environmentOptions.value.length > 0) {
         selectedEnvironment.value = environmentOptions.value[0].value
@@ -352,15 +352,15 @@ const testValidateFileList = ref<any[]>([])
 // // 处理评测文件上传
 // const handleTestValidateFilesUpload = async (info: any) => {
 //   const { fileList } = info
-  
+
 //   const validFiles = fileList.filter((file: any) => {
 //     if (file.status === 'uploading') return true
 //     if (file.status === 'done' || !file.status) return true
 //     return false
 //   })
-  
+
 //   testValidateFileList.value = validFiles
-  
+
 //   const uploadPromises = validFiles
 //     .filter((file: any) => file.originFileObj && !file.url)
 //     .map(async (file: any) => {
@@ -374,17 +374,17 @@ const testValidateFileList = ref<any[]>([])
 //         return null
 //       }
 //     })
-  
+
 //   if (uploadPromises.length > 0) {
 //     const urls = await Promise.all(uploadPromises)
 //     const successUrls = urls.filter(url => url !== null)
-    
+
 //     if (successUrls.length > 0) {
 //       const allUrls = validFiles
 //         .filter((file: any) => file.url)
 //         .map((file: any) => file.url)
 //         .join(',')
-      
+
 //       evaluationData.value.testValidateFiles = allUrls
 //       message.success(`成功上传 ${successUrls.length} 个文件`)
 //     }
@@ -399,11 +399,11 @@ const handleTestValidateFilesSelect = (selectedFiles: any[]) => {
     status: 'done',
     url: file.path, // 使用文件路径作为url
   }))
-  
+
   // 将选中的文件路径拼接成字符串
   const filePaths = selectedFiles.map((file: any) => file.path).join(',')
   evaluationData.value.testValidateFiles = filePaths
-  
+
   message.success(`已选择 ${selectedFiles.length} 个文件`)
   showTestValidateFileSelectModal.value = false
 }
@@ -419,7 +419,7 @@ const filteredEnvironmentList = computed(() => {
   if (!environmentSearchKeyword.value) {
     return environmentOptions.value
   }
-  return environmentOptions.value.filter(env => 
+  return environmentOptions.value.filter(env =>
     env.label.toLowerCase().includes(environmentSearchKeyword.value.toLowerCase())
   )
 })
@@ -464,7 +464,7 @@ const fetchProjectDetail = async () => {
   try {
     loading.value = true
     const detail = await getProjectDetailApi({ id: projectId.value })
-    
+
     // 回填基本信息表单数据
     formData.value = {
       name: detail.name || '',
@@ -483,7 +483,7 @@ const fetchProjectDetail = async () => {
       repositoryType: detail.repositoryType || '代码仓库',
       gitUrl: detail.gitUrl || '',
     }
-    
+
     // 设置图片预览
     if (detail.topCover) {
       topCoverUrl.value = imageUrlPrefix + detail.topCover
@@ -491,12 +491,12 @@ const fetchProjectDetail = async () => {
     if (detail.cover) {
       coverUrl.value = imageUrlPrefix + detail.cover
     }
-    
+
     // 如果有仓库地址，自动打开开关并锁定输入框
     // if (detail.gitUrl) {
     //   isRepositoryUrlLocked.value = true
     // }
-    
+
     // 同步第一步选择的实验环境到第四步
     if (detail.environment) {
       await nextTick()
@@ -508,10 +508,10 @@ const fetchProjectDetail = async () => {
         environmentOptions: environmentOptions.value
       })
     }
-    
+
     // 获取任务数据
     await fetchProjectTaskList()
-    
+
   } catch (error: any) {
     console.error('获取项目详情失败：', error)
     message.error(error.message || '获取项目详情失败')
@@ -524,22 +524,22 @@ const fetchProjectDetail = async () => {
 // 获取任务列表并填充评测设置和参考答案
 const fetchProjectTaskList = async () => {
   if (!projectId.value) return
-  
+
   try {
     const response = await getProjectTaskListApi({ projectId: projectId.value, orderbyFiled: 'weight:asc' })
-    
+
     let list: any[] = []
     if (Array.isArray(response)) {
       list = response
     } else if (response && typeof response === 'object') {
       list = (response as any).list || (response as any).data || (response as any).tasks || []
     }
-    
+
     if (list && list.length > 0) {
       const task = list[0] // JupyterLab只有一个任务
       if (task) {
         taskId.value = task.taskId
-        
+
         // 填充评测设置
         evaluationData.value = {
           openTestValidate: task.openTestValidate || 1,
@@ -551,7 +551,7 @@ const fetchProjectTaskList = async () => {
           evaluationSetting: task.evaluationSetting || 1,
           testSets: [],
         }
-        
+
         // 解析测试集
         if (task.testContent) {
           try {
@@ -566,7 +566,7 @@ const fetchProjectTaskList = async () => {
             console.error('解析测试集失败:', e)
           }
         }
-        
+
         // 如果没有测试集，添加默认的两个
         if (evaluationData.value.testSets.length === 0) {
           evaluationData.value.testSets = [
@@ -575,7 +575,7 @@ const fetchProjectTaskList = async () => {
           ]
           testSetIdCounter = 3
         }
-        
+
         // 填充评测文件列表
         if (task.testValidateFiles) {
           testValidateFileList.value = task.testValidateFiles.split(',').map((url: string, index: number) => ({
@@ -586,14 +586,14 @@ const fetchProjectTaskList = async () => {
             response: url,
           }))
         }
-        
+
         // 填充参考答案
         referenceAnswerData.value = {
           showAnswer: task.showAnswer || 1,
           prohibitCopyAnswer: task.prohibitCopyAnswer || 1,
           referenceAnswer: task.referenceAnswer || '',
         }
-        
+
         // 填充实验环境配置（不再从任务中读取 dockerImage，因为应该从项目详情中读取）
         // 只填充其他配置项
         if (task.secondType) {
@@ -602,7 +602,7 @@ const fetchProjectTaskList = async () => {
         if (task.timeLimitM) {
           environmentConfig.value.timeLimitM = task.timeLimitM
         }
-        
+
         // 标记为已保存
         evaluationSaved.value = true
         referenceAnswerSaved.value = true
@@ -1073,7 +1073,7 @@ const handleBack = async () => {
   if (currentStep.value > 0) {
     currentStep.value--
     scrollToTop()
-    
+
     // 如果返回到第二步（实验内容），获取Pod配置
     if (currentStep.value === 1 && taskId.value) {
       await fetchPodConfig()
@@ -1095,7 +1095,7 @@ const handleNext = async () => {
       await handleUpdateProject(false)
       currentStep.value = 1
       scrollToTop()
-      
+
       // 进入第二步（实验内容），获取Pod配置
       if (taskId.value) {
         await fetchPodConfig()
@@ -1109,7 +1109,7 @@ const handleNext = async () => {
     if (taskId.value) {
       await handleStopPod()
     }
-    
+
     currentStep.value = 2
     scrollToTop()
   } else if (currentStep.value === 2) {
@@ -1120,7 +1120,7 @@ const handleNext = async () => {
         message.error('任务ID不存在，请重新创建任务')
         return
       }
-      
+
       // 如果启用了评测功能，进行非空校验
       if (evaluationData.value.openTestValidate === 1) {
         // 校验评测时长限制
@@ -1129,21 +1129,21 @@ const handleNext = async () => {
           scrollToTop()
           return
         }
-        
+
         // 校验学时
         if (!evaluationData.value.classHour || evaluationData.value.classHour <= 0) {
           message.error('请输入有效的学时')
           scrollToTop()
           return
         }
-        
+
         // 校验测试集
         if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
           message.error('请至少添加一个测试集')
           scrollToTop()
           return
         }
-        
+
         // 校验是否至少有一个测试集被选中
         const selectedTestSets = evaluationData.value.testSets.filter(item => item.select === 1)
         if (selectedTestSets.length === 0) {
@@ -1151,7 +1151,7 @@ const handleNext = async () => {
           scrollToTop()
           return
         }
-        
+
         // 校验选中的测试集是否填写了期望输出
         for (let i = 0; i < selectedTestSets.length; i++) {
           const testSet = selectedTestSets[i]
@@ -1162,14 +1162,14 @@ const handleNext = async () => {
           }
         }
       }
-      
+
       // 校验参考答案内容是否为空
       if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
         message.error('请输入参考答案内容')
         scrollToTop()
         return
       }
-      
+
       // 去除HTML标签后检查是否有实际内容
       const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
       if (!textContent) {
@@ -1177,13 +1177,13 @@ const handleNext = async () => {
         scrollToTop()
         return
       }
-      
+
       // 准备测试集数据
       const testContentArray = evaluationData.value.testSets.map(item => ({
         answer: item.answer,
         select: item.select,
       }))
-      
+
       // 始终调用更新接口保存数据 - 包含两个tabs的所有参数
       const taskUpdateData: any = {
         taskId: taskId.value,
@@ -1202,14 +1202,14 @@ const handleNext = async () => {
         prohibitCopyAnswer: referenceAnswerData.value.prohibitCopyAnswer,
         referenceAnswer: referenceAnswerData.value.referenceAnswer,
       }
-      
+
       console.log('下一步时保存评测设置和参考答案数据：', taskUpdateData)
-      
+
       // 调用更新任务接口
       await updateProjectTaskApi(taskUpdateData as any)
       evaluationSaved.value = true
       referenceAnswerSaved.value = true
-      
+
       // 保存成功后进入下一步
       currentStep.value = 3
       scrollToTop()
@@ -1228,7 +1228,7 @@ const handleNext = async () => {
 const handleUpdateProject = async (isComplete: boolean = false) => {
   try {
     loading.value = true
-    
+
     const submitData: any = {
       id: projectId.value,
       projectType: 3, // JupyterLab环境实训项目
@@ -1258,7 +1258,7 @@ const handleUpdateProject = async (isComplete: boolean = false) => {
     }
 
     await updateProjectApi(submitData)
-    
+
     if (isComplete) {
       message.success('项目更新成功！')
       setTimeout(() => {
@@ -1284,7 +1284,7 @@ const handleSaveEvaluation = async () => {
       message.error('任务ID不存在，请重新创建任务')
       return
     }
-    
+
     // 如果启用了评测功能，进行非空校验
     if (evaluationData.value.openTestValidate === 1) {
       // 校验评测时长限制
@@ -1292,26 +1292,26 @@ const handleSaveEvaluation = async () => {
         message.error('请输入评测时长限制')
         return
       }
-      
+
       // 校验学时
       if (!evaluationData.value.classHour || evaluationData.value.classHour <= 0) {
         message.error('请输入有效的学时')
         return
       }
-      
+
       // 校验测试集
       if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
         message.error('请至少添加一个测试集')
         return
       }
-      
+
       // 校验是否至少有一个测试集被选中
       const selectedTestSets = evaluationData.value.testSets.filter(item => item.select === 1)
       if (selectedTestSets.length === 0) {
         message.error('请至少选中一个测试集')
         return
       }
-      
+
       // 校验选中的测试集是否填写了期望输出
       for (let i = 0; i < selectedTestSets.length; i++) {
         const testSet = selectedTestSets[i]
@@ -1321,26 +1321,26 @@ const handleSaveEvaluation = async () => {
         }
       }
     }
-    
+
     // 校验参考答案内容是否为空
     if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
       message.error('请输入参考答案内容')
       return
     }
-    
+
     // 去除HTML标签后检查是否有实际内容
     const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
     if (!textContent) {
       message.error('请输入参考答案内容')
       return
     }
-    
+
     // 准备测试集数据
     const testContentArray = evaluationData.value.testSets.map(item => ({
       answer: item.answer,
       select: item.select,
     }))
-    
+
     // 更新任务数据 - 包含两个tabs的所有参数
     const taskUpdateData: any = {
       taskId: taskId.value,
@@ -1359,9 +1359,9 @@ const handleSaveEvaluation = async () => {
       prohibitCopyAnswer: referenceAnswerData.value.prohibitCopyAnswer,
       referenceAnswer: referenceAnswerData.value.referenceAnswer,
     }
-    
+
     console.log('保存评测设置和参考答案数据：', taskUpdateData)
-    
+
     // 调用更新任务接口
     await updateProjectTaskApi(taskUpdateData as any)
     evaluationSaved.value = true
@@ -1381,7 +1381,7 @@ const handleSaveReferenceAnswer = async () => {
       message.error('任务ID不存在，请重新创建任务')
       return
     }
-    
+
     // 如果启用了评测功能，进行非空校验
     if (evaluationData.value.openTestValidate === 1) {
       // 校验评测时长限制
@@ -1389,26 +1389,26 @@ const handleSaveReferenceAnswer = async () => {
         message.error('请输入评测时长限制')
         return
       }
-      
+
       // 校验学时
       if (!evaluationData.value.classHour || evaluationData.value.classHour <= 0) {
         message.error('请输入有效的学时')
         return
       }
-      
+
       // 校验测试集
       if (!evaluationData.value.testSets || evaluationData.value.testSets.length === 0) {
         message.error('请至少添加一个测试集')
         return
       }
-      
+
       // 校验是否至少有一个测试集被选中
       const selectedTestSets = evaluationData.value.testSets.filter(item => item.select === 1)
       if (selectedTestSets.length === 0) {
         message.error('请至少选中一个测试集')
         return
       }
-      
+
       // 校验选中的测试集是否填写了期望输出
       for (let i = 0; i < selectedTestSets.length; i++) {
         const testSet = selectedTestSets[i]
@@ -1418,26 +1418,26 @@ const handleSaveReferenceAnswer = async () => {
         }
       }
     }
-    
+
     // 校验参考答案内容是否为空
     if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
       message.error('请输入参考答案内容')
       return
     }
-    
+
     // 去除HTML标签后检查是否有实际内容
     const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
     if (!textContent) {
       message.error('请输入参考答案内容')
       return
     }
-    
+
     // 准备测试集数据
     const testContentArray = evaluationData.value.testSets.map(item => ({
       answer: item.answer,
       select: item.select,
     }))
-    
+
     // 更新任务数据 - 包含两个tabs的所有参数
     const taskUpdateData: any = {
       taskId: taskId.value,
@@ -1456,9 +1456,9 @@ const handleSaveReferenceAnswer = async () => {
       prohibitCopyAnswer: referenceAnswerData.value.prohibitCopyAnswer,
       referenceAnswer: referenceAnswerData.value.referenceAnswer,
     }
-    
+
     console.log('保存评测设置和参考答案数据：', taskUpdateData)
-    
+
     // 调用更新任务接口
     await updateProjectTaskApi(taskUpdateData as any)
     evaluationSaved.value = true
@@ -1477,27 +1477,27 @@ const handleCompleteUpdate = async () => {
       message.error('项目ID或任务ID不存在')
       return
     }
-    
+
     if (!evaluationSaved.value) {
       message.error('请先保存评测设置后再完成更新')
       return
     }
-    
+
     if (!referenceAnswerSaved.value) {
       message.error('请先保存参考答案后再完成更新')
       return
     }
-    
+
     if (!environmentConfig.value.dockerImage) {
       message.error('请选择实验环境')
       return
     }
-    
+
     if (!environmentConfig.value.timeLimitM) {
       message.error('请输入实验环境使用时长')
       return
     }
-    
+
     // 更新任务的实验环境配置
     await updateProjectTaskApi({
       taskId: taskId.value,
@@ -1506,7 +1506,7 @@ const handleCompleteUpdate = async () => {
       secondType: environmentConfig.value.secondType,
       timeLimitM: environmentConfig.value.timeLimitM,
     } as any)
-    
+
     // 完成项目更新
     await handleUpdateProject(true)
   } catch (error) {
@@ -1521,14 +1521,14 @@ const fetchPodConfig = async () => {
     console.log('taskId不存在，无法获取Pod配置')
     return
   }
-  
+
   try {
     loadingPodUrl.value = true
     console.log('正在获取Pod配置，taskId:', taskId.value)
-    
+
     const podData = await getPodApi({ taskId: taskId.value })
     console.log('获取到Pod数据：', podData)
-    
+
     if (podData && podData.config && podData.config.url) {
       jupyterUrl.value = podData.config.url
       console.log('更新Jupyter URL为：', jupyterUrl.value)
@@ -1551,10 +1551,10 @@ const handleStopPod = async () => {
     console.log('taskId不存在，无法停止Pod')
     return
   }
-  
+
   try {
     console.log('正在停止Pod，taskId:', taskId.value)
-    
+
     await stopPodApi({ taskId: taskId.value })
     console.log('Pod停止成功')
     message.success('实验环境已停止')
@@ -1571,7 +1571,7 @@ onMounted(async () => {
   fieldCategory.load()
   difficulty.load()
   subcategory.load()
-  
+
   // 从路由参数获取项目ID
   const id = route.query.id
   if (id) {
@@ -1611,14 +1611,8 @@ onMounted(async () => {
 
           <!-- 表单区域 -->
           <div class="form-section">
-            <a-form 
-              ref="formRef" 
-              :model="formData" 
-              :rules="formRules" 
-              layout="horizontal" 
-              :label-col="{ span: 2 }"
-              :wrapper-col="{ span: 18 }"
-            >
+            <a-form ref="formRef" :model="formData" :rules="formRules" layout="horizontal" :label-col="{ span: 2 }"
+              :wrapper-col="{ span: 18 }">
               <a-form-item label="名称" name="name" required>
                 <a-input v-model:value="formData.name" placeholder="请输入名称" />
               </a-form-item>
@@ -1627,27 +1621,23 @@ onMounted(async () => {
                 <a-col :span="12">
                   <a-form-item label="技能标签" name="tag" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
                     <a-input v-model:value="formData.tag" placeholder="请输入技能标签" />
+                    <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                      请使用英文状态下的逗号分隔技能标签，比如html,css,js
+                    </div>
                   </a-form-item>
                 </a-col>
                 <a-col :span="12">
-                  <a-form-item label="领域类别" name="fieldType" required :label-col="{ span: 4 }" :wrapper-col="{ span: 12 }">
-                    <a-select 
-                      v-model:value="formData.fieldType" 
-                      placeholder="请选择领域类别"
-                      :options="fieldCategory.options.value"
-                      :loading="fieldCategory.loading.value" 
-                    />
+                  <a-form-item label="领域类别" name="fieldType" required :label-col="{ span: 4 }"
+                    :wrapper-col="{ span: 12 }">
+                    <a-select v-model:value="formData.fieldType" placeholder="请选择领域类别"
+                      :options="fieldCategory.options.value" :loading="fieldCategory.loading.value" />
                   </a-form-item>
                 </a-col>
               </a-row>
 
               <a-form-item label="难度" name="difficulty" required>
                 <a-radio-group v-model:value="formData.difficulty" class="custom-radio">
-                  <a-radio 
-                    v-for="item in difficulty.data.value" 
-                    :key="item.value" 
-                    :value="Number(item.value)"
-                  >
+                  <a-radio v-for="item in difficulty.data.value" :key="item.value" :value="Number(item.value)">
                     {{ item.name }}
                   </a-radio>
                 </a-radio-group>
@@ -1655,13 +1645,10 @@ onMounted(async () => {
 
               <a-row>
                 <a-col :span="12">
-                  <a-form-item label="实验环境" name="environment" required :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
-                    <a-select 
-                      v-model:value="formData.environment" 
-                      placeholder="请选择实验环境"
-                      :options="environmentOptions"
-                      :loading="loadingEnvironment"
-                    />
+                  <a-form-item label="实验环境" name="environment" required :label-col="{ span: 4 }"
+                    :wrapper-col="{ span: 20 }">
+                    <a-select v-model:value="formData.environment" placeholder="请选择实验环境" :options="environmentOptions"
+                      :loading="loadingEnvironment" />
                   </a-form-item>
                 </a-col>
                 <!-- <a-col :span="12">
@@ -1677,17 +1664,15 @@ onMounted(async () => {
               </a-row>
 
               <a-form-item label="学时" name="classHour">
-                <a-input-number :min="0" disabled class="w-full" v-model:value="formData.classHour" placeholder="配置任务后自动计算学时" />
+                <a-input-number :min="0" disabled class="w-full" v-model:value="formData.classHour"
+                  placeholder="配置任务后自动计算学时" />
               </a-form-item>
 
               <a-form-item label="顶部背景图" name="topCover" required>
                 <div class="flex items-top gap-16px">
                   <div class="flex flex-col gap-12px">
-                    <a-upload 
-                      :before-upload="handleBackgroundUpload" 
-                      :show-upload-list="false"
-                      accept="image/png,image/jpeg"
-                    >
+                    <a-upload :before-upload="handleBackgroundUpload" :show-upload-list="false"
+                      accept="image/png,image/jpeg">
                       <a-button :loading="uploadingTopCover">
                         <template v-if="!uploadingTopCover">选择文件</template>
                         <template v-else>上传中...</template>
@@ -1707,18 +1692,16 @@ onMounted(async () => {
               <a-form-item label="封面图" name="cover" required>
                 <div class="flex items-top gap-16px">
                   <div class="flex flex-col gap-12px">
-                    <a-upload 
-                      :before-upload="handleCoverUpload" 
-                      :show-upload-list="false" 
-                      accept="image/png,image/jpeg"
-                    >
+                    <a-upload :before-upload="handleCoverUpload" :show-upload-list="false"
+                      accept="image/png,image/jpeg">
                       <a-button :loading="uploadingCover">
                         <template v-if="!uploadingCover">选择文件</template>
                         <template v-else>上传中...</template>
                       </a-button>
                     </a-upload>
                     <div v-if="coverUrl" class="image-preview">
-                      <img :src="coverUrl" alt="封面图预览" style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
+                      <img :src="coverUrl" alt="封面图预览"
+                        style="max-width: 290px; max-height: 218px; border-radius: 4px;" />
                     </div>
                   </div>
                   <div class="upload-hint">
@@ -1746,14 +1729,8 @@ onMounted(async () => {
 
           <!-- 培训公开范围表单 -->
           <div class="form-section">
-            <a-form 
-              ref="trainingScopeFormRef" 
-              :model="formData" 
-              :rules="formRules" 
-              layout="horizontal"
-              :label-col="{ span: 2 }" 
-              :wrapper-col="{ span: 18 }"
-            >
+            <a-form ref="trainingScopeFormRef" :model="formData" :rules="formRules" layout="horizontal"
+              :label-col="{ span: 2 }" :wrapper-col="{ span: 18 }">
               <a-form-item label="培训公开范围" name="authType" required>
                 <a-radio-group v-model:value="formData.authType" class="custom-radio">
                   <a-radio :value="1">完全公开</a-radio>
@@ -1766,40 +1743,31 @@ onMounted(async () => {
           </div>
         </div>
 
-      <!-- 第二步：实验内容 -->
-      <div v-if="currentStep === 1" class="step-content">
-        <div class="jupyter-container" :class="{ 'fullscreen': isFullscreen }">
-          <div class="jupyter-header">
-            <h3>Jupyter Lab 编辑器</h3>
-            <div class="jupyter-actions">
-              <a-tooltip :title="isFullscreen ? '退出全屏' : '全屏'">
-                <a-button 
-                  type="text" 
-                  :icon="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
-                  @click="toggleFullscreen"
-                >
-                  {{ isFullscreen ? '退出全屏' : '全屏' }}
-                </a-button>
-              </a-tooltip>
+        <!-- 第二步：实验内容 -->
+        <div v-if="currentStep === 1" class="step-content">
+          <div class="jupyter-container" :class="{ 'fullscreen': isFullscreen }">
+            <div class="jupyter-header">
+              <h3>Jupyter Lab 编辑器</h3>
+              <div class="jupyter-actions">
+                <a-tooltip :title="isFullscreen ? '退出全屏' : '全屏'">
+                  <a-button type="text" :icon="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+                    @click="toggleFullscreen">
+                    {{ isFullscreen ? '退出全屏' : '全屏' }}
+                  </a-button>
+                </a-tooltip>
+              </div>
             </div>
-          </div>
-          <div class="jupyter-iframe-wrapper">
-            <div v-if="loadingPodUrl" class="loading-container">
-              <a-spin size="large" tip="正在加载实验环境..." />
+            <div class="jupyter-iframe-wrapper">
+              <div v-if="loadingPodUrl" class="loading-container">
+                <a-spin size="large" tip="正在加载实验环境..." />
+              </div>
+              <iframe v-else :src="jupyterUrl" class="jupyter-iframe" frameborder="0" allowfullscreen></iframe>
             </div>
-            <iframe 
-              v-else
-              :src="jupyterUrl" 
-              class="jupyter-iframe"
-              frameborder="0"
-              allowfullscreen
-            ></iframe>
           </div>
         </div>
-      </div>
 
-      <!-- 第三步：评测设置 -->
-      <div v-if="currentStep === 2" class="step-content evaluation-step">
+        <!-- 第三步：评测设置 -->
+        <div v-if="currentStep === 2" class="step-content evaluation-step">
           <a-tabs v-model:activeKey="evaluationActiveTab" class="evaluation-tabs">
             <!-- 评测设置标签页 -->
             <a-tab-pane key="settings" tab="评测设置">
@@ -1819,23 +1787,15 @@ onMounted(async () => {
                       <template v-if="evaluationData.openTestValidate === 1">
                         <a-form-item label="评测时长限制" required>
                           <div style="display: flex; align-items: center; gap: 8px;">
-                            <a-input-number 
-                              v-model:value="evaluationData.timeLimitM" 
-                              :min="1"
-                              placeholder="请输入评测时长（分钟）" 
-                              style="width: 580px"
-                            />
+                            <a-input-number v-model:value="evaluationData.timeLimitM" :min="1" placeholder="请输入评测时长（分钟）"
+                              style="width: 580px" />
                             <span>分钟</span>
                           </div>
                         </a-form-item>
 
                         <a-form-item label="学时" required>
-                          <a-input-number 
-                            v-model:value="evaluationData.classHour" 
-                            :min="0"
-                            placeholder="请输入学时" 
-                            style="width: 600px"
-                          />
+                          <a-input-number v-model:value="evaluationData.classHour" :min="0" placeholder="请输入学时"
+                            style="width: 600px" />
                         </a-form-item>
 
                         <a-form-item label="系统评分规则">
@@ -1873,31 +1833,18 @@ onMounted(async () => {
                     </div>
                   </div>
                   <div class="block-content">
-                    <div 
-                      v-for="(testSet, index) in evaluationData.testSets" 
-                      :key="testSet.id"
-                      class="test-set-item"
-                    >
-                      <a-checkbox 
-                        :checked="testSet.select === 1"
+                    <div v-for="(testSet, index) in evaluationData.testSets" :key="testSet.id" class="test-set-item">
+                      <a-checkbox :checked="testSet.select === 1"
                         @change="(e) => handleTestSetSelectChange(testSet, e.target.checked)"
-                        class="test-set-checkbox" 
-                      />
+                        class="test-set-checkbox" />
                       <span class="test-set-label">测试集{{ index + 1 }}</span>
-                      <a-textarea 
-                        v-model:value="testSet.answer" 
-                        placeholder="请输入期望输出"
-                        class="test-set-input"
-                        :auto-size="{ minRows: 3 }"
-                      />
-                      <DeleteOutlined 
-                        class="delete-test-set-icon" 
-                        @click="removeTestSet(testSet.id)" 
-                      />
+                      <a-textarea v-model:value="testSet.answer" placeholder="请输入期望输出" class="test-set-input"
+                        :auto-size="{ minRows: 3 }" />
+                      <DeleteOutlined class="delete-test-set-icon" @click="removeTestSet(testSet.id)" />
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- 保存按钮 -->
                 <div class="tab-footer-buttons">
                   <a-button type="primary" @click="handleSaveEvaluation">
@@ -1934,7 +1881,7 @@ onMounted(async () => {
                     </a-form>
                   </div>
                 </div>
-                
+
                 <!-- 保存按钮 -->
                 <div class="tab-footer-buttons">
                   <a-button type="primary" @click="handleSaveReferenceAnswer">
@@ -1950,30 +1897,21 @@ onMounted(async () => {
         <div v-if="currentStep === 3" class="step-content environment-step">
           <div class="environment-section">
             <h3 class="section-main-title">实验环境</h3>
-            
+
             <div class="environment-container">
               <!-- 左侧：环境列表 -->
               <div class="environment-left">
                 <div class="search-box">
-                  <a-input 
-                    v-model:value="environmentSearchKeyword"
-                    placeholder="搜索需要的实验环境"
-                    allow-clear
-                  >
+                  <a-input v-model:value="environmentSearchKeyword" placeholder="搜索需要的实验环境" allow-clear>
                     <template #suffix>
                       <span class="search-icon">🔍</span>
                     </template>
                   </a-input>
                 </div>
-                
+
                 <div class="environment-list">
-                  <div 
-                    v-for="env in filteredEnvironmentList" 
-                    :key="env.value"
-                    class="environment-item"
-                    :class="{ active: selectedEnvironment === env.value }"
-                    @click="handleSelectEnvironment(env.value)"
-                  >
+                  <div v-for="env in filteredEnvironmentList" :key="env.value" class="environment-item"
+                    :class="{ active: selectedEnvironment === env.value }" @click="handleSelectEnvironment(env.value)">
                     {{ env.label }}
                   </div>
                 </div>
@@ -1984,30 +1922,18 @@ onMounted(async () => {
                 <div class="environment-config-header">
                   实验环境: {{ selectedEnvironmentLabel }}
                 </div>
-                
-                <a-form 
-                  :model="environmentConfig"
-                  layout="horizontal"
-                  :label-col="{ span: 6 }"
-                  :wrapper-col="{ span: 16 }"
-                >
+
+                <a-form :model="environmentConfig" layout="horizontal" :label-col="{ span: 6 }"
+                  :wrapper-col="{ span: 16 }">
                   <a-form-item label="附带环境">
-                    <a-select 
-                      v-model:value="environmentConfig.secondType"
-                      placeholder="请选择附带环境"
-                      :options="subcategory.options.value"
-                      :loading="subcategory.loading.value"
-                    />
+                    <a-select v-model:value="environmentConfig.secondType" placeholder="请选择附带环境"
+                      :options="subcategory.options.value" :loading="subcategory.loading.value" />
                   </a-form-item>
 
                   <a-form-item label="实验环境使用时长">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                      <a-input-number 
-                        v-model:value="environmentConfig.timeLimitM"
-                        :min="1"
-                        placeholder="请输入实验环境使用时长"
-                        style="flex: 1;"
-                      />
+                      <a-input-number v-model:value="environmentConfig.timeLimitM" :min="1" placeholder="请输入实验环境使用时长"
+                        style="flex: 1;" />
                       <span>分</span>
                     </div>
                   </a-form-item>
@@ -2053,14 +1979,10 @@ onMounted(async () => {
       :parent-path="currentFolderParentPath"
       @confirm="handleConfirmNewFolder"
     /> -->
-    
+
     <!-- 评测文件选择器 -->
-    <FileSelectModal 
-      v-model:open="showTestValidateFileSelectModal" 
-      title="选择评测文件"
-      :git-url="formData.gitUrl"
-      @confirm="handleTestValidateFilesSelect" 
-    />
+    <FileSelectModal v-model:open="showTestValidateFileSelectModal" title="选择评测文件" :git-url="formData.gitUrl"
+      @confirm="handleTestValidateFilesSelect" />
   </div>
 </template>
 
@@ -2074,7 +1996,7 @@ onMounted(async () => {
     margin: 0 0 16px 0;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     text-align: center;
-    
+
     h2 {
       margin: 0;
       font-size: 20px;
@@ -2108,7 +2030,7 @@ onMounted(async () => {
       font-size: 14px;
       font-weight: 500;
       margin-bottom: 24px;
-      
+
       h3 {
         margin: 0;
       }
@@ -2265,7 +2187,7 @@ onMounted(async () => {
       padding-top: 32px;
       margin-top: 20px;
       border-top: 1px solid #f0f0f0;
-      
+
       .ant-btn {
         min-width: 100px;
         padding: 0 32px;
@@ -2353,7 +2275,7 @@ onMounted(async () => {
   overflow: hidden;
   background: #fff;
   transition: all 0.3s;
-  
+
   &.fullscreen {
     position: fixed;
     top: 0;
@@ -2362,12 +2284,12 @@ onMounted(async () => {
     bottom: 0;
     z-index: 9999;
     border-radius: 0;
-    
+
     .jupyter-iframe-wrapper {
       height: calc(100vh - 64px);
     }
   }
-  
+
   .jupyter-header {
     display: flex;
     justify-content: space-between;
@@ -2375,25 +2297,25 @@ onMounted(async () => {
     padding: 12px 16px;
     background: #fafafa;
     border-bottom: 1px solid #e8e8e8;
-    
+
     h3 {
       margin: 0;
       font-size: 16px;
       font-weight: 500;
       color: rgba(0, 0, 0, 0.85);
     }
-    
+
     .jupyter-actions {
       display: flex;
       gap: 8px;
     }
   }
-  
+
   .jupyter-iframe-wrapper {
     width: 100%;
     height: 700px;
     position: relative;
-    
+
     .loading-container {
       width: 100%;
       height: 100%;
@@ -2402,7 +2324,7 @@ onMounted(async () => {
       justify-content: center;
       background: #f5f5f5;
     }
-    
+
     .jupyter-iframe {
       width: 100%;
       height: 100%;
@@ -2489,7 +2411,7 @@ onMounted(async () => {
           margin-bottom: 0;
         }
       }
-      
+
       .file-select-wrapper {
         .selected-files-list {
           margin-top: 8px;
@@ -2640,4 +2562,3 @@ onMounted(async () => {
   }
 }
 </style>
-

@@ -930,7 +930,7 @@ export async function exportProjectUserApi(params: ExportProjectUserParams): Pro
   const { locale } = useI18nLocale()
   
   // 构建请求URL
-  let baseURL = import.meta.env.VITE_APP_BASE_API ?? '/'
+  let baseURL = import.meta.env.VITE_APP_BASE_URL ?? '/'
   if (import.meta.env.DEV && import.meta.env.VITE_APP_BASE_API_DEV && import.meta.env.VITE_APP_BASE_URL_DEV) {
     baseURL = import.meta.env.VITE_APP_BASE_API_DEV
   }
@@ -998,7 +998,7 @@ export async function exportProjectUserTaskApi(params: ExportProjectUserTaskPara
   const { locale } = useI18nLocale()
   
   // 构建请求URL
-  let baseURL = import.meta.env.VITE_APP_BASE_API ?? '/'
+  let baseURL = import.meta.env.VITE_APP_BASE_URL ?? '/'
   if (import.meta.env.DEV && import.meta.env.VITE_APP_BASE_API_DEV && import.meta.env.VITE_APP_BASE_URL_DEV) {
     baseURL = import.meta.env.VITE_APP_BASE_API_DEV
   }
