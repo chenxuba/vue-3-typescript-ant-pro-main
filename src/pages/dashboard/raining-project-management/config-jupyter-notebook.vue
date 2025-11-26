@@ -9,12 +9,19 @@ import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProject
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 import { getDicGroupApi } from '@/api/common/dictionary'
 import RichTextEditor from './components/RichTextEditor.vue'
+import { useMultiTab } from '@/stores/multi-tab'
 
 defineOptions({
   name: 'ConfigJupyterNotebook',
 })
 
 const router = useRouter()
+const multiTabStore = useMultiTab()
+const PROJECT_LIST_PATH = '/dashboard/analysis'
+const redirectToProjectList = async () => {
+  await router.push(PROJECT_LIST_PATH)
+  multiTabStore.closeOther(PROJECT_LIST_PATH)
+}
 
 // 当前步骤
 const currentStep = ref(0)
@@ -701,7 +708,7 @@ const handleSave = async () => {
     message.success('项目创建成功！')
     
     setTimeout(() => {
-      router.push('/dashboard/analysis')
+      void redirectToProjectList()
     }, 500)
   } catch (error) {
     console.error('完成创建失败：', error)

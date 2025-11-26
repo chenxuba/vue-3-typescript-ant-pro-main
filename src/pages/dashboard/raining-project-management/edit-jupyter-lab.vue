@@ -7,6 +7,7 @@ import { uploadFileApi } from '@/api/common/file'
 import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
+import { useMultiTab } from '@/stores/multi-tab'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore 
@@ -51,6 +52,12 @@ defineOptions({
 
 const router = useRouter()
 const route = useRoute()
+const multiTabStore = useMultiTab()
+const PROJECT_LIST_PATH = '/dashboard/analysis'
+const redirectToProjectList = async () => {
+  await router.push(PROJECT_LIST_PATH)
+  multiTabStore.closeOther(PROJECT_LIST_PATH)
+}
 
 // 项目ID
 const projectId = ref<number | null>(null)
@@ -1224,7 +1231,7 @@ const handleUpdateProject = async (isComplete: boolean = false) => {
     if (isComplete) {
       message.success('项目更新成功！')
       setTimeout(() => {
-        router.push('/dashboard/analysis')
+        void redirectToProjectList()
       }, 500)
     } else {
       message.success('保存成功！')

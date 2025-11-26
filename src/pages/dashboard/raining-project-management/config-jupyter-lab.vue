@@ -7,6 +7,7 @@ import { uploadFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
+import { useMultiTab } from '@/stores/multi-tab'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -50,6 +51,12 @@ defineOptions({
 })
 
 const router = useRouter()
+const multiTabStore = useMultiTab()
+const PROJECT_LIST_PATH = '/dashboard/analysis'
+const redirectToProjectList = async () => {
+  await router.push(PROJECT_LIST_PATH)
+  multiTabStore.closeOther(PROJECT_LIST_PATH)
+}
 
 // 当前步骤
 const currentStep = ref(0)
@@ -1358,7 +1365,7 @@ const handleSave = async () => {
     message.success('项目创建成功！')
     
     setTimeout(() => {
-      router.push('/dashboard/analysis')
+      void redirectToProjectList()
     }, 500)
   } catch (error) {
     console.error('完成创建失败：', error)

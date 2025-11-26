@@ -9,6 +9,7 @@ import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updatePro
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 import { getDicGroupApi } from '@/api/common/dictionary'
 import RichTextEditor from './components/RichTextEditor.vue'
+import { useMultiTab } from '@/stores/multi-tab'
 
 defineOptions({
   name: 'EditJupyterNotebook',
@@ -16,6 +17,12 @@ defineOptions({
 
 const router = useRouter()
 const route = useRoute()
+const multiTabStore = useMultiTab()
+const PROJECT_LIST_PATH = '/dashboard/analysis'
+const redirectToProjectList = async () => {
+  await router.push(PROJECT_LIST_PATH)
+  multiTabStore.closeOther(PROJECT_LIST_PATH)
+}
 
 // 项目ID
 const projectId = ref<number | null>(null)
@@ -680,7 +687,7 @@ const handleCompleteUpdate = async () => {
   message.success('项目更新成功！')
   
   setTimeout(() => {
-    router.push('/dashboard/analysis')
+    void redirectToProjectList()
   }, 500)
 }
 

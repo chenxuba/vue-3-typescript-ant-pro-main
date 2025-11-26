@@ -7,6 +7,7 @@ import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutline
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, updateProjectEnvironmentApi } from '@/api/project'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useCollateralEnvironmentDictionary, useProgrammingLanguageDictionary, useEnvironmentDictionary } from '@/composables/dictionary'
+import { useMultiTab } from '@/stores/multi-tab'
 // @ts-ignore
 import hljs from 'highlight.js/lib/core'
 // @ts-ignore
@@ -55,6 +56,12 @@ defineOptions({
 })
 
 const router = useRouter()
+const multiTabStore = useMultiTab()
+const PROJECT_LIST_PATH = '/dashboard/analysis'
+const redirectToProjectList = async () => {
+  await router.push(PROJECT_LIST_PATH)
+  multiTabStore.closeOther(PROJECT_LIST_PATH)
+}
 
 // 当前步骤
 const currentStep = ref(0)
@@ -1049,7 +1056,7 @@ const completeProject = async () => {
 
     // 延迟返回列表页，让用户看到成功提示
     setTimeout(() => {
-      router.push('/dashboard/analysis')
+      void redirectToProjectList()
     }, 500)
   } catch (error: any) {
     console.error('项目发布失败：', error)
