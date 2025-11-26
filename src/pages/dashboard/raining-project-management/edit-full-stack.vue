@@ -233,7 +233,6 @@ const {
   deleteTaskLevel,
   selectTaskLevel,
   saveTaskLevel,
-  saveAllTaskLevels,
   resetTaskLevel,
   handleLearningResourceCustomRequest,
   handleLearningResourceUpload,
@@ -263,6 +262,14 @@ const sortedTaskLevels = computed(() => {
     return weightA - weightB
   })
 })
+
+// 仅包含编程任务的关卡列表
+const programmingTaskLevels = computed(() => {
+  return sortedTaskLevels.value.filter(level => level.type === 'programming')
+})
+
+// 是否需要配置实验环境（存在编程任务时）
+const needsExperimentEnvironment = computed(() => programmingTaskLevels.value.length > 0)
 
 // 弹窗状态
 const showRepositoryModal = ref(false)
@@ -408,13 +415,13 @@ const fetchProjectTaskList = async () => {
       }
     }
 
-    // 初始化实验环境数据 - 从任务关卡中提取（通过 envIsDel 字段判断）
+    // 初始化实验环境数据 - 从任务关卡中提取（仅限编程任务，通过 envIsDel 字段判断）
     let envData: any[] = []
 
     if (list && list.length > 0) {
       list.forEach((task: any, index: number) => {
-        // envIsDel 为 0 或者不存在该字段，表示实验环境未删除
-        if (task.envIsDel === 0 || task.envIsDel === undefined || task.envIsDel === null) {
+        // 只处理编程任务(type === 1)，且 envIsDel 为 0 或者不存在该字段，表示实验环境未删除
+        if (task.type === 1 && (task.envIsDel === 0 || task.envIsDel === undefined || task.envIsDel === null)) {
           // 从任务中提取实验环境配置
           const envConfig = {
             id: task.id || task.taskId,
@@ -1043,13 +1050,33 @@ const handleNext = async () => {
       return
     }
 
-    // 批量保存所有任务关卡的修改
-    try {
-      // saveAllTaskLevels 会自动同步当前表单数据到本地状态，然后批量更新所有关卡
-      await saveAllTaskLevels()
-    } catch (error) {
-      // 如果保存失败，阻止跳转到下一步
-      console.error('批量保存任务关卡失败:', error)
+    // 检查所有选择题任务是否都有题目
+    const choiceLevelWithoutQuestions = taskLevels.value.find(level =>
+      level.type === 'choice' &&
+      level.taskId &&
+      (!level.questions || level.questions.length === 0)
+    )
+    if (choiceLevelWithoutQuestions) {
+      message.warning('请至少新增一条题目')
+      selectTaskLevel(choiceLevelWithoutQuestions.id)
+      currentTab.value = 'questions'
+      return
+    }
+
+    // 检查所有编程任务是否都配置了评测设置
+    const programmingLevelWithoutEvaluation = taskLevels.value.find(level => {
+      if (level.type !== 'programming' || !level.taskId || !level.evaluationSettings) {
+        return false
+      }
+      if (level.evaluationSettings.testValidateType === 1) {
+        return !level.evaluationSettings.testContent || level.evaluationSettings.testContent.length === 0
+      }
+      return false
+    })
+    if (programmingLevelWithoutEvaluation) {
+      message.warning('用例类型为文本时，必须至少创建一条测试集')
+      selectTaskLevel(programmingLevelWithoutEvaluation.id)
+      currentTab.value = 'evaluation'
       return
     }
 
@@ -1057,19 +1084,12 @@ const handleNext = async () => {
     scrollToTop()
   } else if (currentStep.value === 3) {
     // 第四步：实验环境验证并完成更新
-    const unsavedEnvironments = experimentEnvironments.value.filter(env => !env.isSaved)
-    if (unsavedEnvironments.length > 0) {
-      message.error('请先保存所有实验环境配置')
-      return
-    }
-
-    // 批量保存所有实验环境的修改
-    try {
-      await saveAllEnvironments()
-    } catch (error) {
-      // 如果保存失败，阻止完成
-      console.error('批量保存实验环境失败:', error)
-      return
+    if (needsExperimentEnvironment.value) {
+      const unsavedEnvironments = experimentEnvironments.value.filter(env => !env.isSaved)
+      if (unsavedEnvironments.length > 0) {
+        message.error('请先保存实验环境配置')
+        return
+      }
     }
 
     // 完成更新
@@ -1194,102 +1214,6 @@ const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0)
     console.error('保存失败：', error)
     message.error(envisDel === 1 ? '删除失败' : '请完善必填信息')
     throw error
-  }
-}
-
-// 批量保存所有实验环境
-const saveAllEnvironments = async () => {
-  // 先验证当前激活的实验环境的表单
-  const currentEnv = experimentEnvironments.value.find(e => e.id === activeEnvironmentKey.value)
-
-  if (currentEnv) {
-    // 验证当前环境的表单
-    const fieldsToValidate: string[] = ['dockerImage', 'viewTypes', 'taskId']
-    const fieldsToClear: string[] = []
-
-    if (currentEnv.config.viewTypes.includes(1)) {
-      fieldsToValidate.push('codeType')
-    } else {
-      fieldsToClear.push('codeType')
-    }
-
-    if (currentEnv.config.viewTypes.includes(2)) {
-      fieldsToValidate.push('shellBegin')
-    } else {
-      fieldsToClear.push('shellBegin')
-    }
-
-    if (currentEnv.config.viewTypes.includes(3)) {
-      fieldsToValidate.push('containerPort')
-    } else {
-      fieldsToClear.push('containerPort')
-    }
-
-    if (fieldsToClear.length > 0) {
-      experimentFormRef.value?.clearValidate(fieldsToClear)
-    }
-
-    try {
-      await experimentFormRef.value?.validate(fieldsToValidate)
-      console.log('当前实验环境表单验证通过')
-    } catch (error) {
-      message.error('请完善当前实验环境的必填信息')
-      throw new Error('当前实验环境表单验证失败')
-    }
-  }
-
-  // 过滤出所有已保存的实验环境（isSaved 为 true 的）
-  const savedEnvironments = experimentEnvironments.value.filter(env => env.isSaved)
-
-  if (savedEnvironments.length === 0) {
-    console.log('没有需要更新的实验环境')
-    return
-  }
-
-  console.log(`开始批量更新 ${savedEnvironments.length} 个实验环境`)
-
-  // 保存错误信息
-  const errors: string[] = []
-
-  // 遍历所有已保存的实验环境
-  for (const env of savedEnvironments) {
-    try {
-      if (!projectId.value) {
-        throw new Error('项目ID不存在，无法保存')
-      }
-
-      const updateData = {
-        title: env.name,
-        dockerImage: env.config.dockerImage,
-        viewTypes: env.config.viewTypes.join(','),
-        secondType: env.config.secondType,
-        taskId: env.config.taskId ? Number(env.config.taskId) : undefined,
-        codeType: env.config.codeType,
-        shellBegin: env.config.shellBegin,
-        containerPort: env.config.containerPort,
-        containerPath: env.config.containerPath,
-        projectId: projectId.value,
-        envisDel: 0,
-      }
-
-      await updateProjectEnvironmentApi(updateData)
-      console.log(`实验环境 "${env.name}" 更新成功`)
-    } catch (error: any) {
-      const errorMsg = `实验环境 "${env.name}" 更新失败: ${error.message || '未知错误'}`
-      console.error(errorMsg, error)
-      errors.push(errorMsg)
-    }
-  }
-
-  // 根据结果显示提示
-  if (errors.length === 0) {
-    message.success(`成功更新 ${savedEnvironments.length} 个实验环境`)
-  } else if (errors.length < savedEnvironments.length) {
-    message.warning(`部分实验环境更新失败：${errors.join('; ')}`)
-    throw new Error(`部分实验环境更新失败`)
-  } else {
-    message.error('所有实验环境更新失败')
-    throw new Error('所有实验环境更新失败')
   }
 }
 
@@ -2063,7 +1987,7 @@ onMounted(() => {
 
         <!-- 第四步：实验环境 -->
         <div v-if="currentStep === 3" class="step-content">
-          <div class="content-card">
+          <div v-if="needsExperimentEnvironment" class="content-card">
             <div class="environment-header">
               <h3 class="environment-title">实验环境</h3>
               <div class="environment-actions">
@@ -2133,7 +2057,7 @@ onMounted(() => {
 
                   <a-form-item label="任务关卡" name="taskId" required>
                     <a-select v-model:value="env.config.taskId" placeholder="请选择任务关卡" allowClear>
-                      <a-select-option v-for="level in sortedTaskLevels" :key="level.taskId || level.id"
+                      <a-select-option v-for="level in programmingTaskLevels" :key="level.taskId || level.id"
                         :value="level.taskId ? String(level.taskId) : undefined"
                         :disabled="!level.taskId || isTaskLevelSelectedByOther(env.id, level.taskId)">
                         {{ level.name }}
@@ -2182,6 +2106,16 @@ onMounted(() => {
                 </a-tab-pane>
               </a-tabs>
             </a-form>
+          </div>
+          <div v-else class="content-card no-environment-card">
+            <div class="no-env-content">
+              <div class="no-env-badge">实验环境配置</div>
+              <h3>当前无编程任务，无需配置实验环境</h3>
+              <p class="no-env-desc">
+                当你添加并保存编程任务后，可在此一步选择对应关卡并配置实验镜像、界面与端口。
+              </p>
+              <p class="no-env-hint">点击完成创建即可完成整个项目配置。</p>
+            </div>
           </div>
         </div>
 
@@ -2248,6 +2182,55 @@ onMounted(() => {
     border-radius: 4px;
     overflow-x: hidden;
     max-width: 100%;
+
+    .content-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+    }
+
+    .no-environment-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 260px;
+      text-align: center;
+
+      .no-env-content {
+        max-width: 520px;
+
+        .no-env-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px 12px;
+          border-radius: 16px;
+          background: #e6f7ff;
+          color: #1890ff;
+          font-size: 12px;
+          font-weight: 500;
+          margin-bottom: 12px;
+        }
+
+        h3 {
+          margin-bottom: 8px;
+          font-size: 20px;
+          color: rgba(0, 0, 0, 0.88);
+        }
+
+        .no-env-desc {
+          color: rgba(0, 0, 0, 0.65);
+          margin-bottom: 4px;
+          white-space: nowrap;
+        }
+
+        .no-env-hint {
+          color: rgba(0, 0, 0, 0.45);
+          font-size: 13px;
+        }
+      }
+    }
 
     .steps-container {
       margin-bottom: 32px;

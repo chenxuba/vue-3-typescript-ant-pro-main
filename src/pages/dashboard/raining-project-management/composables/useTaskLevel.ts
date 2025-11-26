@@ -3,7 +3,15 @@ import { message, Modal } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import type { TaskLevel, TaskLevelForm, EvaluationForm, Question, UploadedFile } from '../types'
 import { uploadFileApi } from '@/api/common/file'
-import { createProjectTaskApi, updateProjectTaskApi, getTaskQuestionListApi, deleteTaskQuestionApi, updateTaskQuestionApi, type TaskQuestionItem } from '@/api/project'
+import {
+  createProjectTaskApi,
+  updateProjectTaskApi,
+  getTaskQuestionListApi,
+  deleteTaskQuestionApi,
+  updateTaskQuestionApi,
+  deleteProjectTaskApi,
+  type TaskQuestionItem,
+} from '@/api/project'
 
 export function useTaskLevel(projectId?: Ref<number | null>) {
   // 状态
@@ -195,28 +203,34 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
   }
 
   // 删除任务关卡
-  const deleteTaskLevel = (id: string) => {
+  const deleteTaskLevel = async (id: string) => {
     const index = taskLevels.value.findIndex(level => level.id === id)
-    if (index !== -1) {
+    if (index === -1) {
+      return
+    }
+
+    const level = taskLevels.value[index]
+
+    const removeLocalLevel = () => {
       taskLevels.value.splice(index, 1)
       
       // 重新编号所有关卡
-      taskLevels.value.forEach((level, idx) => {
+      taskLevels.value.forEach((levelItem, idx) => {
         // 使用正则表达式匹配 "第X关：" 格式
-        const match = level.name.match(/^第\d+关：(.+)$/)
+        const match = levelItem.name.match(/^第\d+关：(.+)$/)
         if (match) {
           // 如果匹配到标准格式，保留冒号后面的内容，重新编号
-          level.name = `第${idx + 1}关：${match[1]}`
+          levelItem.name = `第${idx + 1}关：${match[1]}`
         } else {
           // 如果不是标准格式，检查是否有冒号
-          const colonIndex = level.name.indexOf('：')
+          const colonIndex = levelItem.name.indexOf('：')
           if (colonIndex !== -1) {
             // 有冒号但不是标准格式，保留冒号后面的内容
-            const nameSuffix = level.name.substring(colonIndex + 1)
-            level.name = `第${idx + 1}关：${nameSuffix}`
+            const nameSuffix = levelItem.name.substring(colonIndex + 1)
+            levelItem.name = `第${idx + 1}关：${nameSuffix}`
           } else {
             // 完全自定义的名称，在前面添加编号
-            level.name = `第${idx + 1}关：${level.name}`
+            levelItem.name = `第${idx + 1}关：${levelItem.name}`
           }
         }
       })
@@ -226,7 +240,12 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
         // 如果删除的是当前选中的关卡，切换到第一个关卡
         selectedTaskLevelId.value = taskLevels.value[0]?.id || ''
         if (selectedTaskLevelId.value) {
+          // 删除当前关卡后重置为第一个标签页（关联任务）
+          currentTab.value = 'task'
           loadTaskLevelFormData(selectedTaskLevelId.value)
+        } else {
+          // 如果已经没有任何关卡了，同样重置标签状态，避免残留无效的 tab key
+          currentTab.value = 'task'
         }
       } else if (selectedTaskLevelId.value) {
         // 如果删除的不是当前选中的关卡，刷新当前选中关卡的表单数据（因为名称可能变化了）
@@ -235,6 +254,21 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       
       message.success('任务关卡删除成功')
     }
+
+    // 已保存的任务需要先调用后端删除接口
+    if (level.taskId) {
+      try {
+        await deleteProjectTaskApi({
+          taskId: Number(level.taskId),
+        })
+      } catch (error: any) {
+        console.error('任务关卡删除失败:', error)
+        message.error(error.message || '任务关卡删除失败，请重试')
+        return
+      }
+    }
+
+    removeLocalLevel()
   }
 
   // 选择任务关卡

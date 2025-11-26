@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
@@ -331,6 +331,14 @@ const sortedTaskLevels = computed(() => {
     return weightA - weightB
   })
 })
+
+// 仅包含编程任务的关卡列表
+const programmingTaskLevels = computed(() => {
+  return sortedTaskLevels.value.filter(level => level.type === 'programming')
+})
+
+// 是否需要配置实验环境（存在编程任务时）
+const needsExperimentEnvironment = computed(() => programmingTaskLevels.value.length > 0)
 
 // 弹窗状态
 const showRepositoryModal = ref(false)
@@ -1015,12 +1023,13 @@ const saveEnvironment = async (env: ExperimentEnvironment, envisDel: number = 0)
 
 // 完成项目创建
 const completeProject = async () => {
-  // 校验每个实验环境是否都已保存
-  const unsavedEnvironments = experimentEnvironments.value.filter(env => !env.isSaved)
-
-  if (unsavedEnvironments.length > 0) {
-    message.error('请先保存实验环境配置')
-    return
+  if (needsExperimentEnvironment.value) {
+    // 校验每个实验环境是否都已保存
+    const unsavedEnvironments = experimentEnvironments.value.filter(env => !env.isSaved)
+    if (unsavedEnvironments.length > 0) {
+      message.error('请先保存实验环境配置')
+      return
+    }
   }
 
   // 校验是否有项目ID
@@ -1867,7 +1876,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
       <!-- 第四步：实验环境 -->
       <div v-if="currentStep === 3" class="step-content">
-        <div class="content-card">
+        <div v-if="needsExperimentEnvironment" class="content-card">
           <div class="environment-header">
             <h3 class="environment-title">实验环境</h3>
             <div class="environment-actions">
@@ -1941,7 +1950,7 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
 
                 <a-form-item label="任务关卡" name="taskId" required>
                   <a-select v-model:value="env.config.taskId" placeholder="请选择任务关卡" allowClear>
-                    <a-select-option v-for="level in sortedTaskLevels" :key="level.taskId || level.id" 
+                    <a-select-option v-for="level in programmingTaskLevels" :key="level.taskId || level.id" 
                       :value="level.taskId ? String(level.taskId) : undefined"
                       :disabled="!level.taskId || isTaskLevelSelectedByOther(env.id, level.taskId)">
                       {{ level.name }}
@@ -1989,6 +1998,16 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
               </a-tab-pane>
             </a-tabs>
           </a-form>
+        </div>
+        <div v-else class="content-card no-environment-card">
+          <div class="no-env-content">
+            <div class="no-env-badge">实验环境配置</div>
+            <h3>当前无编程任务，无需配置实验环境</h3>
+            <p class="no-env-desc">
+              当你添加并保存编程任务后，可在此一步选择对应关卡并配置实验镜像、界面与端口。
+            </p>
+            <p class="no-env-hint">点击完成创建即可完成整个项目配置。</p>
+          </div>
         </div>
       </div>
 
@@ -2067,6 +2086,55 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
     background: #fff;
     padding: 24px;
     border-radius: 4px;
+
+      .content-card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+      }
+
+      .no-environment-card {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 260px;
+        text-align: center;
+
+        .no-env-content {
+          max-width: 520px;
+
+          .no-env-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 12px;
+            border-radius: 16px;
+            background: #e6f7ff;
+            color: #1890ff;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 12px;
+          }
+
+          h3 {
+            margin-bottom: 8px;
+            font-size: 20px;
+            color: rgba(0, 0, 0, 0.88);
+          }
+
+          .no-env-desc {
+            color: rgba(0, 0, 0, 0.65);
+            margin-bottom: 4px;
+            white-space: nowrap;
+          }
+
+          .no-env-hint {
+            color: rgba(0, 0, 0, 0.45);
+            font-size: 13px;
+          }
+        }
+      }
 
     .steps-container {
       margin-bottom: 32px;

@@ -315,6 +315,30 @@ export interface UpdateProjectTaskParams extends CreateProjectTaskParams {
 }
 
 /**
+ * 删除任务关卡的请求参数
+ */
+export interface DeleteProjectTaskParams {
+  taskId: number // 任务关卡ID
+}
+
+/**
+ * 删除任务关卡
+ * @param params 删除参数
+ * @returns 返回删除结果
+ */
+export async function deleteProjectTaskApi(params: DeleteProjectTaskParams): Promise<any> {
+  const response = await usePost<any>('/admin/api/projectTask/del', params, {
+    customDev: true,
+  })
+  
+  if (response) {
+    return response as any
+  }
+  
+  throw new Error('任务关卡删除失败')
+}
+
+/**
  * 创建任务关卡的响应数据
  */
 export interface CreateProjectTaskResponse {
