@@ -275,6 +275,11 @@ const handlePublish = (record: any) => {
   const actionText = isPublished ? '取消发布' : '发布'
   const newStatus = isPublished ? 2 : 10
 
+  if (newStatus === 10 && record.authType === 4) {
+    message.warning('可见范围为不公开，不支持发布')
+    return
+  }
+
   Modal.confirm({
     title: `确认${actionText}`,
     content: `确定要${actionText}项目"${record.name}"吗？`,
