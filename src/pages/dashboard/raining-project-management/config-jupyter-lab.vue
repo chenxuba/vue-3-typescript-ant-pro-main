@@ -3,7 +3,6 @@ import { ref, nextTick, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import {  DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
@@ -767,7 +766,6 @@ const evaluationData = ref<EvaluationData>({
   evaluationSetting: 1, // 默认通过所有代码块评测
   testSets: [
     { id: 1, answer: '', select: 1 },
-    { id: 2, answer: '', select: 1 },
   ],
 })
 
@@ -787,28 +785,6 @@ const referenceAnswerData = ref<ReferenceAnswerData>({
 // 保存状态标记
 const evaluationSaved = ref(false) // 评测设置是否已保存
 const referenceAnswerSaved = ref(false) // 参考答案是否已保存
-
-// 测试集计数器
-let testSetIdCounter = 3
-
-// 新增测试集
-const addTestSet = () => {
-  evaluationData.value.testSets.push({
-    id: testSetIdCounter++,
-    answer: '',
-    select: 1,
-  })
-}
-
-// 删除单个测试集
-const removeTestSet = (id: number) => {
-  if (evaluationData.value.testSets.length === 1) {
-    message.warning('至少保留一个测试集')
-    return
-  }
-  evaluationData.value.testSets = evaluationData.value.testSets.filter(item => item.id !== id)
-  message.success('删除成功')
-}
 
 // 处理测试集选中状态变化
 const handleTestSetSelectChange = (testSet: TestSet, checked: boolean) => {
@@ -1024,26 +1000,11 @@ const handleNext = async () => {
         for (let i = 0; i < selectedTestSets.length; i++) {
           const testSet = selectedTestSets[i]
           if (!testSet.answer || testSet.answer.trim() === '') {
-            message.error(`测试集${i + 1}的期望输出不能为空`)
+            message.error(`测试集的期望输出不能为空`)
             scrollToTop()
             return
           }
         }
-      }
-      
-      // 校验参考答案内容是否为空
-      if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
-        message.error('请输入参考答案内容')
-        scrollToTop()
-        return
-      }
-      
-      // 去除HTML标签后检查是否有实际内容
-      const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
-      if (!textContent) {
-        message.error('请输入参考答案内容')
-        scrollToTop()
-        return
       }
       
       // 准备测试集数据
@@ -1215,23 +1176,10 @@ const handleSaveEvaluation = async () => {
       for (let i = 0; i < selectedTestSets.length; i++) {
         const testSet = selectedTestSets[i]
         if (!testSet.answer || testSet.answer.trim() === '') {
-          message.error(`测试集${i + 1}的期望输出不能为空`)
+          message.error(`测试集的期望输出不能为空`)
           return
         }
       }
-    }
-    
-    // 校验参考答案内容是否为空
-    if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
-      message.error('请输入参考答案内容')
-      return
-    }
-    
-    // 去除HTML标签后检查是否有实际内容
-    const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
-    if (!textContent) {
-      message.error('请输入参考答案内容')
-      return
     }
     
     // 准备测试集数据
@@ -1312,23 +1260,10 @@ const handleSaveReferenceAnswer = async () => {
       for (let i = 0; i < selectedTestSets.length; i++) {
         const testSet = selectedTestSets[i]
         if (!testSet.answer || testSet.answer.trim() === '') {
-          message.error(`测试集${i + 1}的期望输出不能为空`)
+          message.error(`测试集的期望输出不能为空`)
           return
         }
       }
-    }
-    
-    // 校验参考答案内容是否为空
-    if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
-      message.error('请输入参考答案内容')
-      return
-    }
-    
-    // 去除HTML标签后检查是否有实际内容
-    const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
-    if (!textContent) {
-      message.error('请输入参考答案内容')
-      return
     }
     
     // 准备测试集数据
@@ -1801,13 +1736,15 @@ const scrollToTop = () => {
               <div v-if="evaluationData.openTestValidate === 1" class="section-block">
                 <div class="block-header">
                   <span>测试集</span>
+                  <!-- 暂不支持新增测试集
                   <div class="header-actions">
                     <a-button @click="addTestSet">新增测试集</a-button>
                   </div>
+                  -->
                 </div>
                 <div class="block-content">
                   <div 
-                    v-for="(testSet, index) in evaluationData.testSets" 
+                    v-for="(testSet) in evaluationData.testSets" 
                     :key="testSet.id"
                     class="test-set-item"
                   >
@@ -1816,17 +1753,19 @@ const scrollToTop = () => {
                       @change="(e) => handleTestSetSelectChange(testSet, e.target.checked)"
                       class="test-set-checkbox" 
                     />
-                    <span class="test-set-label">测试集{{ index + 1 }}</span>
+                    <span class="test-set-label">测试集</span>
                     <a-textarea 
                       v-model:value="testSet.answer" 
                       placeholder="请输入期望输出"
                       class="test-set-input"
                       :auto-size="{ minRows: 3 }"
                     />
+                    <!-- 暂不支持删除测试集
                     <DeleteOutlined 
                       class="delete-test-set-icon" 
                       @click="removeTestSet(testSet.id)" 
                     />
+                    -->
                   </div>
                 </div>
               </div>
@@ -1861,7 +1800,7 @@ const scrollToTop = () => {
                       </a-radio-group>
                     </a-form-item>
 
-                    <a-form-item label="参考答案" required>
+                    <a-form-item label="参考答案">
                       <RichTextEditor v-model="referenceAnswerData.referenceAnswer" />
                     </a-form-item>
                   </a-form>

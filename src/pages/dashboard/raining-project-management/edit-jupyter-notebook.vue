@@ -3,7 +3,7 @@ import { ref, nextTick, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { DeleteOutlined } from '@ant-design/icons-vue'
+// import { DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
 import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
@@ -95,10 +95,10 @@ const referenceAnswerData = ref<ReferenceAnswerData>({
 const evaluationSaved = ref(false) // 评测设置是否已保存
 const referenceAnswerSaved = ref(false) // 参考答案是否已保存
 
-// 测试集计数器
-let testSetIdCounter = 3
+// // 测试集计数器
+// let testSetIdCounter = 3
 
-// 新增测试集
+/* // 新增测试集
 const addTestSet = () => {
   evaluationData.value.testSets.push({
     id: testSetIdCounter++,
@@ -115,7 +115,7 @@ const removeTestSet = (id: number) => {
   }
   evaluationData.value.testSets = evaluationData.value.testSets.filter(item => item.id !== id)
   message.success('删除成功')
-}
+} */
 
 // 处理测试集选中状态变化
 const handleTestSetSelectChange = (testSet: TestSet, checked: boolean) => {
@@ -393,7 +393,7 @@ const fetchProjectTaskList = async () => {
                 answer: item.answer || '',
                 select: item.select || 1,
               }))
-              testSetIdCounter = testContent.length + 1
+              // testSetIdCounter = testContent.length + 1
             }
           } catch (e) {
             // 解析失败，保持默认值
@@ -620,19 +620,6 @@ const handleSaveReferenceAnswer = async () => {
   if (!taskId.value) {
     message.error('任务ID不存在，请重新创建任务')
     throw new Error('任务ID不存在')
-  }
-  
-  // 校验参考答案内容是否为空
-  if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
-    message.error('请输入参考答案内容')
-    throw new Error('请输入参考答案内容')
-  }
-  
-  // 去除HTML标签后检查是否有实际内容
-  const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
-  if (!textContent) {
-    message.error('请输入参考答案内容')
-    throw new Error('请输入参考答案内容')
   }
   
   // 更新任务数据
@@ -1090,9 +1077,9 @@ onMounted(async () => {
                 <div v-if="evaluationData.openTestValidate === 1" class="section-block">
                   <div class="block-header">
                     <span>测试集</span>
-                    <div class="header-actions">
+                    <!-- <div class="header-actions">
                       <a-button @click="addTestSet">新增测试集</a-button>
-                    </div>
+                    </div> -->
                   </div>
                   <div class="block-content">
                     <div 
@@ -1112,10 +1099,10 @@ onMounted(async () => {
                         class="test-set-input"
                         :auto-size="{ minRows: 3 }"
                       />
-                      <DeleteOutlined 
+                      <!-- <DeleteOutlined 
                         class="delete-test-set-icon" 
                         @click="removeTestSet(testSet.id)" 
-                      />
+                      /> -->
                     </div>
                   </div>
                 </div>
@@ -1150,7 +1137,7 @@ onMounted(async () => {
                         </a-radio-group>
                       </a-form-item>
 
-                      <a-form-item label="参考答案" required>
+                      <a-form-item label="参考答案">
                         <RichTextEditor v-model="referenceAnswerData.referenceAnswer" />
                       </a-form-item>
                     </a-form>
