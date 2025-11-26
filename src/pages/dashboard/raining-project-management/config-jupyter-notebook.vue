@@ -3,7 +3,7 @@ import { ref, nextTick, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { DeleteOutlined } from '@ant-design/icons-vue'
+// import { DeleteOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, createProjectTaskApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
@@ -89,26 +89,26 @@ const evaluationSaved = ref(false) // 评测设置是否已保存
 const referenceAnswerSaved = ref(false) // 参考答案是否已保存
 
 // 测试集计数器
-let testSetIdCounter = 3
+// let testSetIdCounter = 3
 
 // 新增测试集
-const addTestSet = () => {
-  evaluationData.value.testSets.push({
-    id: testSetIdCounter++,
-    answer: '',
-    select: 1,
-  })
-}
+// const addTestSet = () => {
+//   evaluationData.value.testSets.push({
+//     id: testSetIdCounter++,
+//     answer: '',
+//     select: 1,
+//   })
+// }
 
 // 删除单个测试集
-const removeTestSet = (id: number) => {
-  if (evaluationData.value.testSets.length === 1) {
-    message.warning('至少保留一个测试集')
-    return
-  }
-  evaluationData.value.testSets = evaluationData.value.testSets.filter(item => item.id !== id)
-  message.success('删除成功')
-}
+// const removeTestSet = (id: number) => {
+//   if (evaluationData.value.testSets.length === 1) {
+//     message.warning('至少保留一个测试集')
+//     return
+//   }
+//   evaluationData.value.testSets = evaluationData.value.testSets.filter(item => item.id !== id)
+//   message.success('删除成功')
+// }
 
 // 处理测试集选中状态变化
 const handleTestSetSelectChange = (testSet: TestSet, checked: boolean) => {
@@ -625,19 +625,6 @@ const handleSaveReferenceAnswer = async () => {
       return
     }
     
-    // 校验参考答案内容是否为空
-    if (!referenceAnswerData.value.referenceAnswer || referenceAnswerData.value.referenceAnswer.trim() === '') {
-      message.error('请输入参考答案内容')
-      return
-    }
-    
-    // 去除HTML标签后检查是否有实际内容
-    const textContent = referenceAnswerData.value.referenceAnswer.replace(/<[^>]*>/g, '').trim()
-    if (!textContent) {
-      message.error('请输入参考答案内容')
-      return
-    }
-    
     // 更新任务数据
     const taskUpdateData: any = {
       taskId: taskId.value,
@@ -668,14 +655,9 @@ const handleSave = async () => {
       return
     }
     
-    // 校验评测设置和参考答案是否都已保存
+    // 校验评测设置是否已保存
     if (!evaluationSaved.value) {
       message.error('请先保存评测设置后再完成创建')
-      return
-    }
-    
-    if (!referenceAnswerSaved.value) {
-      message.error('请先保存参考答案后再完成创建')
       return
     }
     
@@ -1099,12 +1081,12 @@ const handleCoverUpload = async (file: File) => {
                 <div class="block-header">
                   <span>测试集</span>
                   <div class="header-actions">
-                    <a-button @click="addTestSet">新增测试集</a-button>
+                    <!-- <a-button @click="addTestSet">新增测试集</a-button> -->
                   </div>
                 </div>
                 <div class="block-content">
                   <div 
-                    v-for="(testSet, index) in evaluationData.testSets" 
+                    v-for="(testSet) in evaluationData.testSets" 
                     :key="testSet.id"
                     class="test-set-item"
                   >
@@ -1113,17 +1095,17 @@ const handleCoverUpload = async (file: File) => {
                       @change="(e) => handleTestSetSelectChange(testSet, e.target.checked)"
                       class="test-set-checkbox" 
                     />
-                    <span class="test-set-label">测试集{{ index + 1 }}</span>
+                    <span class="test-set-label">测试集</span>
                     <a-textarea 
                       v-model:value="testSet.answer" 
                       placeholder="请输入期望输出"
                       class="test-set-input"
                       :auto-size="{ minRows: 3 }"
                     />
-                    <DeleteOutlined 
+                    <!-- <DeleteOutlined 
                       class="delete-test-set-icon" 
                       @click="removeTestSet(testSet.id)" 
-                    />
+                    /> -->
                   </div>
                 </div>
               </div>
@@ -1158,7 +1140,7 @@ const handleCoverUpload = async (file: File) => {
                       </a-radio-group>
                     </a-form-item>
 
-                    <a-form-item label="参考答案" required>
+                    <a-form-item label="参考答案">
                       <RichTextEditor v-model="referenceAnswerData.referenceAnswer" />
                     </a-form-item>
                   </a-form>
