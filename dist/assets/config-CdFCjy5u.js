@@ -1,0 +1,1 @@
+import{k as o}from"./index-LD9Em1il.js";async function t(e){return o("/admin/api/sysConfig/getByCode",e,{customDev:!0})}async function n(e){return o("/admin/api/sysConfig/updateByCode",e,{customDev:!0})}export{t as g,n as u};

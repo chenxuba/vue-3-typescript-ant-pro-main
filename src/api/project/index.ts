@@ -1053,3 +1053,69 @@ export async function exportProjectUserTaskApi(params: ExportProjectUserTaskPara
   return response.data as Blob
 }
 
+/**
+ * 获取正在完成任务的人数的请求参数
+ */
+export interface GetTaskUsersParams {
+  taskId: number // 任务ID
+}
+
+/**
+ * 获取正在完成任务的人数的响应数据
+ */
+export interface GetTaskUsersResponse {
+  result: number
+  msg: string
+  data: number // 已参与未完成任务的用户数
+}
+
+/**
+ * 获取正在完成任务的人数
+ * @param params 包含taskId的参数
+ * @returns 返回人数
+ */
+export async function getTaskUsersApi(params: GetTaskUsersParams): Promise<number> {
+  const response = await usePost<GetTaskUsersResponse>('/admin/api/projectTask/getTaskUsers', params, {
+    customDev: true,
+  })
+  
+  if (response && response.data !== undefined) {
+    return response.data
+  }
+  
+  throw new Error('获取任务用户数失败')
+}
+
+/**
+ * 重置任务文件的请求参数
+ */
+export interface ResetTaskFileParams {
+  taskId: number // 任务ID
+}
+
+/**
+ * 重置任务文件的响应数据
+ */
+export interface ResetTaskFileResponse {
+  result: number
+  msg: string
+  data?: any
+}
+
+/**
+ * 重置任务文件
+ * @param params 包含taskId的参数
+ * @returns 返回重置结果
+ */
+export async function resetTaskFileApi(params: ResetTaskFileParams): Promise<ResetTaskFileResponse> {
+  const response = await usePost<ResetTaskFileResponse>('/admin/api/file/resetTaskFile', params, {
+    customDev: true,
+  })
+  
+  if (response) {
+    return response as any
+  }
+  
+  throw new Error('重置任务文件失败')
+}
+

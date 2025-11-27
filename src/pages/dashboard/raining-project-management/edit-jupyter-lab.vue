@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, nextTick, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { uploadFileApi } from '@/api/common/file'
-import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectTaskApi, getPodApi, stopPodApi } from '@/api/project'
+import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectTaskApi, getPodApi, stopPodApi, getTaskUsersApi, resetTaskFileApi } from '@/api/project'
 import { getDicGroupApi, getEnvironmentDicCode } from '@/api/common/dictionary'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useSubcategoryDictionary } from '@/composables/dictionary'
 import { useMultiTab } from '@/stores/multi-tab'
@@ -1089,13 +1089,72 @@ const handleNext = async () => {
       scrollToTop()
     }
   } else if (currentStep.value === 1) {
-    // 第二步：实验内容，停止Pod后进入下一步
+    // 第二步：实验内容，查询正在完成任务的人数
     if (taskId.value) {
-      await handleStopPod()
+      try {
+        // 查询正在完成任务的人数
+        const userCount = await getTaskUsersApi({ taskId: taskId.value })
+        
+        if (userCount > 0) {
+          // 如果人数大于0，弹出提示询问是否重置文件
+          return new Promise<void>((resolve) => {
+            Modal.confirm({
+              title: '提示',
+              content: `当前有 ${userCount} 个用户正在完成任务，是否重置已参与未完成任务的用户文件？`,
+              okText: '是',
+              cancelText: '否',
+              onOk: async () => {
+                try {
+                  // 点击"是"，调用重置文件接口
+                  await resetTaskFileApi({ taskId: taskId.value! })
+                  message.success('文件重置成功')
+                  
+                  // 停止Pod
+                  await handleStopPod()
+                  
+                  // 进入下一步
+                  currentStep.value = 2
+                  scrollToTop()
+                  resolve()
+                } catch (error) {
+                  console.error('重置文件失败：', error)
+                  message.error('重置文件失败，请重试')
+                  resolve()
+                }
+              },
+              onCancel: async () => {
+                // 点击"否"，直接进入下一步
+                try {
+                  await handleStopPod()
+                } catch (error) {
+                  // 即使停止失败，也允许继续流程
+                  console.error('停止Pod失败：', error)
+                }
+                currentStep.value = 2
+                scrollToTop()
+                resolve()
+              },
+            })
+          })
+        } else {
+          // 如果人数为0，直接进入下一步
+          await handleStopPod()
+          currentStep.value = 2
+          scrollToTop()
+        }
+      } catch (error) {
+        console.error('查询任务用户数失败：', error)
+        message.error('查询任务用户数失败，请重试')
+        // 即使查询失败，也允许继续流程
+        await handleStopPod()
+        currentStep.value = 2
+        scrollToTop()
+      }
+    } else {
+      // 如果没有taskId，直接进入下一步
+      currentStep.value = 2
+      scrollToTop()
     }
-
-    currentStep.value = 2
-    scrollToTop()
   } else if (currentStep.value === 2) {
     // 第三步：评测设置验证
     try {
