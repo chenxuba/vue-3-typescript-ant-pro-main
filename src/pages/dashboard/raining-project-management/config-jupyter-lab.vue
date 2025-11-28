@@ -1357,10 +1357,13 @@ const handleSave = async () => {
     } as any)
     
     // 第二步：任务更新成功后，再更新项目状态为已完成
-    await updateProjectApi({
-      id: projectId.value,
-      status: 10, // 设置状态为10（已完成）
-    } as any)
+    // 培训公开范围为全院公开（authType === 2）时，不调用此接口
+    if (formData.value.authType !== 2) {
+      await updateProjectApi({
+        id: projectId.value,
+        status: 10, // 设置状态为10（已完成）
+      } as any)
+    }
     
     message.success('项目创建成功！')
     

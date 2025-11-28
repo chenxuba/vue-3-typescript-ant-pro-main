@@ -1276,7 +1276,8 @@ const handleUpdateProject = async (isComplete: boolean = false) => {
     }
 
     // 如果是完成操作，传递 status=10
-    if (isComplete) {
+    // 培训公开范围为全院公开（authType === 2）时，不设置状态为已完成
+    if (isComplete && formData.value.authType !== 2) {
       submitData.status = 10
     }
 

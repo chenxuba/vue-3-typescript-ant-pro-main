@@ -1075,7 +1075,7 @@ export interface GetTaskUsersResponse {
  * @returns 返回人数
  */
 export async function getTaskUsersApi(params: GetTaskUsersParams): Promise<number> {
-  const response = await usePost<GetTaskUsersResponse>('/admin/api/projectTask/getTaskUsers', params, {
+  const response = await usePost<GetTaskUsersResponse['data']>('/admin/api/projectTask/getTaskUsers', params, {
     customDev: true,
   })
   

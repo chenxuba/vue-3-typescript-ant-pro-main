@@ -1046,11 +1046,14 @@ const completeProject = async () => {
   }
 
   try {
-    // 调用更新接口，将状态设置为10（已完成）
-    await updateProjectApi({
-      id: projectId.value,
-      status: 10, // 设置状态为10（已完成）
-    } as any)
+    // 如果培训公开范围为全院公开（authType === 2），则不调用更新接口
+    if (formData.value.authType !== 2) {
+      // 调用更新接口，将状态设置为10（已完成）
+      await updateProjectApi({
+        id: projectId.value,
+        status: 10, // 设置状态为10（已完成）
+      } as any)
+    }
     
     message.success('项目创建成功！')
 
