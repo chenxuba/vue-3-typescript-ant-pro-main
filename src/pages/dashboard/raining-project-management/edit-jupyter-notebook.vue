@@ -954,6 +954,9 @@ onMounted(async () => {
 
               <a-form-item label="学时" name="classHour" required>
                 <a-input-number :min="0" class="w-full" disabled v-model:value="formData.classHour" placeholder="请输入学时" />
+                <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                此学时为关卡总计学时，无需填写，系统自动计算。
+              </div>
               </a-form-item>
 
               <a-form-item label="顶部背景图" name="topCover" required>

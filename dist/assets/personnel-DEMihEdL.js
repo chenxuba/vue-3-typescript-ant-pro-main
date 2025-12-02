@@ -1,1 +1,0 @@
-import{k as s}from"./index-BM7DJeGE.js";async function n(e){return await s("/web/api/user/getAllUsers",e,{customDev:!0})}async function o(e){return await s("/web/api/user/getUser",{operatorID:e},{customDev:!0})}export{o as a,n as g};

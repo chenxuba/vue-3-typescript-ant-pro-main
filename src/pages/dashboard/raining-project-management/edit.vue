@@ -62,7 +62,7 @@ const validateDescription = (_rule: any, value: string) => {
   const hasImage = /<img\s+[^>]*src\s*=\s*["'][^"']+["'][^>]*>/i.test(value)
   // 移除所有 HTML 标签和空格，检查是否有实际文本内容
   const textContent = value.replace(/<[^>]*>/g, '').trim()
-  
+
   // 如果既没有图片也没有文本内容，则验证失败
   if (!hasImage && !textContent) {
     return Promise.reject('请输入简介')
@@ -108,12 +108,12 @@ const loadEnvironmentOptions = async (type: number) => {
     // 如果已经加载过，直接返回
     return
   }
-  
+
   try {
     loadingEnvironment.value = true
     const code = getEnvironmentDicCode(type)
     if (!code) return
-    
+
     const data = await getDicGroupApi({ code })
     if (data && data.list) {
       environmentOptionsMap.value[type] = data.list
@@ -129,7 +129,7 @@ const loadEnvironmentOptions = async (type: number) => {
 // const getSecondTypeOptions = () => {
 //   // 如果不是JupyterNotebook环境或JupyterLab环境，返回空数组
 //   if (projectType.value !== 2 && projectType.value !== 3) return []
-  
+
 //   return subcategory.options.value
 // }
 
@@ -144,17 +144,17 @@ const fetchProjectDetail = async () => {
   try {
     loading.value = true
     const detail = await getProjectDetailApi({ id: projectId.value })
-    
+
     // 保存完整的项目详情
     projectDetail.value = detail
-    
+
     // 先设置项目类型并加载字典选项
     if (detail.projectType) {
       projectType.value = detail.projectType
       // 先加载对应的环境选项，再回填表单数据
       await loadEnvironmentOptions(detail.projectType)
     }
-    
+
     // 回填表单数据（必须在字典数据加载完成后）
     editForm.value = {
       name: detail.name || '',
@@ -186,7 +186,7 @@ const handleNext = async () => {
   } catch (error) {
     return
   }
-  
+
   // 基础字段必填校验
   if (!editForm.value.name) {
     message.error('请输入名称')
@@ -208,22 +208,22 @@ const handleNext = async () => {
     message.error('请选择实验环境')
     return
   }
-  
+
   // 如果是 JupyterNotebook 或 JupyterLab 环境，小类别也是必填
   // if ((projectType.value === 2 || projectType.value === 3) && !editForm.value.secondType) {
   //   message.error('请选择小类别')
   //   return
   // }
-  
+
   // 保存修改的数据到后端
   if (!projectId.value || !projectDetail.value) {
     message.error('项目信息缺失')
     return
   }
-  
+
   try {
     saving.value = true
-    
+
     // 合并原始项目数据和修改后的表单数据
     const updateParams = {
       id: projectId.value,
@@ -242,17 +242,17 @@ const handleNext = async () => {
       gitUrl: projectDetail.value.gitUrl || '',
       environment: editForm.value.environment,
     }
-    
+
     await updateProjectApi(updateParams)
     message.success('保存成功')
-    
+
     // 根据项目类型跳转到不同的编辑页面
     const routeMap: Record<number, string> = {
       1: '/dashboard/raining-project-management/edit-full-stack', // 全栈环境
       2: '/dashboard/raining-project-management/edit-jupyter-notebook', // JupyterNotebook环境
       3: '/dashboard/raining-project-management/edit-jupyter-lab', // JupyterLab环境
     }
-    
+
     const targetRoute = routeMap[projectType.value]
     if (targetRoute) {
       router.push({
@@ -301,7 +301,7 @@ onMounted(() => {
   // 加载难度字典和小类别字典
   difficulty.load()
   subcategory.load()
-  
+
   // 从路由参数获取项目ID
   const id = route.query.id
   if (id) {
@@ -351,24 +351,14 @@ onMounted(() => {
             <span v-if="editForm.environment"> 实验环境: {{ getEnvironmentName }}</span>
           </div>
 
-          <a-form
-            ref="formRef"
-            :model="editForm"
-            :rules="formRules"
-            layout="horizontal"
-            :label-col="{ span: 3 }"
-            :wrapper-col="{ span: 18 }"
-          >
+          <a-form ref="formRef" :model="editForm" :rules="formRules" layout="horizontal" :label-col="{ span: 3 }"
+            :wrapper-col="{ span: 18 }">
             <a-form-item label="名称" name="name" required>
               <a-input v-model:value="editForm.name" placeholder="请输入名称" />
             </a-form-item>
 
             <a-form-item label="简介" name="description" required>
-              <RichTextEditor 
-                v-model="editForm.description" 
-                placeholder="请输入简介内容"
-                :height="200"
-              />
+              <RichTextEditor v-model="editForm.description" placeholder="请输入简介内容" :height="200" />
             </a-form-item>
 
             <!-- <a-form-item 
@@ -382,21 +372,13 @@ onMounted(() => {
             </a-form-item> -->
 
             <a-form-item label="难度" name="difficulty" required>
-              <a-select
-                v-model:value="editForm.difficulty"
-                placeholder="请选择难度"
-                :options="difficulty.options.value"
-                :loading="difficulty.loading.value"
-              />
+              <a-select v-model:value="editForm.difficulty" placeholder="请选择难度" :options="difficulty.options.value"
+                :loading="difficulty.loading.value" />
             </a-form-item>
 
             <a-form-item label="实验环境" name="environment" required>
-              <a-select
-                v-model:value="editForm.environment"
-                placeholder="请选择实验环境"
-                :options="getEnvironmentOptions()"
-                :loading="loadingEnvironment"
-              />
+              <a-select v-model:value="editForm.environment" placeholder="请选择实验环境" :options="getEnvironmentOptions()"
+                :loading="loadingEnvironment" />
             </a-form-item>
 
             <!-- <a-form-item 
@@ -413,13 +395,11 @@ onMounted(() => {
             </a-form-item> -->
 
             <a-form-item label="学时" name="classHour">
-              <a-input-number 
-                :min="0" 
-                class="w-full" 
-                v-model:value="editForm.classHour" 
-                disabled
-                placeholder="配置任务后自动计算" 
-              />
+              <a-input-number :min="0" class="w-full" v-model:value="editForm.classHour" disabled
+                placeholder="配置任务后自动计算" />
+              <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                此学时为关卡总计学时，无需填写，系统自动计算。
+              </div>
             </a-form-item>
           </a-form>
         </div>
@@ -522,6 +502,7 @@ onMounted(() => {
     }
   }
 }
+
 /* 自定义镂空样式 */
 .custom-radio ::v-deep(.ant-radio-wrapper:hover .ant-radio),
 .custom-radio ::v-deep(.ant-radio:hover .ant-radio-inner),

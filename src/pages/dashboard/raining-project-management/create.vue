@@ -284,6 +284,9 @@ const getEnvironmentName = computed(() => {
 
           <a-form-item label="学时" name="classHour">
             <a-input v-model:value="createForm.classHour" placeholder="配置任务后自动计算" disabled />
+            <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                此学时为关卡总计学时，无需填写，系统自动计算。
+              </div>
           </a-form-item>
         </a-form>
       </div>
