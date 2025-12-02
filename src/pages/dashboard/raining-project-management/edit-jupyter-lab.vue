@@ -290,7 +290,7 @@ interface TestSet {
 }
 
 const evaluationData = ref<EvaluationData>({
-  openTestValidate: 1,
+  openTestValidate: 2,
   testValidateFiles: '',
   testValidateSh: '',
   timeLimitM: '',

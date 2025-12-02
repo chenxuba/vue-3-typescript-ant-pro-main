@@ -764,7 +764,7 @@ interface TestSet {
 }
 
 const evaluationData = ref<EvaluationData>({
-  openTestValidate: 1, // 默认开启
+  openTestValidate: 2, // 默认开启
   testValidateFiles: '', // 评测文件
   testValidateSh: '', // 评测执行命令
   timeLimitM: '', // 评测时长限制
