@@ -729,6 +729,8 @@ export interface ProjectUserListItem {
   userId: number
   joinTime: number
   currentTask: number
+  // 已完成学时
+  classHour?: number | string
   createTime: number
   updateTime: number
   nickName: string
@@ -880,6 +882,8 @@ export interface ProjectUserTaskListItem {
   userId: number
   nickName: string // 用户姓名
   orgName: string // 单位
+  // 已完成学时
+  classHour?: number | string
 }
 
 /**

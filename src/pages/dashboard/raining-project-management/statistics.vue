@@ -132,6 +132,7 @@ const participationColumns = [
   { title: '用户编号', dataIndex: 'userId', key: 'userId', width: 150 },
   { title: '用户姓名', dataIndex: 'nickName', key: 'nickName', width: 150 },
   { title: '单位', dataIndex: 'orgName', key: 'orgName', width: 300 },
+  { title: '已完成学时', dataIndex: 'classHour', key: 'classHour', width: 150 },
   { title: '参训时间', dataIndex: 'joinTime', key: 'joinTime', width: 200 },
   { title: '参训状态', dataIndex: 'currentTask', key: 'currentTask', width: 150, align: 'center' as const },
 ]
@@ -144,6 +145,7 @@ const taskColumns = [
   { title: '任务开始时间', dataIndex: 'taskStartTime', key: 'taskStartTime', width: 180 },
   { title: '任务结束时间', dataIndex: 'taskEndTime', key: 'taskEndTime', width: 180 },
   { title: '累计时间', dataIndex: 'totalTime', key: 'totalTime', width: 120 },
+  { title: '已完成学时', dataIndex: 'classHour', key: 'classHour', width: 120 },
   { title: '实验状态', dataIndex: 'experimentStatus', key: 'experimentStatus', width: 120 },
 ]
 
@@ -585,6 +587,9 @@ onMounted(async () => {
                 <template v-if="column.key === 'nickName'">
                   <a class="user-link">{{ record.nickName }}</a>
                 </template>
+                <template v-else-if="column.key === 'classHour'">
+                  {{ record.classHour ?? '0' }}
+                </template>
                 <template v-else-if="column.key === 'joinTime'">
                   {{ formatTimestamp(record.joinTime) }}
                 </template>
@@ -713,6 +718,9 @@ onMounted(async () => {
                   </template>
                   <template v-else-if="column.key === 'totalTime'">
                     {{ formatDuration(record.beginTime, record.endTime) }}
+                  </template>
+                  <template v-else-if="column.key === 'classHour'">
+                    {{ record.classHour ?? '-' }}
                   </template>
                   <template v-else-if="column.key === 'experimentStatus'">
                     <span 
