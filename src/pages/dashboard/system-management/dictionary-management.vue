@@ -89,6 +89,7 @@ const itemFormData = reactive({
   dicGroupId: undefined as string | number | undefined,
   name: '',
   content: '',
+  config: '',
   status: 1,
   weight: 0,
 })
@@ -334,6 +335,7 @@ const handleCreateItem = () => {
   itemFormData.dicGroupId = selectedType.value.dicGroupId
   itemFormData.name = ''
   itemFormData.content = ''
+  itemFormData.config = ''
   itemFormData.status = 1
   itemFormData.weight = 0
   itemModalVisible.value = true
@@ -347,6 +349,7 @@ const handleEditItem = (item: any) => {
   itemFormData.dicGroupId = item.dicGroupId
   itemFormData.name = item.name
   itemFormData.content = item.content
+  itemFormData.config = item.config || ''
   itemFormData.status = item.status
   itemFormData.weight = item.weight
   itemModalVisible.value = true
@@ -369,6 +372,7 @@ const handleSubmitItem = async () => {
       dicGroupId: itemFormData.dicGroupId,
       name: itemFormData.name,
       content: itemFormData.content,
+      config: itemFormData.config,
       status: itemFormData.status,
       weight: itemFormData.weight,
     }
@@ -775,6 +779,14 @@ onMounted(() => {
           <a-input 
             v-model:value="itemFormData.content" 
             placeholder="请输入字典值"
+            allow-clear
+          />
+        </a-form-item>
+
+        <a-form-item label="配置">
+          <a-input 
+            v-model:value="itemFormData.config" 
+            placeholder="请输入配置（可选）"
             allow-clear
           />
         </a-form-item>

@@ -43,6 +43,10 @@ interface DictionaryTypeModel {
 interface DictionaryItemModel {
   id?: string | number
   /**
+   * 配置
+   */
+  config?: string
+  /**
    * 字典项名称
    */
   name: string
