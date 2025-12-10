@@ -57,7 +57,8 @@ export interface UploadedFile {
 // 任务关卡类型
 export interface TaskLevel {
   id: string
-  name: string
+  name: string // 左侧列表显示的名称（保持不变）
+  formName?: string // 表单中修改后的名称（用于右侧表单显示）
   type: 'programming' | 'choice' | 'kernel'
   source: string // 学习资源，逗号隔开的字符串
   require: string

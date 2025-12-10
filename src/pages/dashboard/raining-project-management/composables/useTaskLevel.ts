@@ -315,7 +315,8 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       }
       
       taskLevelFormData.value = {
-        name: level.name,
+        // 优先使用 formName（表单中修改后的名称），如果没有则使用 name（左侧列表名称）
+        name: level.formName || level.name,
         source: level.source || '', // 直接使用字符串
         require: level.require,
         referenceAnswer: level.referenceAnswer,
@@ -377,7 +378,8 @@ export function useTaskLevel(projectId?: Ref<number | null>) {
       
       // 只保存表单中与 TaskLevel 类型匹配的字段，避免覆盖 type 等关键字段
       // 注意：不更新 level.name，保持左侧列表中的关卡名称不变
-      // level.name = taskLevelFormData.value.name
+      // 但保存表单中的名称到 formName，用于切换关卡时恢复
+      level.formName = taskLevelFormData.value.name
       level.source = taskLevelFormData.value.source
       level.require = taskLevelFormData.value.require
       level.referenceAnswer = taskLevelFormData.value.referenceAnswer

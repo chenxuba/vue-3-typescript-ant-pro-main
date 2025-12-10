@@ -3,7 +3,7 @@ import { ref, nextTick, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined,InfoCircleOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
 import { getProjectDetailApi, updateProjectApi, getProjectTaskListApi, updateProjectEnvironmentApi, type ProjectTaskItem } from '@/api/project'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useCollateralEnvironmentDictionary, useProgrammingLanguageDictionary, useEnvironmentDictionary } from '@/composables/dictionary'
@@ -1629,6 +1629,11 @@ onMounted(() => {
         <!-- 第二步：代码仓库 -->
         <div v-if="currentStep === 1">
           <div class="form-section repository-section">
+             <!-- 说明提示 -->
+          <div class="repository-notice" style="margin-bottom: 16px; padding: 12px; background-color: #f0f7ff; border: 1px solid #91caff; border-radius: 4px; color: #0958d9;">
+            <InfoCircleOutlined style="margin-right: 8px;" />
+            <span>内嵌链接任务跳过此步骤</span>
+          </div>
             <!-- 顶部：下拉菜单 + 仓库地址 -->
             <div class="repository-top-bar flex items-center gap-16px justify-between">
               <a-select v-model:value="formData.repositoryType" :options="repositoryTypeOptions"

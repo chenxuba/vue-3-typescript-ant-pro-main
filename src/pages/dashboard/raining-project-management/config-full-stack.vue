@@ -3,7 +3,7 @@ import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
-import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DeleteOutlined, EditOutlined, HolderOutlined, MoreOutlined, InfoCircleOutlined } from '@ant-design/icons-vue'
 import { uploadFileApi, getGitFileListApi, saveGitFileContentApi, uploadFileToGitApi, createGitDirApi, deleteGitFileApi } from '@/api/common/file'
 import { createProjectApi, updateProjectApi, updateProjectEnvironmentApi } from '@/api/project'
 import { useFieldCategoryDictionary, useDifficultyDictionary, useCollateralEnvironmentDictionary, useProgrammingLanguageDictionary, useEnvironmentDictionary } from '@/composables/dictionary'
@@ -850,9 +850,11 @@ const handleNext = async () => {
       return
     }
     // 检查是否所有关卡都已保存
-    const hasUnsavedLevel = taskLevels.value.some(level => !level.taskId)
-    if (hasUnsavedLevel) {
-      message.error('请先保存所有任务关卡后再进行下一步')
+    const unsavedLevels = taskLevels.value.filter(level => !level.taskId)
+    if (unsavedLevels.length > 0) {
+      // 获取未保存关卡的名称列表
+      const unsavedLevelNames = unsavedLevels.map(level => level.formName || level.name).join('、')
+      message.error(`请先保存以下任务关卡后再进行下一步：${unsavedLevelNames}`)
       return
     }
     // 检查所有选择题任务是否都有题目
@@ -1484,6 +1486,11 @@ const handleTestCaseSelectChange = (testCase: any, checked: boolean) => {
       <!-- 第二步：代码仓库 -->
       <div v-if="currentStep === 1">
         <div class="form-section repository-section">
+          <!-- 说明提示 -->
+          <div class="repository-notice" style="margin-bottom: 16px; padding: 12px; background-color: #f0f7ff; border: 1px solid #91caff; border-radius: 4px; color: #0958d9;">
+            <InfoCircleOutlined style="margin-right: 8px;" />
+            <span>内嵌链接任务跳过此步骤</span>
+          </div>
           <!-- 顶部：下拉菜单 + 仓库地址 -->
           <div class="repository-top-bar flex items-center gap-16px justify-between">
             <a-select v-model:value="formData.repositoryType" :options="repositoryTypeOptions"
